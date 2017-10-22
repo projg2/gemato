@@ -26,6 +26,14 @@ class HashAPITest(unittest.TestCase):
         self.assertRaises(gemato.hash.UnsupportedHash,
                 gemato.hash.get_hash_by_name, '_invalid_name_')
 
+    def test_get_invalid_pyblake2(self):
+        self.assertRaises(gemato.hash.UnsupportedHash,
+                gemato.hash.get_hash_by_name, 'blake2zzz')
+
+    def test_get_invalid_pysha3(self):
+        self.assertRaises(gemato.hash.UnsupportedHash,
+                gemato.hash.get_hash_by_name, 'sha3_987')
+
     def test_hash_file(self):
         f = io.BytesIO(TEST_STRING)
         self.assertDictEqual(gemato.hash.hash_file(f, ('md5', 'sha1', 'sha256')),
