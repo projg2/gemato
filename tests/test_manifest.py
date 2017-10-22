@@ -41,6 +41,9 @@ class ManifestTest(unittest.TestCase):
         m = gemato.manifest.ManifestFile()
         m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
 
+    def test_load_via_ctor(self):
+        gemato.manifest.ManifestFile(io.StringIO(TEST_MANIFEST))
+
     def test_load_and_dump(self):
         m = gemato.manifest.ManifestFile()
         m.load(io.StringIO(TEST_MANIFEST))
