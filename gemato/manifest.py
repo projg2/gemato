@@ -17,12 +17,15 @@ class ManifestEntryTIMESTAMP(object):
     ISO-8601 timestamp.
     """
 
+    tag = 'TIMESTAMP'
+
     def __init__(self, ts):
         assert isinstance(ts, datetime.datetime)
         self.ts = ts
 
     @classmethod
     def from_list(cls, l):
+        assert l[0] == cls.tag
         if len(l) != 2:
             raise ManifestSyntaxError(
                     '{} line: expects 1 value, got: {}'.format(l[0], l[1:]))
@@ -34,7 +37,7 @@ class ManifestEntryTIMESTAMP(object):
         return cls(ts)
 
     def to_list(self):
-        return ('TIMESTAMP', self.ts.strftime('%Y-%m-%dT%H:%M:%SZ'))
+        return (self.tag, self.ts.strftime('%Y-%m-%dT%H:%M:%SZ'))
 
 
 class ManifestPathEntry(object):
@@ -62,18 +65,23 @@ class ManifestEntryIGNORE(ManifestPathEntry):
     Ignored path.
     """
 
+    tag = 'IGNORE'
+
     @classmethod
     def from_list(cls, l):
+        assert l[0] == cls.tag
         return cls(cls.process_path(l))
 
     def to_list(self):
-        return ('IGNORE', self.path)
+        return (self.tag, self.path)
 
 
 class ManifestEntryOPTIONAL(ManifestPathEntry):
     """
     Optional path.
     """
+
+    tag = 'OPTIONAL'
 
     def __init__(self, path):
         super(ManifestEntryOPTIONAL, self).__init__(path)
@@ -82,10 +90,11 @@ class ManifestEntryOPTIONAL(ManifestPathEntry):
 
     @classmethod
     def from_list(cls, l):
+        assert l[0] == cls.tag
         return cls(cls.process_path(l))
 
     def to_list(self):
-        return ('OPTIONAL', self.path)
+        return (self.tag, self.path)
 
 
 class ManifestFileEntry(ManifestPathEntry):
@@ -140,14 +149,17 @@ class ManifestEntryMANIFEST(ManifestFileEntry):
     Sub-Manifest file reference.
     """
 
+    tag = 'MANIFEST'
+
     @classmethod
     def from_list(cls, l):
+        assert l[0] == cls.tag
         path = cls.process_path(l[:2])
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryMANIFEST, self).to_list('MANIFEST')
+        return super(ManifestEntryMANIFEST, self).to_list(self.tag)
 
 
 class ManifestEntryDATA(ManifestFileEntry):
@@ -155,14 +167,17 @@ class ManifestEntryDATA(ManifestFileEntry):
     Regular file reference.
     """
 
+    tag = 'DATA'
+
     @classmethod
     def from_list(cls, l):
+        assert l[0] == cls.tag
         path = cls.process_path(l[:2])
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryDATA, self).to_list('DATA')
+        return super(ManifestEntryDATA, self).to_list(self.tag)
 
 
 class ManifestEntryMISC(ManifestFileEntry):
@@ -170,20 +185,25 @@ class ManifestEntryMISC(ManifestFileEntry):
     Non-obligatory file reference.
     """
 
+    tag = 'MISC'
+
     @classmethod
     def from_list(cls, l):
+        assert l[0] == cls.tag
         path = cls.process_path(l[:2])
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryMISC, self).to_list('MISC')
+        return super(ManifestEntryMISC, self).to_list(self.tag)
 
 
 class ManifestEntryDIST(ManifestFileEntry):
     """
     Distfile reference.
     """
+
+    tag = 'DIST'
 
     @classmethod
     def from_list(cls, l):
@@ -195,7 +215,7 @@ class ManifestEntryDIST(ManifestFileEntry):
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryDIST, self).to_list('DIST')
+        return super(ManifestEntryDIST, self).to_list(self.tag)
 
 
 class ManifestEntryEBUILD(ManifestFileEntry):
@@ -203,20 +223,25 @@ class ManifestEntryEBUILD(ManifestFileEntry):
     Deprecated ebuild file reference (equivalent to DATA).
     """
 
+    tag = 'EBUILD'
+
     @classmethod
     def from_list(cls, l):
+        assert l[0] == cls.tag
         path = cls.process_path(l[:2])
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryEBUILD, self).to_list('EBUILD')
+        return super(ManifestEntryEBUILD, self).to_list(self.tag)
 
 
 class ManifestEntryAUX(ManifestFileEntry):
     """
     Deprecated AUX file reference (DATA with 'files/' prepended).
     """
+
+    tag = 'AUX'
 
     def __init__(self, aux_path, size, checksums):
         self.aux_path = aux_path
@@ -225,12 +250,13 @@ class ManifestEntryAUX(ManifestFileEntry):
 
     @classmethod
     def from_list(cls, l):
+        assert l[0] == cls.tag
         path = cls.process_path(l[:2])
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
     def to_list(self):
-        ret = super(ManifestEntryAUX, self).to_list('AUX')
+        ret = super(ManifestEntryAUX, self).to_list(self.tag)
         assert ret[1].startswith('files/')
         ret[1] = ret[1][6:]
         return ret
