@@ -344,3 +344,15 @@ class ManifestFile(object):
                 if e.path == path:
                     return e
         return None
+
+    def find_dist_entry(self, filename):
+        """
+        Find a matching entry for distfile @filename and return it.
+        Returns None when no DIST entry matches.
+        """
+
+        for e in self.entries:
+            if isinstance(e, ManifestEntryDIST):
+                if e.path == filename:
+                    return e
+        return None

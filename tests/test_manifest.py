@@ -84,6 +84,12 @@ class ManifestTest(unittest.TestCase):
         self.assertIsNone(m.find_path_entry('test.patch'))
         self.assertEqual(m.find_path_entry('files/test.patch').aux_path, 'test.patch')
 
+    def test_find_dist_entry(self):
+        m = gemato.manifest.ManifestFile()
+        m.load(io.StringIO(TEST_MANIFEST))
+        self.assertIsNone(m.find_dist_entry('myebuild-0.ebuild'))
+        self.assertEqual(m.find_dist_entry('mydistfile.tar.gz').path, 'mydistfile.tar.gz')
+
 
 class ManifestEntryTest(unittest.TestCase):
     """
