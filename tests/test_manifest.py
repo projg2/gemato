@@ -147,15 +147,17 @@ class ManifestEntryTest(unittest.TestCase):
 
     def test_timestamp_invalid(self):
         self.assertRaises(gemato.manifest.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '',))
+                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP',))
         self.assertRaises(gemato.manifest.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '2017-10-22T18:06:41+02:00',))
+                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', ''))
         self.assertRaises(gemato.manifest.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '2017-10-22T18:06:41',))
+                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '2017-10-22T18:06:41+02:00'))
         self.assertRaises(gemato.manifest.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '2017-10-22 18:06:41Z',))
+                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '2017-10-22T18:06:41'))
         self.assertRaises(gemato.manifest.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '20171022T180641Z',))
+                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '2017-10-22', '18:06:41Z'))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '20171022T180641Z'))
 
     def test_path_invalid(self):
         self.assertRaises(gemato.manifest.ManifestSyntaxError,
@@ -262,3 +264,37 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertRaises(gemato.manifest.ManifestSyntaxError,
                 gemato.manifest.ManifestEntryAUX.from_list,
                 ('AUX', 'foo', '0', 'md5', 'd41d8cd98f00b204e9800998ecf8427e', 'sha1'))
+
+    def test_invalid_value_count(self):
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST',))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST', 'foo'))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryIGNORE.from_list, ('IGNORE',))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryIGNORE.from_list, ('IGNORE', 'foo', 'bar'))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list, ('DATA',))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list, ('DATA', 'foo'))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryMISC.from_list, ('MISC',))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryMISC.from_list, ('MISC', 'foo'))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryOPTIONAL.from_list, ('OPTIONAL',))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryOPTIONAL.from_list, ('OPTIONAL', 'foo', 'bar'))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDIST.from_list, ('DIST',))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDIST.from_list, ('DIST', 'foo'))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD',))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD', 'foo'))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryAUX.from_list, ('AUX',))
+        self.assertRaises(gemato.manifest.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryAUX.from_list, ('AUX', 'foo'))
