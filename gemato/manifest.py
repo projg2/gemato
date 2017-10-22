@@ -33,6 +33,9 @@ class ManifestEntryTIMESTAMP(object):
                     '{} line: expected ISO8601 timestamp, got: {}'.format(l[0], l[1:]))
         return cls(ts)
 
+    def to_list(self):
+        return ('TIMESTAMP', self.ts.strftime('%Y-%m-%dT%H:%M:%SZ'))
+
 
 class ManifestPathEntry(object):
     """
@@ -63,6 +66,9 @@ class ManifestEntryIGNORE(ManifestPathEntry):
     def from_list(cls, l):
         return cls(cls.process_path(l))
 
+    def to_list(self):
+        return ('IGNORE', self.path)
+
 
 class ManifestEntryOPTIONAL(ManifestPathEntry):
     """
@@ -77,6 +83,9 @@ class ManifestEntryOPTIONAL(ManifestPathEntry):
     @classmethod
     def from_list(cls, l):
         return cls(cls.process_path(l))
+
+    def to_list(self):
+        return ('OPTIONAL', self.path)
 
 
 class ManifestFileEntry(ManifestPathEntry):
@@ -119,6 +128,12 @@ class ManifestFileEntry(ManifestPathEntry):
 
         return size, checksums
 
+    def to_list(self, tag):
+        ret = [tag, self.path, str(self.size)]
+        for k, v in sorted(self.checksums.items()):
+            ret += [k, v]
+        return ret
+
 
 class ManifestEntryMANIFEST(ManifestFileEntry):
     """
@@ -130,6 +145,9 @@ class ManifestEntryMANIFEST(ManifestFileEntry):
         path = cls.process_path(l[:2])
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
+
+    def to_list(self):
+        return super(ManifestEntryMANIFEST, self).to_list('MANIFEST')
 
 
 class ManifestEntryDATA(ManifestFileEntry):
@@ -143,6 +161,9 @@ class ManifestEntryDATA(ManifestFileEntry):
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
+    def to_list(self):
+        return super(ManifestEntryDATA, self).to_list('DATA')
+
 
 class ManifestEntryMISC(ManifestFileEntry):
     """
@@ -154,6 +175,9 @@ class ManifestEntryMISC(ManifestFileEntry):
         path = cls.process_path(l[:2])
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
+
+    def to_list(self):
+        return super(ManifestEntryMISC, self).to_list('MISC')
 
 
 class ManifestEntryDIST(ManifestFileEntry):
@@ -170,6 +194,9 @@ class ManifestEntryDIST(ManifestFileEntry):
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
+    def to_list(self):
+        return super(ManifestEntryDIST, self).to_list('DIST')
+
 
 class ManifestEntryEBUILD(ManifestFileEntry):
     """
@@ -181,6 +208,9 @@ class ManifestEntryEBUILD(ManifestFileEntry):
         path = cls.process_path(l[:2])
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
+
+    def to_list(self):
+        return super(ManifestEntryEBUILD, self).to_list('EBUILD')
 
 
 class ManifestEntryAUX(ManifestFileEntry):
@@ -198,6 +228,12 @@ class ManifestEntryAUX(ManifestFileEntry):
         path = cls.process_path(l[:2])
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
+
+    def to_list(self):
+        ret = super(ManifestEntryAUX, self).to_list('AUX')
+        assert ret[1].startswith('files/')
+        ret[1] = ret[1][6:]
+        return ret
 
 
 MANIFEST_TAG_MAPPING = {
@@ -224,6 +260,8 @@ class ManifestFile(object):
         Create a new instance. If @f is provided, reads the entries
         from open Manifest file @f (see load()).
         """
+        self.entries = []
+
         if f is not None:
             self.load(f)
 
@@ -239,7 +277,7 @@ class ManifestFile(object):
             if not sl:
                 continue
             tag = sl[0]
-            MANIFEST_TAG_MAPPING[tag].from_list(sl)
+            self.entries.append(MANIFEST_TAG_MAPPING[tag].from_list(sl))
 
 
     def dump(self, f):
@@ -247,4 +285,6 @@ class ManifestFile(object):
         Dump data into file @f. The file should be open for writing
         in text mode, and truncated to zero length.
         """
-        pass
+        
+        for e in self.entries:
+            f.write('{}\n'.format(' '.join(e.to_list())))

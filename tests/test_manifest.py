@@ -41,6 +41,20 @@ class ManifestTest(unittest.TestCase):
         m = gemato.manifest.ManifestFile()
         m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
 
+    def test_load_and_dump(self):
+        m = gemato.manifest.ManifestFile()
+        m.load(io.StringIO(TEST_MANIFEST))
+        outf = io.StringIO()
+        m.dump(outf)
+        self.assertEqual(outf.getvalue().strip(), TEST_MANIFEST.strip())
+
+    def test_load_and_dump_deprecated(self):
+        m = gemato.manifest.ManifestFile()
+        m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
+        outf = io.StringIO()
+        m.dump(outf)
+        self.assertEqual(outf.getvalue().strip(), TEST_DEPRECATED_MANIFEST.strip())
+
 
 class ManifestEntryTest(unittest.TestCase):
     """
@@ -58,6 +72,9 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertEqual(gemato.manifest.ManifestEntryTIMESTAMP.from_list(
                     ('TIMESTAMP', '2010-01-01T11:12:13Z')).ts,
                 datetime.datetime(2010, 1, 1, 11, 12, 13))
+        self.assertListEqual(list(gemato.manifest.ManifestEntryTIMESTAMP(
+                    datetime.datetime(2010, 1, 1, 11, 12, 13)).to_list()),
+                ['TIMESTAMP', '2010-01-01T11:12:13Z'])
 
     def test_MANIFEST(self):
         m = gemato.manifest.ManifestEntryMANIFEST.from_list(
@@ -65,11 +82,15 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertEqual(m.path, 'test')
         self.assertEqual(m.size, 0)
         self.assertDictEqual(m.checksums, self.exp_cksums)
+        self.assertListEqual(list(m.to_list()),
+                ['MANIFEST'] + list(self.file_vals))
 
     def test_IGNORE(self):
         self.assertEqual(gemato.manifest.ManifestEntryIGNORE.from_list(
                     ('IGNORE', 'test')).path,
                 'test')
+        self.assertListEqual(list(gemato.manifest.ManifestEntryIGNORE('test').to_list()),
+                ['IGNORE', 'test'])
 
     def test_DATA(self):
         m = gemato.manifest.ManifestEntryDATA.from_list(
@@ -77,6 +98,8 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertEqual(m.path, 'test')
         self.assertEqual(m.size, 0)
         self.assertDictEqual(m.checksums, self.exp_cksums)
+        self.assertListEqual(list(m.to_list()),
+                ['DATA'] + list(self.file_vals))
 
     def test_MISC(self):
         m = gemato.manifest.ManifestEntryMISC.from_list(
@@ -84,11 +107,15 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertEqual(m.path, 'test')
         self.assertEqual(m.size, 0)
         self.assertDictEqual(m.checksums, self.exp_cksums)
+        self.assertListEqual(list(m.to_list()),
+                ['MISC'] + list(self.file_vals))
 
     def test_OPTIONAL(self):
         self.assertEqual(gemato.manifest.ManifestEntryOPTIONAL.from_list(
                     ('OPTIONAL', 'test')).path,
                 'test')
+        self.assertListEqual(list(gemato.manifest.ManifestEntryOPTIONAL('test').to_list()),
+                ['OPTIONAL', 'test'])
 
     def test_DIST(self):
         m = gemato.manifest.ManifestEntryDIST.from_list(
@@ -96,6 +123,8 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertEqual(m.path, 'test')
         self.assertEqual(m.size, 0)
         self.assertDictEqual(m.checksums, self.exp_cksums)
+        self.assertListEqual(list(m.to_list()),
+                ['DIST'] + list(self.file_vals))
 
     def test_EBUILD(self):
         m = gemato.manifest.ManifestEntryEBUILD.from_list(
@@ -103,6 +132,8 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertEqual(m.path, 'test')
         self.assertEqual(m.size, 0)
         self.assertDictEqual(m.checksums, self.exp_cksums)
+        self.assertListEqual(list(m.to_list()),
+                ['EBUILD'] + list(self.file_vals))
 
     def test_AUX(self):
         m = gemato.manifest.ManifestEntryAUX.from_list(
@@ -111,6 +142,8 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertEqual(m.path, 'files/test')
         self.assertEqual(m.size, 0)
         self.assertDictEqual(m.checksums, self.exp_cksums)
+        self.assertListEqual(list(m.to_list()),
+                ['AUX'] + list(self.file_vals))
 
     def test_timestamp_invalid(self):
         self.assertRaises(gemato.manifest.ManifestSyntaxError,
