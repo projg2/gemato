@@ -287,4 +287,4 @@ class ManifestFile(object):
         """
         
         for e in self.entries:
-            f.write('{}\n'.format(' '.join(e.to_list())))
+            f.write(u' '.join(e.to_list()) + '\n')
