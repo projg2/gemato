@@ -314,6 +314,17 @@ class ManifestFile(object):
         for e in self.entries:
             f.write(u' '.join(e.to_list()) + '\n')
 
+    def find_timestamp(self):
+        """
+        Find a timestamp entry and return it. Returns None if there
+        is no timestamp.
+        """
+
+        for e in self.entries:
+            if isinstance(e, ManifestEntryTIMESTAMP):
+                return e
+        return None
+
     def find_path_entry(self, path):
         """
         Find a matching entry for path @path and return it. Returns
