@@ -23,14 +23,14 @@ class ManifestEntryTIMESTAMP(object):
 
     @classmethod
     def from_list(cls, l):
-        if len(l) != 1:
+        if len(l) != 2:
             raise ManifestSyntaxError(
-                    'TIMESTAMP line: expects 1 value, got: {}'.format(l))
+                    '{} line: expects 1 value, got: {}'.format(l[0], l[1:]))
         try:
-            ts = datetime.datetime.strptime(l[0], '%Y-%m-%dT%H:%M:%SZ')
+            ts = datetime.datetime.strptime(l[1], '%Y-%m-%dT%H:%M:%SZ')
         except ValueError:
             raise ManifestSyntaxError(
-                    'TIMESTAMP line: expected ISO8601 timestamp, got: {}'.format(l[0]))
+                    '{} line: expected ISO8601 timestamp, got: {}'.format(l[0], l[1:]))
         return cls(ts)
 
 
@@ -44,14 +44,14 @@ class ManifestPathEntry(object):
         self.path = path
 
     @staticmethod
-    def process_path(tag, l):
-        if len(l) != 1:
+    def process_path(l):
+        if len(l) != 2:
             raise ManifestSyntaxError(
-                    '{} line: expects 1 value, got: {}'.format(tag, l))
-        if not l[0] or l[0][0] == '/':
+                    '{} line: expects 1 value, got: {}'.format(l[0], l[1:]))
+        if not l[1] or l[1][0] == '/':
             raise ManifestSyntaxError(
-                    '{} line: expected relative path, got: {}'.format(tag, l[0]))
-        return l[0]
+                    '{} line: expected relative path, got: {}'.format(l[0], l[1:]))
+        return l[1]
 
 
 class ManifestEntryIGNORE(ManifestPathEntry):
@@ -61,7 +61,7 @@ class ManifestEntryIGNORE(ManifestPathEntry):
 
     @classmethod
     def from_list(cls, l):
-        return cls(cls.process_path('IGNORE', l))
+        return cls(cls.process_path(l))
 
 
 class ManifestEntryOPTIONAL(ManifestPathEntry):
@@ -76,7 +76,7 @@ class ManifestEntryOPTIONAL(ManifestPathEntry):
 
     @classmethod
     def from_list(cls, l):
-        return cls(cls.process_path('OPTIONAL', l))
+        return cls(cls.process_path(l))
 
 
 class ManifestFileEntry(ManifestPathEntry):
@@ -90,21 +90,21 @@ class ManifestFileEntry(ManifestPathEntry):
         self.checksums = checksums
 
     @staticmethod
-    def process_checksums(tag, l):
-        if len(l) < 2:
+    def process_checksums(l):
+        if len(l) < 3:
             raise ManifestSyntaxError(
-                    '{} line: expects at least 2 values, got: {}'.format(tag, l))
+                    '{} line: expects at least 2 values, got: {}'.format(l[0], l[1:]))
 
         try:
-            size = int(l[1])
+            size = int(l[2])
             if size < 0:
                 raise ValueError()
         except ValueError:
             raise ManifestSyntaxError(
-                    '{} line: size must be a non-negative integer, got: {}'.format(tag, l[1]))
+                    '{} line: size must be a non-negative integer, got: {}'.format(l[0], l[2]))
 
         checksums = {}
-        it = iter(l[2:])
+        it = iter(l[3:])
         while True:
             try:
                 ckname = next(it)
@@ -114,7 +114,7 @@ class ManifestFileEntry(ManifestPathEntry):
                 ckval = next(it)
             except StopIteration:
                 raise ManifestSyntaxError(
-                        '{} line: checksum {} has no value'.format(tag, ckname))
+                        '{} line: checksum {} has no value'.format(l[0], ckname))
             checksums[ckname] = ckval
 
         return size, checksums
@@ -127,8 +127,8 @@ class ManifestEntryMANIFEST(ManifestFileEntry):
 
     @classmethod
     def from_list(cls, l):
-        path = cls.process_path('MANIFEST', l[:1])
-        size, checksums = cls.process_checksums('MANIFEST', l)
+        path = cls.process_path(l[:2])
+        size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
 
@@ -139,8 +139,8 @@ class ManifestEntryDATA(ManifestFileEntry):
 
     @classmethod
     def from_list(cls, l):
-        path = cls.process_path('DATA', l[:1])
-        size, checksums = cls.process_checksums('DATA', l)
+        path = cls.process_path(l[:2])
+        size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
 
@@ -151,8 +151,8 @@ class ManifestEntryMISC(ManifestFileEntry):
 
     @classmethod
     def from_list(cls, l):
-        path = cls.process_path('MISC', l[:1])
-        size, checksums = cls.process_checksums('MISC', l)
+        path = cls.process_path(l[:2])
+        size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
 
@@ -163,11 +163,11 @@ class ManifestEntryDIST(ManifestFileEntry):
 
     @classmethod
     def from_list(cls, l):
-        path = cls.process_path('DIST', l[:1])
+        path = cls.process_path(l[:2])
         if '/' in path:
             raise ManifestSyntaxError(
                     'DIST line: file name expected, got directory path: {}'.format(path))
-        size, checksums = cls.process_checksums('DIST', l)
+        size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
 
@@ -178,8 +178,8 @@ class ManifestEntryEBUILD(ManifestFileEntry):
 
     @classmethod
     def from_list(cls, l):
-        path = cls.process_path('EBUILD', l[:1])
-        size, checksums = cls.process_checksums('EBUILD', l)
+        path = cls.process_path(l[:2])
+        size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
 
@@ -195,8 +195,8 @@ class ManifestEntryAUX(ManifestFileEntry):
 
     @classmethod
     def from_list(cls, l):
-        path = cls.process_path('AUX', l[:1])
-        size, checksums = cls.process_checksums('AUX', l)
+        path = cls.process_path(l[:2])
+        size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)
 
 
@@ -238,7 +238,7 @@ class ManifestFile(object):
             # skip empty lines
             if not sl:
                 continue
-            tag = sl.pop(0)
+            tag = sl[0]
             MANIFEST_TAG_MAPPING[tag].from_list(sl)
 
 
