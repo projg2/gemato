@@ -58,6 +58,26 @@ class ManifestTest(unittest.TestCase):
         m.dump(outf)
         self.assertEqual(outf.getvalue().strip(), TEST_DEPRECATED_MANIFEST.strip())
 
+    def test_find_path_entry(self):
+        m = gemato.manifest.ManifestFile()
+        m.load(io.StringIO(TEST_MANIFEST))
+        self.assertIsNone(m.find_path_entry('2017-10-22T18:06:41Z'))
+        self.assertEqual(m.find_path_entry('eclass/Manifest').path, 'eclass/Manifest')
+        self.assertIsNone(m.find_path_entry('eclass'))
+        self.assertEqual(m.find_path_entry('local').path, 'local')
+        self.assertEqual(m.find_path_entry('local/foo').path, 'local')
+        self.assertIsNone(m.find_path_entry('locale'))
+        self.assertEqual(m.find_path_entry('myebuild-0.ebuild').path, 'myebuild-0.ebuild')
+        self.assertEqual(m.find_path_entry('metadata.xml').path, 'metadata.xml')
+        self.assertEqual(m.find_path_entry('ChangeLog').path, 'ChangeLog')
+        self.assertIsNone(m.find_path_entry('mydistfile.tar.gz'))
+
+    def test_find_path_entry_AUX(self):
+        m = gemato.manifest.ManifestFile()
+        m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
+        self.assertIsNone(m.find_path_entry('test.patch'))
+        self.assertEqual(m.find_path_entry('files/test.patch').aux_path, 'test.patch')
+
 
 class ManifestEntryTest(unittest.TestCase):
     """

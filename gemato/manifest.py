@@ -305,7 +305,6 @@ class ManifestFile(object):
             tag = sl[0]
             self.entries.append(MANIFEST_TAG_MAPPING[tag].from_list(sl))
 
-
     def dump(self, f):
         """
         Dump data into file @f. The file should be open for writing
@@ -314,3 +313,23 @@ class ManifestFile(object):
         
         for e in self.entries:
             f.write(u' '.join(e.to_list()) + '\n')
+
+    def find_path_entry(self, path):
+        """
+        Find a matching entry for path @path and return it. Returns
+        None when no path matches. DIST entries are not included.
+        """
+
+        for e in self.entries:
+            if isinstance(e, ManifestEntryIGNORE):
+                # ignore matches recursively, so we process it separately
+                # py<3.5 does not have os.path.commonpath()
+                if (path + '/').startswith(e.path + '/'):
+                    return e
+            elif isinstance(e, ManifestEntryDIST):
+                # distfiles are not local files, so skip them
+                pass
+            elif isinstance(e, ManifestPathEntry):
+                if e.path == path:
+                    return e
+        return None
