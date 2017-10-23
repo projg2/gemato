@@ -30,11 +30,12 @@ def verify_path(path, e):
     - any checksum name according to the entry.
     """
 
-    assert isinstance(e, gemato.manifest.ManifestPathEntry)
+    if e is not None:
+        assert isinstance(e, gemato.manifest.ManifestPathEntry)
 
-    # IGNORE entries cause verification to always succeed
-    if isinstance(e, gemato.manifest.ManifestEntryIGNORE):
-        return (True, [])
+        # IGNORE entries cause verification to always succeed
+        if isinstance(e, gemato.manifest.ManifestEntryIGNORE):
+            return (True, [])
 
     try:
         # we want O_NONBLOCK to avoid blocking when opening pipes
@@ -54,7 +55,8 @@ def verify_path(path, e):
         opened = True
 
     # 1. verify whether the file existed in the first place
-    expect_exist = not isinstance(e, gemato.manifest.ManifestEntryOPTIONAL)
+    expect_exist = (e is not None
+            and not isinstance(e, gemato.manifest.ManifestEntryOPTIONAL))
     if exists != expect_exist:
         if opened:
             os.close(fd)

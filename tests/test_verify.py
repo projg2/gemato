@@ -39,6 +39,10 @@ class NonExistingFileVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(os.path.join(self.dir, e.path), e),
                 (True, []))
 
+    def testNone(self):
+        self.assertEqual(gemato.verify.verify_path(os.path.join(self.dir, 'test'), None),
+                (True, []))
+
 
 class DirectoryVerificationTest(unittest.TestCase):
     def setUp(self):
@@ -65,6 +69,10 @@ class DirectoryVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(self.dir, e),
                 (False, [('__exists__', False, True)]))
 
+    def testNone(self):
+        self.assertEqual(gemato.verify.verify_path(self.dir, None),
+                (False, [('__exists__', False, True)]))
+
 
 class CharacterDeviceVerificationTest(unittest.TestCase):
     def setUp(self):
@@ -86,6 +94,10 @@ class CharacterDeviceVerificationTest(unittest.TestCase):
         e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
                 ('OPTIONAL', os.path.basename(self.path)))
         self.assertEqual(gemato.verify.verify_path(self.path, e),
+                (False, [('__exists__', False, True)]))
+
+    def testNone(self):
+        self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
 
 
@@ -115,6 +127,10 @@ class NamedPipeVerificationTest(unittest.TestCase):
         e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
                 ('OPTIONAL', os.path.basename(self.path)))
         self.assertEqual(gemato.verify.verify_path(self.path, e),
+                (False, [('__exists__', False, True)]))
+
+    def testNone(self):
+        self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
 
 
@@ -147,6 +163,10 @@ class UNIXSocketVerificationTest(unittest.TestCase):
         e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
                 ('OPTIONAL', os.path.basename(self.path)))
         self.assertEqual(gemato.verify.verify_path(self.path, e),
+                (False, [('__exists__', False, True)]))
+
+    def testNone(self):
+        self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
 
 
@@ -217,6 +237,10 @@ class EmptyFileVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(self.path, e),
                 (False, [('__exists__', False, True)]))
 
+    def testNone(self):
+        self.assertEqual(gemato.verify.verify_path(self.path, None),
+                (False, [('__exists__', False, True)]))
+
 
 class NonEmptyFileVerificationTest(unittest.TestCase):
     def setUp(self):
@@ -284,6 +308,10 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
         e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
                 ('OPTIONAL', os.path.basename(self.path)))
         self.assertEqual(gemato.verify.verify_path(self.path, e),
+                (False, [('__exists__', False, True)]))
+
+    def testNone(self):
+        self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
 
 
@@ -370,6 +398,10 @@ class ProcFileVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(self.path, e),
                 (False, [('__exists__', False, True)]))
 
+    def testNone(self):
+        self.assertEqual(gemato.verify.verify_path(self.path, None),
+                (False, [('__exists__', False, True)]))
+
 
 class ExceptionVerificationTest(object):
     def setUp(self):
@@ -399,3 +431,7 @@ class ExceptionVerificationTest(object):
                 ('DATA', os.path.basename(self.path), '0'))
         self.assertRaises(gemato.verify.ManifestMismatch,
                 gemato.verify.assert_path_verifies, self.path, e)
+
+    def testNone(self):
+        self.assertRaises(gemato.verify.ManifestMismatch,
+                gemato.verify.gemato.verify.assert_path_verifies, self.path, None)
