@@ -369,3 +369,26 @@ class ManifestFile(object):
                 mdir = os.path.dirname(e.path)
                 if path.startswith(mdir + '/'):
                     yield e
+
+
+MANIFEST_HASH_MAPPING = {
+    'MD5': 'md5',
+    'SHA1': 'sha1',
+    'SHA256': 'sha256',
+    'SHA512': 'sha512',
+    'RMD160': 'ripemd160',
+    'WHIRLPOOL': 'whirlpool',
+    'BLAKE2B': 'blake2b',
+    'BLAKE2S': 'blake2s',
+    'SHA3_256': 'sha3_256',
+    'SHA3_512': 'sha3_512',
+}
+
+
+def manifest_hashes_to_hashlib(hashes):
+    """
+    Return the hashlib hash names corresponding to the Manifest names
+    in @hashes. Returns an iterable.
+    """
+    for h in hashes:
+        yield MANIFEST_HASH_MAPPING[h]

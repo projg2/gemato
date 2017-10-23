@@ -341,3 +341,16 @@ class ManifestEntryTest(unittest.TestCase):
                 gemato.manifest.ManifestEntryAUX.from_list, ('AUX',))
         self.assertRaises(gemato.manifest.ManifestSyntaxError,
                 gemato.manifest.ManifestEntryAUX.from_list, ('AUX', 'foo'))
+
+
+class ManifestUtilityTest(unittest.TestCase):
+    def test_manifest_hashes_to_hashlib(self):
+        self.assertListEqual(list(
+                gemato.manifest.manifest_hashes_to_hashlib(['MD5', 'SHA1'])),
+            ['md5', 'sha1'])
+        self.assertListEqual(list(
+                gemato.manifest.manifest_hashes_to_hashlib(['RMD160'])),
+            ['ripemd160'])
+        self.assertListEqual(list(
+                gemato.manifest.manifest_hashes_to_hashlib(['SHA3_256', 'SHA256'])),
+            ['sha3_256', 'sha256'])
