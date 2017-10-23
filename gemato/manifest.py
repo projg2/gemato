@@ -356,3 +356,16 @@ class ManifestFile(object):
                 if e.path == filename:
                     return e
         return None
+
+    def find_manifests_for_path(self, path):
+        """
+        Find all MANIFEST entries that could affect the path @path
+        and return an iterator over them. Yield an empty list when
+        there are no matching MANIFEST entries.
+        """
+
+        for e in self.entries:
+            if isinstance(e, ManifestEntryMANIFEST):
+                mdir = os.path.dirname(e.path)
+                if path.startswith(mdir + '/'):
+                    yield e
