@@ -43,6 +43,15 @@ class HashAPITest(unittest.TestCase):
                     'sha256': 'd7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592',
                 })
 
+    def test_hash_empty_file(self):
+        f = io.BytesIO(b'')
+        self.assertDictEqual(gemato.hash.hash_file(f, ('md5', 'sha1', 'sha256')),
+                {
+                    'md5': 'd41d8cd98f00b204e9800998ecf8427e',
+                    'sha1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                    'sha256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+                })
+
     def test_hash_path(self):
         with tempfile.NamedTemporaryFile() as f:
             f.write(TEST_STRING)
@@ -52,6 +61,15 @@ class HashAPITest(unittest.TestCase):
                         'md5': '9e107d9d372bb6826bd81d3542a419d6',
                         'sha1': '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12',
                         'sha256': 'd7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592',
+                    })
+
+    def test_hash_empty_path(self):
+        with tempfile.NamedTemporaryFile() as f:
+            self.assertDictEqual(gemato.hash.hash_path(f.name, ('md5', 'sha1', 'sha256')),
+                    {
+                        'md5': 'd41d8cd98f00b204e9800998ecf8427e',
+                        'sha1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                        'sha256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
                     })
 
 
