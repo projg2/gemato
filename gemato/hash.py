@@ -16,6 +16,21 @@ class UnsupportedHash(Exception):
 				'Unsupported hash name: {}'.format(hash_name))
 
 
+class SizeHash(object):
+	"""
+	A cheap wrapper to count file size via hashlib-like interface.
+	"""
+
+	def __init__(self):
+		self.size = 0
+
+	def update(self, data):
+		self.size += len(data)
+
+	def hexdigest(self):
+		return self.size
+
+
 def get_hash_by_name(name):
 	"""
 	Get a hashlib-compatible hash object for hash named @name. Supports
@@ -25,6 +40,9 @@ def get_hash_by_name(name):
 		return hashlib.new(name)
 	except ValueError:
 		pass
+
+	if name == '__size__':
+		return SizeHash()
 
 	# fallback support
 	if name.startswith('sha3_'):

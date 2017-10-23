@@ -245,3 +245,15 @@ class OptionalHashTest(unittest.TestCase):
                     '19fa61d75522a4669b44e39c1d2e1726c530232130d407f89afee0964997f7a73e83be698b288febcf88e3e03c4f0757ea8964e59b63d93708b138cc42a66eb3')
         except gemato.hash.UnsupportedHash:
             raise unittest.SkipTest('hash not supported')
+
+
+class SizeHashTest(unittest.TestCase):
+    """
+    Test __size__ special function.
+    """
+
+    def test_size(self):
+        self.assertEqual(gemato.hash.hash_bytes(TEST_STRING, '__size__'), 43)
+
+    def test_size_empty(self):
+        self.assertEqual(gemato.hash.hash_bytes(b'', '__size__'), 0)
