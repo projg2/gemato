@@ -3,6 +3,7 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import datetime
 import io
 import os
 import tempfile
@@ -15,12 +16,17 @@ class BasicNestingTest(unittest.TestCase):
     DIRS = ['sub', 'sub/deeper']
     FILES = {
         'Manifest': u'''
-MANIFEST sub/Manifest 65 MD5 6af76e314820a44aba2b4bd3e6280c20
+TIMESTAMP 2017-01-01T01:01:01Z
+MANIFEST sub/Manifest 128 MD5 30fd28b98a23031c72793908dd35c530
+DIST topdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
         'sub/Manifest': u'''
-MANIFEST deeper/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+MANIFEST deeper/Manifest 50 MD5 0f7cd9ed779a4844f98d28315dd9176a
+DIST subdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
-        'sub/deeper/Manifest': u'',
+        'sub/deeper/Manifest': u'''
+DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
     }
 
     def setUp(self):
@@ -62,16 +68,55 @@ MANIFEST deeper/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertIn('sub/Manifest', m.loaded_manifests)
         self.assertIn('sub/deeper/Manifest', m.loaded_manifests)
 
+    def test_find_timestamp(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.find_timestamp().ts,
+                datetime.datetime(2017, 1, 1, 1, 1, 1))
+
+    def test_find_path_entry(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertIsNone(m.find_path_entry('test'))
+        self.assertIsNone(m.find_path_entry('sub/test'))
+        self.assertEqual(m.find_path_entry('sub/deeper/test').path, 'test')
+
+    def test_find_top_dist_entry(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.find_dist_entry('topdistfile-1.txt').path, 'topdistfile-1.txt')
+        self.assertIsNone(m.find_dist_entry('subdistfile-1.txt'))
+
+    def test_find_sub_dist_entry(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.find_dist_entry('topdistfile-1.txt', 'sub').path, 'topdistfile-1.txt')
+        self.assertEqual(m.find_dist_entry('subdistfile-1.txt', 'sub').path, 'subdistfile-1.txt')
+
+    def test_find_sub_dist_entry_with_slash_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.find_dist_entry('topdistfile-1.txt', 'sub/').path, 'topdistfile-1.txt')
+        self.assertEqual(m.find_dist_entry('subdistfile-1.txt', 'sub/').path, 'subdistfile-1.txt')
+
+    def test_find_sub_dist_entry_with_file_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.find_dist_entry('topdistfile-1.txt', 'sub/file').path, 'topdistfile-1.txt')
+        self.assertEqual(m.find_dist_entry('subdistfile-1.txt', 'sub/file').path, 'subdistfile-1.txt')
+
 
 class MultipleManifestTest(unittest.TestCase):
     DIRS = ['sub']
     FILES = {
         'Manifest': u'''
 MANIFEST sub/Manifest.a 0 MD5 d41d8cd98f00b204e9800998ecf8427e
-MANIFEST sub/Manifest.b 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+MANIFEST sub/Manifest.b 32 MD5 95737355786df5760d6369a80935cf8a
 ''',
         'sub/Manifest.a': u'',
-        'sub/Manifest.b': u'',
+        'sub/Manifest.b': u'''
+TIMESTAMP 2017-01-01T01:01:01Z
+''',
     }
 
     def setUp(self):
@@ -98,15 +143,24 @@ MANIFEST sub/Manifest.b 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertIn('sub/Manifest.a', m.loaded_manifests)
         self.assertIn('sub/Manifest.b', m.loaded_manifests)
 
+    def test_find_timestamp(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        # here it is expected to fail since TIMESTAMP is supposed
+        # to be top-level
+        self.assertIsNone(m.find_timestamp())
+
 
 class MultipleTopLevelManifestTest(unittest.TestCase):
     FILES = {
         'Manifest': u'''
 MANIFEST Manifest.a 0 MD5 d41d8cd98f00b204e9800998ecf8427e
-MANIFEST Manifest.b 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+MANIFEST Manifest.b 32 MD5 95737355786df5760d6369a80935cf8a
 ''',
         'Manifest.a': u'',
-        'Manifest.b': u'',
+        'Manifest.b': u'''
+TIMESTAMP 2017-01-01T01:01:01Z
+''',
     }
 
     def setUp(self):
@@ -126,3 +180,9 @@ MANIFEST Manifest.b 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m.load_manifests_for_path('')
         self.assertIn('Manifest.a', m.loaded_manifests)
         self.assertIn('Manifest.b', m.loaded_manifests)
+
+    def test_find_timestamp(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.find_timestamp().ts,
+                datetime.datetime(2017, 1, 1, 1, 1, 1))

@@ -72,3 +72,56 @@ class ManifestRecursiveLoader(object):
                 break
             for mpath, e in to_load:
                 self.load_manifest(mpath, e)
+
+    def find_timestamp(self):
+        """
+        Find a timestamp entry and return it. Returns None if there
+        is no timestamp.
+        """
+
+        self.load_manifests_for_path('')
+        for p, m in self._iter_manifests_for_path(''):
+            for e in m.entries:
+                if isinstance(e, gemato.manifest.ManifestEntryTIMESTAMP):
+                    return e
+        return None
+
+    def find_path_entry(self, path):
+        """
+        Find a matching entry for path @path and return it. Returns
+        None when no path matches. DIST entries are not included.
+        """
+
+        self.load_manifests_for_path(path)
+        for relpath, m in self._iter_manifests_for_path(path):
+            for e in m.entries:
+                if isinstance(e, gemato.manifest.ManifestEntryIGNORE):
+                    # ignore matches recursively, so we process it separately
+                    # py<3.5 does not have os.path.commonpath()
+                    fullpath = os.path.join(relpath, e.path)
+                    if (path + '/').startswith(fullpath + '/'):
+                        return e
+                elif isinstance(e, gemato.manifest.ManifestEntryDIST):
+                    # distfiles are not local files, so skip them
+                    pass
+                elif isinstance(e, gemato.manifest.ManifestPathEntry):
+                    fullpath = os.path.join(relpath, e.path)
+                    if fullpath == path:
+                        return e
+        return None
+
+    def find_dist_entry(self, filename, relpath=''):
+        """
+        Find a matching entry for distfile @filename and return it.
+        If @relpath is provided, loads all Manifests up to @relpath
+        (which can be e.g. a relevant package directory).
+        Returns None when no DIST entry matches.
+        """
+
+        self.load_manifests_for_path(relpath+'/')
+        for p, m in self._iter_manifests_for_path(relpath+'/'):
+            for e in m.entries:
+                if isinstance(e, gemato.manifest.ManifestEntryDIST):
+                    if e.path == filename:
+                        return e
+        return None
