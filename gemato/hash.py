@@ -24,29 +24,31 @@ def get_hash_by_name(name):
 	try:
 		return hashlib.new(name)
 	except ValueError:
-		# fallback support
-		if name.startswith('sha3_'):
-			try:
-				import sha3
-			except ImportError:
-				pass
-			else:
-				try:
-					return getattr(sha3, name)()
-				except AttributeError:
-					pass
-		elif name.startswith('blake2'):
-			try:
-				import pyblake2
-			except ImportError:
-				pass
-			else:
-				try:
-					return getattr(pyblake2, name)()
-				except AttributeError:
-					pass
+		pass
 
-		raise UnsupportedHash(name)
+	# fallback support
+	if name.startswith('sha3_'):
+		try:
+			import sha3
+		except ImportError:
+			pass
+		else:
+			try:
+				return getattr(sha3, name)()
+			except AttributeError:
+				pass
+	elif name.startswith('blake2'):
+		try:
+			import pyblake2
+		except ImportError:
+			pass
+		else:
+			try:
+				return getattr(pyblake2, name)()
+			except AttributeError:
+				pass
+
+	raise UnsupportedHash(name)
 
 
 def hash_file(f, hash_names):
