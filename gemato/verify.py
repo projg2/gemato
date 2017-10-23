@@ -39,7 +39,7 @@ def verify_path(path, e):
     try:
         # we want O_NONBLOCK to avoid blocking when opening pipes
         fd = os.open(path, os.O_RDONLY|os.O_NONBLOCK)
-    except IOError as err:
+    except OSError as err:
         if err.errno == errno.ENOENT:
             exists = False
             opened = False
