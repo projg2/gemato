@@ -110,6 +110,26 @@ class ManifestRecursiveLoader(object):
                         return e
         return None
 
+    def verify_path(self, relpath):
+        """
+        Verify the path @relpath against appropriate Manifest entry.
+        If there is no matching entry, verification fails (as a stray
+        file). Returns result as verify_path().
+        """
+        real_path = os.path.join(self.root_directory, relpath)
+        path_entry = self.find_path_entry(relpath)
+        return gemato.verify.verify_path(real_path, path_entry)
+
+    def assert_path_verifies(self, relpath):
+        """
+        Verify the path @relpath against appropriate Manifest entry.
+        If there is no matching entry, verification fails (as a stray
+        file). Raises exception for failed verification.
+        """
+        real_path = os.path.join(self.root_directory, relpath)
+        path_entry = self.find_path_entry(relpath)
+        gemato.verify.assert_path_verifies(real_path, path_entry)
+
     def find_dist_entry(self, filename, relpath=''):
         """
         Find a matching entry for distfile @filename and return it.

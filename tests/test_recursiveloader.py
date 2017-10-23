@@ -17,16 +17,19 @@ class BasicNestingTest(unittest.TestCase):
     FILES = {
         'Manifest': u'''
 TIMESTAMP 2017-01-01T01:01:01Z
-MANIFEST sub/Manifest 128 MD5 30fd28b98a23031c72793908dd35c530
+MANIFEST sub/Manifest 146 MD5 81180715a77069664b4b695e53bb856d
 DIST topdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
         'sub/Manifest': u'''
 MANIFEST deeper/Manifest 50 MD5 0f7cd9ed779a4844f98d28315dd9176a
+OPTIONAL nonstray
 DIST subdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
+        'sub/stray': u'',
         'sub/deeper/Manifest': u'''
 DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
+        'sub/deeper/test': u'',
     }
 
     def setUp(self):
@@ -104,6 +107,48 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         self.assertEqual(m.find_dist_entry('topdistfile-1.txt', 'sub/file').path, 'topdistfile-1.txt')
         self.assertEqual(m.find_dist_entry('subdistfile-1.txt', 'sub/file').path, 'subdistfile-1.txt')
+
+    def test_verify_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.verify_path('sub/deeper/test'), (True, []))
+
+    def test_verify_optional_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.verify_path('sub/nonstray'), (True, []))
+
+    def test_verify_nonexistent_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.verify_path('sub/deeper/nonexist'), (True, []))
+
+    def test_verify_stray_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.verify_path('sub/stray'),
+                (False, [('__exists__', False, True)]))
+
+    def test_assert_path_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_path_verifies('sub/deeper/test')
+
+    def test_verify_optional_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_path_verifies('sub/nonstray')
+
+    def test_verify_nonexistent_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_path_verifies('sub/deeper/nonexist')
+
+    def test_verify_stray_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.verify.ManifestMismatch,
+                m.assert_path_verifies, 'sub/stray')
 
 
 class MultipleManifestTest(unittest.TestCase):
