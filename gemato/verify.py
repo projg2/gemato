@@ -121,3 +121,29 @@ def verify_path(path, e):
             return (False, diff)
 
     return (True, [])
+
+
+class ManifestMismatch(Exception):
+    """
+    An exception raised for verification failure.
+    """
+
+    def __init__(self, path, entry, diff):
+        msg = "Manifest mismatch for {}".format(path)
+        for k, exp, got in diff:
+            msg += "\n  {}: expected: {}, have: {}".format(k, exp, got)
+        super(ManifestMismatch, self).__init__(msg)
+        self.path = path
+        self.entry = entry
+        self.diff = diff
+
+
+def assert_path_verifies(path, e):
+    """
+    Verify the path @path against entry @e. Raises an exception if it
+    does not pass the verification.
+    """
+
+    ret, diff = verify_path(path, e)
+    if not ret:
+        raise ManifestMismatch(path, e, diff)
