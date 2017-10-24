@@ -42,24 +42,29 @@ class ManifestRecursiveLoader(object):
             m.load(f)
         self.loaded_manifests[relpath] = m
 
-    def _iter_manifests_for_path(self, path):
+    def _iter_manifests_for_path(self, path, recursive=False):
         """
         Iterate over loaded Manifests that can apply to path.
-        Yields a tuple of (relative_path, manifest).
+        If @recursive is True, returns also Manifests for subdirectories
+        of @path. Yields a tuple of (relative_path, manifest).
         """
         for k, v in self.loaded_manifests.items():
             d = os.path.dirname(k)
             if gemato.util.path_starts_with(path, d):
                 yield (d, v)
+            elif recursive and gemato.util.path_starts_with(d, path):
+                yield (d, v)
 
-    def load_manifests_for_path(self, path):
+    def load_manifests_for_path(self, path, recursive=False):
         """
         Load all Manifests that may apply to the specified path,
-        recursively.
+        recursively. If @recursive is True, also loads Manifests
+        for all subdirectories of @path.
         """
+        # TODO: figure out how to avoid confusing uses of 'recursive'
         while True:
             to_load = []
-            for relpath, m in self._iter_manifests_for_path(path):
+            for relpath, m in self._iter_manifests_for_path(path, recursive):
                 for e in m.entries:
                     if not isinstance(e, gemato.manifest.ManifestEntryMANIFEST):
                         continue
@@ -68,6 +73,8 @@ class ManifestRecursiveLoader(object):
                         continue
                     mdir = os.path.dirname(mpath)
                     if gemato.util.path_starts_with(path, mdir):
+                        to_load.append((mpath, e))
+                    elif recursive and gemato.util.path_starts_with(mdir, path):
                         to_load.append((mpath, e))
             if not to_load:
                 break

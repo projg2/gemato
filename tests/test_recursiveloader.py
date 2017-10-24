@@ -13,11 +13,12 @@ import gemato.recursiveloader
 
 
 class BasicNestingTest(unittest.TestCase):
-    DIRS = ['sub', 'sub/deeper']
+    DIRS = ['sub', 'sub/deeper', 'other']
     FILES = {
         'Manifest': u'''
 TIMESTAMP 2017-01-01T01:01:01Z
 MANIFEST sub/Manifest 146 MD5 81180715a77069664b4b695e53bb856d
+MANIFEST other/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 DIST topdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
         'sub/Manifest': u'''
@@ -30,6 +31,7 @@ DIST subdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
         'sub/deeper/test': u'',
+        'other/Manifest': u'',
     }
 
     def setUp(self):
@@ -61,6 +63,7 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertNotIn('sub/deeper/Manifest', m.loaded_manifests)
         m.load_manifests_for_path('sub/deeper/test')
         self.assertIn('sub/deeper/Manifest', m.loaded_manifests)
+        self.assertNotIn('other/Manifest', m.loaded_manifests)
 
     def test_recursive_load_manifest(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -70,6 +73,28 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m.load_manifests_for_path('sub/deeper/test')
         self.assertIn('sub/Manifest', m.loaded_manifests)
         self.assertIn('sub/deeper/Manifest', m.loaded_manifests)
+        self.assertNotIn('other/Manifest', m.loaded_manifests)
+
+    def test_load_manifests_recursively(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertNotIn('sub/Manifest', m.loaded_manifests)
+        self.assertNotIn('sub/deeper/Manifest', m.loaded_manifests)
+        self.assertNotIn('other/Manifest', m.loaded_manifests)
+        m.load_manifests_for_path('', recursive=True)
+        self.assertIn('sub/Manifest', m.loaded_manifests)
+        self.assertIn('sub/deeper/Manifest', m.loaded_manifests)
+        self.assertIn('other/Manifest', m.loaded_manifests)
+
+    def test_load_sub_manifest_recursively(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertNotIn('sub/Manifest', m.loaded_manifests)
+        self.assertNotIn('sub/deeper/Manifest', m.loaded_manifests)
+        m.load_manifests_for_path('sub', recursive=True)
+        self.assertIn('sub/Manifest', m.loaded_manifests)
+        self.assertIn('sub/deeper/Manifest', m.loaded_manifests)
+        self.assertNotIn('other/Manifest', m.loaded_manifests)
 
     def test_find_timestamp(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -185,6 +210,15 @@ TIMESTAMP 2017-01-01T01:01:01Z
         self.assertNotIn('sub/Manifest.a', m.loaded_manifests)
         self.assertNotIn('sub/Manifest.b', m.loaded_manifests)
         m.load_manifests_for_path('sub/test')
+        self.assertIn('sub/Manifest.a', m.loaded_manifests)
+        self.assertIn('sub/Manifest.b', m.loaded_manifests)
+
+    def test_load_manifests_recursively(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertNotIn('sub/Manifest.a', m.loaded_manifests)
+        self.assertNotIn('sub/Manifest.b', m.loaded_manifests)
+        m.load_manifests_for_path('', recursive=True)
         self.assertIn('sub/Manifest.a', m.loaded_manifests)
         self.assertIn('sub/Manifest.b', m.loaded_manifests)
 
