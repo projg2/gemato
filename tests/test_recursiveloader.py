@@ -845,3 +845,23 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestMismatch,
                 m.assert_directory_verifies)
+
+
+class UnreadableDirectoryTest(TempDirTestCase):
+    """
+    Test a tree where a directory can not be read.
+    """
+
+    DIRS = ['test']
+    FILES = {
+        'Manifest': u''
+    }
+
+    def setUp(self):
+        super(UnreadableDirectoryTest, self).setUp()
+        os.chmod(os.path.join(self.dir, 'test'), 0)
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(OSError, m.assert_directory_verifies)
