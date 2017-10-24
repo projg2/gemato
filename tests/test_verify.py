@@ -455,7 +455,7 @@ class UnreadableFileVerificationTest(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp()
         self.path = os.path.join(self.dir, 'test')
-        with open(self.path, 'w') as f:
+        with open(self.path, 'w'):
             pass
         os.chmod(self.path, 0)
 
