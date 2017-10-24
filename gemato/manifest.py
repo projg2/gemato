@@ -6,6 +6,8 @@
 import datetime
 import os.path
 
+import gemato.util
+
 
 class ManifestSyntaxError(Exception):
     def __init__(self, message):
@@ -257,7 +259,7 @@ class ManifestEntryAUX(ManifestFileEntry):
 
     def to_list(self):
         ret = super(ManifestEntryAUX, self).to_list(self.tag)
-        assert ret[1].startswith('files/')
+        assert gemato.util.path_inside_dir(ret[1], 'files')
         ret[1] = ret[1][6:]
         return ret
 
@@ -335,7 +337,7 @@ class ManifestFile(object):
             if isinstance(e, ManifestEntryIGNORE):
                 # ignore matches recursively, so we process it separately
                 # py<3.5 does not have os.path.commonpath()
-                if (path + '/').startswith(e.path + '/'):
+                if gemato.util.path_starts_with(path, e.path):
                     return e
             elif isinstance(e, ManifestEntryDIST):
                 # distfiles are not local files, so skip them
@@ -367,7 +369,7 @@ class ManifestFile(object):
         for e in self.entries:
             if isinstance(e, ManifestEntryMANIFEST):
                 mdir = os.path.dirname(e.path)
-                if path.startswith(mdir + '/'):
+                if gemato.util.path_inside_dir(path, mdir):
                     yield e
 
 

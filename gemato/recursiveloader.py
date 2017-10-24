@@ -8,6 +8,7 @@ import os.path
 import weakref
 
 import gemato.manifest
+import gemato.util
 import gemato.verify
 
 
@@ -48,7 +49,7 @@ class ManifestRecursiveLoader(object):
         """
         for k, v in self.loaded_manifests.items():
             d = os.path.dirname(k)
-            if not d or (path + '/').startswith(d + '/'):
+            if gemato.util.path_starts_with(path, d):
                 yield (d, v)
 
     def load_manifests_for_path(self, path):
@@ -66,7 +67,7 @@ class ManifestRecursiveLoader(object):
                     if mpath in self.loaded_manifests:
                         continue
                     mdir = os.path.dirname(mpath)
-                    if not mdir or path.startswith(mdir + '/'):
+                    if gemato.util.path_starts_with(path, mdir):
                         to_load.append((mpath, e))
             if not to_load:
                 break
@@ -99,7 +100,7 @@ class ManifestRecursiveLoader(object):
                     # ignore matches recursively, so we process it separately
                     # py<3.5 does not have os.path.commonpath()
                     fullpath = os.path.join(relpath, e.path)
-                    if (path + '/').startswith(fullpath + '/'):
+                    if gemato.util.path_starts_with(path, fullpath):
                         return e
                 elif isinstance(e, gemato.manifest.ManifestEntryDIST):
                     # distfiles are not local files, so skip them
