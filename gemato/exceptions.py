@@ -38,3 +38,15 @@ class ManifestMismatch(Exception):
         self.path = path
         self.entry = entry
         self.diff = diff
+
+
+class ManifestCrossDevice(Exception):
+    """
+    An exception caused by attempting to cross filesystem boundaries.
+    """
+
+    def __init__(self, path):
+        self.path = path
+        super(ManifestCrossDevice, self).__init__(
+            "Path {} crosses filesystem boundaries, it must be IGNORE-d explicitly"
+            .format(path))

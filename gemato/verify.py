@@ -13,7 +13,7 @@ import gemato.hash
 import gemato.manifest
 
 
-def verify_path(path, e):
+def verify_path(path, e, expected_dev=None):
     """
     Verify the file at system path @path against the data in entry @e.
     The path/filename is not matched against the entry -- the correct
@@ -23,6 +23,11 @@ def verify_path(path, e):
     returns (False, diff) where diff is a list of differences between
     the file at path and the Manifest entry. Each list element is
     a tuple of (name, expected, got).
+
+    If @expected_dev is not None, verifies that the file resides
+    on specified device. If the device does not match, raises
+    ManifestCrossDevice exception. It can be used to verify that
+    the files do not cross filesystem boundaries.
 
     Each name can be:
     - __exists__ (boolean) to indicate whether the file existed,
@@ -70,6 +75,10 @@ def verify_path(path, e):
         st = os.fstat(fd)
     else:
         st = os.stat(path)
+    if expected_dev is not None and st.st_dev != expected_dev:
+        if opened:
+            os.close(fd)
+        raise gemato.exceptions.ManifestCrossDevice(path)
     if not opened or not stat.S_ISREG(st.st_mode):
         if opened:
             os.close(fd)
@@ -169,12 +178,12 @@ def verify_entry_compatibility(e1, e2):
     return (ret, diff)
 
 
-def assert_path_verifies(path, e):
+def assert_path_verifies(path, e, expected_dev=None):
     """
     Verify the path @path against entry @e. Raises an exception if it
     does not pass the verification.
     """
 
-    ret, diff = verify_path(path, e)
+    ret, diff = verify_path(path, e, expected_dev=expected_dev)
     if not ret:
         raise gemato.exceptions.ManifestMismatch(path, e, diff)

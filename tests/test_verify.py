@@ -241,6 +241,30 @@ class EmptyFileVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
 
+    def testCrossFilesystem(self):
+        try:
+            st = os.stat('/proc')
+        except OSError:
+            raise unittest.SkipTest('Unable to stat /proc')
+
+        e = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', os.path.basename(self.path), '0'))
+        self.assertRaises(gemato.exceptions.ManifestCrossDevice,
+                gemato.verify.verify_path, self.path, e,
+                expected_dev=st.st_dev)
+
+    def testCrossFilesystemAssert(self):
+        try:
+            st = os.stat('/proc')
+        except OSError:
+            raise unittest.SkipTest('Unable to stat /proc')
+
+        e = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', os.path.basename(self.path), '0'))
+        self.assertRaises(gemato.exceptions.ManifestCrossDevice,
+                gemato.verify.assert_path_verifies, self.path, e,
+                expected_dev=st.st_dev)
+
 
 class NonEmptyFileVerificationTest(unittest.TestCase):
     def setUp(self):
