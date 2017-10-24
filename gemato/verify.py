@@ -137,7 +137,6 @@ def verify_entry_compatibility(e1, e2):
     hashes that are present only in one of the entries.
     """
 
-    assert e1.path == e2.path
     assert isinstance(e1, gemato.manifest.ManifestPathEntry)
     assert isinstance(e2, gemato.manifest.ManifestPathEntry)
 

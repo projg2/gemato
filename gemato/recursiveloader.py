@@ -12,6 +12,17 @@ import gemato.util
 import gemato.verify
 
 
+class ManifestIncompatibleEntry(Exception):
+    def __init__(self, e1, e2, diff):
+        msg = "Incompatible Manifest entries for {}".format(e1.path)
+        for k, d1, d2 in diff:
+            msg += "\n  {}: e1: {}, e2: {}".format(k, e1, e2)
+        super(ManifestIncompatibleEntry, self).__init__(msg)
+        self.e1 = e1
+        self.e2 = e2
+        self.diff = diff
+
+
 class ManifestRecursiveLoader(object):
     """
     A class encapsulating a tree covered by multiple Manifests.
@@ -171,6 +182,18 @@ class ManifestRecursiveLoader(object):
                 elif isinstance(e, gemato.manifest.ManifestPathEntry):
                     fullpath = os.path.join(relpath, e.path)
                     if gemato.util.path_starts_with(fullpath, path):
-                        # TODO: implement conflict detection
+                        if fullpath in out:
+                            # compare the two entries
+                            ret, diff = gemato.verify.verify_entry_compatibility(
+                                    out[fullpath], e)
+                            if not ret:
+                                raise ManifestIncompatibleEntry(out[fullpath], e, diff)
+                            # we need to construct a single entry with both checksums
+                            if diff:
+                                new_checksums = dict(e.checksums)
+                                for k, d1, d2 in diff:
+                                    if d2 is None:
+                                        new_checksums[k] = d1
+                                e = type(e)(e.path, e.size, new_checksums)
                         out[fullpath] = e
         return out
