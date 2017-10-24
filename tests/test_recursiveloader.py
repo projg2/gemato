@@ -12,7 +12,27 @@ import unittest
 import gemato.recursiveloader
 
 
-class BasicNestingTest(unittest.TestCase):
+class TempDirTestCase(unittest.TestCase):
+    DIRS = []
+    FILES = {}
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        for k in self.DIRS:
+            os.mkdir(os.path.join(self.dir, k))
+        for k, v in self.FILES.items():
+            with io.open(os.path.join(self.dir, k), 'w', encoding='utf8') as f:
+                f.write(v)
+
+    def tearDown(self):
+        for k in self.FILES:
+            os.unlink(os.path.join(self.dir, k))
+        for k in reversed(self.DIRS):
+            os.rmdir(os.path.join(self.dir, k))
+        os.rmdir(self.dir)
+
+
+class BasicNestingTest(TempDirTestCase):
     DIRS = ['sub', 'sub/deeper', 'other']
     FILES = {
         'Manifest': u'''
@@ -33,21 +53,6 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         'sub/deeper/test': u'',
         'other/Manifest': u'',
     }
-
-    def setUp(self):
-        self.dir = tempfile.mkdtemp()
-        for k in self.DIRS:
-            os.mkdir(os.path.join(self.dir, k))
-        for k, v in self.FILES.items():
-            with io.open(os.path.join(self.dir, k), 'w', encoding='utf8') as f:
-                f.write(v)
-
-    def tearDown(self):
-        for k in self.FILES:
-            os.unlink(os.path.join(self.dir, k))
-        for k in reversed(self.DIRS):
-            os.rmdir(os.path.join(self.dir, k))
-        os.rmdir(self.dir)
 
     def test_init(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -215,7 +220,7 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertDictEqual(m.get_file_entry_dict('nonexist'), {})
 
 
-class MultipleManifestTest(unittest.TestCase):
+class MultipleManifestTest(TempDirTestCase):
     DIRS = ['sub']
     FILES = {
         'Manifest': u'''
@@ -227,21 +232,6 @@ MANIFEST sub/Manifest.b 32 MD5 95737355786df5760d6369a80935cf8a
 TIMESTAMP 2017-01-01T01:01:01Z
 ''',
     }
-
-    def setUp(self):
-        self.dir = tempfile.mkdtemp()
-        for k in self.DIRS:
-            os.mkdir(os.path.join(self.dir, k))
-        for k, v in self.FILES.items():
-            with io.open(os.path.join(self.dir, k), 'w', encoding='utf8') as f:
-                f.write(v)
-
-    def tearDown(self):
-        for k in self.FILES:
-            os.unlink(os.path.join(self.dir, k))
-        for k in reversed(self.DIRS):
-            os.rmdir(os.path.join(self.dir, k))
-        os.rmdir(self.dir)
 
     def test_load_sub_manifest(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -269,7 +259,7 @@ TIMESTAMP 2017-01-01T01:01:01Z
         self.assertIsNone(m.find_timestamp())
 
 
-class MultipleTopLevelManifestTest(unittest.TestCase):
+class MultipleTopLevelManifestTest(TempDirTestCase):
     FILES = {
         'Manifest': u'''
 MANIFEST Manifest.a 0 MD5 d41d8cd98f00b204e9800998ecf8427e
@@ -280,17 +270,6 @@ MANIFEST Manifest.b 32 MD5 95737355786df5760d6369a80935cf8a
 TIMESTAMP 2017-01-01T01:01:01Z
 ''',
     }
-
-    def setUp(self):
-        self.dir = tempfile.mkdtemp()
-        for k, v in self.FILES.items():
-            with io.open(os.path.join(self.dir, k), 'w', encoding='utf8') as f:
-                f.write(v)
-
-    def tearDown(self):
-        for k in self.FILES:
-            os.unlink(os.path.join(self.dir, k))
-        os.rmdir(self.dir)
 
     def test_load_extra_manifests(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
