@@ -153,3 +153,24 @@ class ManifestRecursiveLoader(object):
                     if e.path == filename:
                         return e
         return None
+
+    def get_file_entry_dict(self, path=''):
+        """
+        Find all file entries that apply to paths starting with @path.
+        Return a dictionary mapping relative paths to entries. Raises
+        an exception if multiple entries for file collide.
+        """
+
+        self.load_manifests_for_path(path, recursive=True)
+        out = {}
+        for relpath, m in self._iter_manifests_for_path(path, recursive=True):
+            for e in m.entries:
+                if isinstance(e, gemato.manifest.ManifestEntryDIST):
+                    # distfiles are not local files, so skip them
+                    pass
+                elif isinstance(e, gemato.manifest.ManifestPathEntry):
+                    fullpath = os.path.join(relpath, e.path)
+                    if gemato.util.path_starts_with(fullpath, path):
+                        # TODO: implement conflict detection
+                        out[fullpath] = e
+        return out

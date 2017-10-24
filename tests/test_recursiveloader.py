@@ -175,6 +175,45 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertRaises(gemato.verify.ManifestMismatch,
                 m.assert_path_verifies, 'sub/stray')
 
+    def test_get_file_entry_dict(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_file_entry_dict('')
+        self.assertSetEqual(frozenset(entries),
+            frozenset((
+                'other/Manifest',
+                'sub/Manifest',
+                'sub/nonstray',
+                'sub/deeper/Manifest',
+                'sub/deeper/test',
+            )))
+        self.assertEqual(entries['other/Manifest'].path, 'other/Manifest')
+        self.assertEqual(entries['sub/Manifest'].path, 'sub/Manifest')
+        self.assertEqual(entries['sub/nonstray'].path, 'nonstray')
+        self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
+        self.assertEqual(entries['sub/deeper/test'].path, 'test')
+
+    def test_get_file_entry_dict_for_sub(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_file_entry_dict('sub')
+        self.assertSetEqual(frozenset(entries),
+            frozenset((
+                'sub/Manifest',
+                'sub/nonstray',
+                'sub/deeper/Manifest',
+                'sub/deeper/test',
+            )))
+        self.assertEqual(entries['sub/Manifest'].path, 'sub/Manifest')
+        self.assertEqual(entries['sub/nonstray'].path, 'nonstray')
+        self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
+        self.assertEqual(entries['sub/deeper/test'].path, 'test')
+
+    def test_get_file_entry_dict_for_invalid(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertDictEqual(m.get_file_entry_dict('nonexist'), {})
+
 
 class MultipleManifestTest(unittest.TestCase):
     DIRS = ['sub']
