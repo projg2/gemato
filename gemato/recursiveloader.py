@@ -205,12 +205,26 @@ class ManifestRecursiveLoader(object):
                         out[fullpath] = e
         return out
 
-    def assert_directory_verifies(self, path=''):
+    def _verify_one_file(self, path, e, strict):
+        try:
+            gemato.verify.assert_path_verifies(path, e)
+        except gemato.verify.ManifestMismatch:
+            if strict:
+                raise
+            # skip MISC/OPTIONAL in non-strict mode
+            # TODO: provide a way to deliver warnings?
+            if (not isinstance(e, gemato.manifest.ManifestEntryOPTIONAL)
+                    and not isinstance(e, gemato.manifest.ManifestEntryMISC)):
+                raise
+
+    def assert_directory_verifies(self, path='', strict=True):
         """
         Verify the complete directory tree starting at @path (relative
         to top Manifest directory). Includes testing for stray files.
         Raises an exception if any of the files does not pass
         verification.
+
+        If @strict is False, MISC/OPTIONAL mismatches will be ignored.
         """
 
         entry_dict = self.get_file_entry_dict(path)
@@ -239,8 +253,7 @@ class ManifestRecursiveLoader(object):
                 if isinstance(de, gemato.manifest.ManifestEntryIGNORE):
                     skip_dirs.append(d)
                 else:
-                    gemato.verify.assert_path_verifies(
-                            os.path.join(dirpath, d), de)
+                    self._verify_one_file(os.path.join(dirpath, d), de, strict)
 
             # skip scanning ignored directories
             for d in skip_dirs:
@@ -257,10 +270,9 @@ class ManifestRecursiveLoader(object):
                 if fpath == 'Manifest':
                     continue
                 fe = entry_dict.pop(fpath, None)
-                gemato.verify.assert_path_verifies(
-                        os.path.join(dirpath, f), fe)
+                self._verify_one_file(os.path.join(dirpath, f), fe, strict)
 
         # check for missing files
         for relpath, e in entry_dict.items():
             syspath = os.path.join(self.root_directory, relpath)
-            gemato.verify.assert_path_verifies(syspath, e)
+            self._verify_one_file(syspath, e, strict)

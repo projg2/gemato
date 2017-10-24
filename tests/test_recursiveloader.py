@@ -658,3 +658,50 @@ IGNORE bar
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.assert_directory_verifies('')
+
+
+class ManifestMiscEntryTest(TempDirTestCase):
+    """
+    Test for a Manifest file with MISC.
+    """
+
+    FILES = {
+        'Manifest': u'''
+MISC foo 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+    }
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.verify.ManifestMismatch,
+                m.assert_directory_verifies, '')
+
+    def test_assert_directory_verifies_nonstrict(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('', strict=False)
+
+
+class ManifestOptionalEntryTest(TempDirTestCase):
+    """
+    Test for a Manifest file with OPTIONAL.
+    """
+
+    FILES = {
+        'Manifest': u'''
+OPTIONAL foo
+''',
+        'foo': u'test',
+    }
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.verify.ManifestMismatch,
+                m.assert_directory_verifies, '')
+
+    def test_assert_directory_verifies_nonstrict(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('', strict=False)
