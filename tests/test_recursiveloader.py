@@ -738,3 +738,60 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.assert_directory_verifies, '', strict=False)
+
+
+class CrossDeviceEmptyManifestTest(TempDirTestCase):
+    """
+    Test for a Manifest that crosses filesystem boundaries without
+    explicit entries.
+    """
+
+    FILES = {
+        'Manifest': u'',
+    }
+
+    def setUp(self):
+        super(CrossDeviceEmptyManifestTest, self).setUp()
+        os.symlink('/proc', os.path.join(self.dir, 'sub'))
+
+    def tearDown(self):
+        os.unlink(os.path.join(self.dir, 'sub'))
+        super(CrossDeviceEmptyManifestTest, self).tearDown()
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestCrossDevice,
+                m.assert_directory_verifies, '')
+
+    def test_assert_directory_verifies_nonstrict(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestCrossDevice,
+                m.assert_directory_verifies, '', strict=False)
+
+
+class CrossDeviceIgnoreManifestTest(TempDirTestCase):
+    """
+    Test for a Manifest that crosses filesystem boundaries without
+    explicit entries.
+    """
+
+    FILES = {
+        'Manifest': u'''
+IGNORE sub
+''',
+    }
+
+    def setUp(self):
+        super(CrossDeviceIgnoreManifestTest, self).setUp()
+        os.symlink('/proc', os.path.join(self.dir, 'sub'))
+
+    def tearDown(self):
+        os.unlink(os.path.join(self.dir, 'sub'))
+        super(CrossDeviceIgnoreManifestTest, self).tearDown()
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('')
