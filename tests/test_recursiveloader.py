@@ -219,6 +219,17 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         self.assertDictEqual(m.get_file_entry_dict('nonexist'), {})
 
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('other')
+
+    def test_assert_directory_verifies_stray_file(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.verify.ManifestMismatch,
+                m.assert_directory_verifies, 'sub')
+
 
 class MultipleManifestTest(TempDirTestCase):
     DIRS = ['sub']
@@ -295,6 +306,7 @@ class DuplicateFileEntryTest(TempDirTestCase):
 DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
+        'test': u'',
     }
 
     def test_find_path_entry(self):
@@ -308,6 +320,11 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         entries = m.get_file_entry_dict('')
         self.assertSetEqual(frozenset(entries), frozenset(('test',)))
         self.assertEqual(entries['test'].path, 'test')
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('')
 
 
 class DuplicateManifestFileEntryTest(TempDirTestCase):
@@ -397,6 +414,7 @@ class DuplicateCompatibleTypeFileEntryTest(TempDirTestCase):
 DATA test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 EBUILD test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
+        'test.ebuild': u'',
     }
 
     def test_find_path_entry(self):
@@ -411,6 +429,11 @@ EBUILD test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertSetEqual(frozenset(entries), frozenset(('test.ebuild',)))
         self.assertEqual(entries['test.ebuild'].path, 'test.ebuild')
 
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('')
+
 
 class DuplicateAUXTypeFileEntryTest(TempDirTestCase):
     """
@@ -418,11 +441,13 @@ class DuplicateAUXTypeFileEntryTest(TempDirTestCase):
     type (because of path weirdness).
     """
 
+    DIRS = ['files']
     FILES = {
         'Manifest': u'''
 DATA files/test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 AUX test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
+        'files/test.patch': u'',
     }
 
     def test_find_path_entry(self):
@@ -437,6 +462,11 @@ AUX test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertSetEqual(frozenset(entries), frozenset(('files/test.patch',)))
         self.assertEqual(entries['files/test.patch'].path, 'files/test.patch')
 
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('')
+
 
 class DuplicateDifferentHashSetFileEntryTest(TempDirTestCase):
     """
@@ -449,6 +479,7 @@ class DuplicateDifferentHashSetFileEntryTest(TempDirTestCase):
 DATA test 0 MD5 9e107d9d372bb6826bd81d3542a419d6
 DATA test 0 SHA1 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
 ''',
+        'test': u'',
     }
 
     def test_find_path_entry(self):
@@ -464,6 +495,17 @@ DATA test 0 SHA1 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
         self.assertEqual(entries['test'].path, 'test')
         self.assertSetEqual(frozenset(entries['test'].checksums),
             frozenset(('MD5', 'SHA1')))
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        with self.assertRaises(gemato.verify.ManifestMismatch) as cm:
+            m.assert_directory_verifies('')
+        self.assertListEqual(cm.exception.diff,
+            [
+                ('MD5', '9e107d9d372bb6826bd81d3542a419d6', 'd41d8cd98f00b204e9800998ecf8427e'),
+                ('SHA1', '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12', 'da39a3ee5e6b4b0d3255bfef95601890afd80709'),
+            ])
 
 
 class DuplicateIncompatibleDataMiscTypeFileEntryTest(TempDirTestCase):
@@ -589,3 +631,30 @@ DATA test.ebuild 0 MD5 9e107d9d372bb6826bd81d3542a419d6
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.recursiveloader.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.recursiveloader.ManifestIncompatibleEntry,
+            m.assert_directory_verifies, '')
+
+
+class ManifestIgnoreEntryTest(TempDirTestCase):
+    """
+    Test for a Manifest file with IGNOREs.
+    """
+
+    DIRS = ['bar']
+    FILES = {
+        'Manifest': u'''
+IGNORE foo
+IGNORE bar
+''',
+        'foo': u'test',
+        'bar/baz': u'test',
+    }
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('')

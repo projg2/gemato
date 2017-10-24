@@ -22,6 +22,14 @@ class ManifestIncompatibleEntry(Exception):
         self.diff = diff
 
 
+def throw_exception(e):
+    """
+    Raise the given exception. Needed for onerror= argument
+    to os.walk().
+    """
+    raise e
+
+
 class ManifestRecursiveLoader(object):
     """
     A class encapsulating a tree covered by multiple Manifests.
@@ -196,3 +204,63 @@ class ManifestRecursiveLoader(object):
                                 e = type(e)(e.path, e.size, new_checksums)
                         out[fullpath] = e
         return out
+
+    def assert_directory_verifies(self, path=''):
+        """
+        Verify the complete directory tree starting at @path (relative
+        to top Manifest directory). Includes testing for stray files.
+        Raises an exception if any of the files does not pass
+        verification.
+        """
+
+        entry_dict = self.get_file_entry_dict(path)
+        it = os.walk(os.path.join(self.root_directory, path),
+                onerror=throw_exception,
+                followlinks=True)
+
+        for dirpath, dirnames, filenames in it:
+            relpath = os.path.relpath(dirpath, self.root_directory)
+            # strip dot to avoid matching problems
+            if relpath == '.':
+                relpath = ''
+
+            skip_dirs = []
+            for d in dirnames:
+                # skip dotfiles
+                if d.startswith('.'):
+                    skip_dirs.append(d)
+                    continue
+
+                dpath = os.path.join(relpath, d)
+                de = entry_dict.pop(dpath, None)
+                if de is None:
+                    continue
+
+                if isinstance(de, gemato.manifest.ManifestEntryIGNORE):
+                    skip_dirs.append(d)
+                else:
+                    gemato.verify.assert_path_verifies(
+                            os.path.join(dirpath, d), de)
+
+            # skip scanning ignored directories
+            for d in skip_dirs:
+                dirnames.remove(d)
+
+            for f in filenames:
+                # skip dotfiles
+                if f.startswith('.'):
+                    continue
+
+                fpath = os.path.join(relpath, f)
+                # skip top-level Manifest, we obviously can't have
+                # an entry for it
+                if fpath == 'Manifest':
+                    continue
+                fe = entry_dict.pop(fpath, None)
+                gemato.verify.assert_path_verifies(
+                        os.path.join(dirpath, f), fe)
+
+        # check for missing files
+        for relpath, e in entry_dict.items():
+            syspath = os.path.join(self.root_directory, relpath)
+            gemato.verify.assert_path_verifies(syspath, e)
