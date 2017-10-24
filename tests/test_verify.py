@@ -315,6 +315,55 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
                 (False, [('__exists__', False, True)]))
 
 
+class SymbolicLinkVerificationTest(NonEmptyFileVerificationTest):
+    """
+    A variant of regular file test using symlink.
+    """
+
+    def setUp(self):
+        TEST_STRING = b'The quick brown fox jumps over the lazy dog'
+        self.dir = tempfile.mkdtemp()
+        self.real_path = os.path.join(self.dir, 'real')
+        self.path = os.path.join(self.dir, 'symlink')
+        with open(self.real_path, 'wb') as f:
+            f.write(TEST_STRING)
+        os.symlink('real', self.path)
+
+    def tearDown(self):
+        os.unlink(self.path)
+        os.unlink(self.real_path)
+        os.rmdir(self.dir)
+
+
+class SymbolicLinkDirectoryVerificationTest(DirectoryVerificationTest):
+    """
+    A variant of directory test using symlink.
+    """
+
+    def setUp(self):
+        self.top_dir = tempfile.mkdtemp()
+        self.real_dir = os.path.join(self.top_dir, 'real')
+        self.dir = os.path.join(self.top_dir, 'symlink')
+        os.mkdir(self.real_dir)
+        os.symlink('real', self.dir)
+
+    def tearDown(self):
+        os.unlink(self.dir)
+        os.rmdir(self.real_dir)
+        os.rmdir(self.top_dir)
+
+
+class BrokenSymbolicLinkVerificationTest(NonExistingFileVerificationTest):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.path = os.path.join(self.dir, 'test')
+        os.symlink('broken', self.path)
+
+    def tearDown(self):
+        os.unlink(self.path)
+        os.rmdir(self.dir)
+
+
 class ProcFileVerificationTest(unittest.TestCase):
     """
     Attempt to verify a file from /proc to verify that we can handle
@@ -401,6 +450,25 @@ class ProcFileVerificationTest(unittest.TestCase):
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
+
+
+class UnreadableFileVerificationTest(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.path = os.path.join(self.dir, 'test')
+        with open(self.path, 'w') as f:
+            pass
+        os.chmod(self.path, 0)
+
+    def tearDown(self):
+        os.unlink(self.path)
+        os.rmdir(self.dir)
+
+    def testDATA(self):
+        e = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0'))
+        self.assertRaises(OSError, gemato.verify.verify_path,
+                os.path.join(self.dir, e.path), e)
 
 
 class ExceptionVerificationTest(object):
