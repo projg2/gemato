@@ -125,6 +125,50 @@ def verify_path(path, e):
     return (True, [])
 
 
+def verify_entry_compatibility(e1, e2):
+    """
+    Verify that the two entries @e1 and @e2 are compatible.
+
+    If the entries are compatible, returns (True, diff). Otherwise,
+    returns (False, diff). Here diff is a list of differences between
+    @e1 and @e2. Each list element is a tuple of (name, e1, e2).
+
+    In case of successful comparison, the diff may contain additional
+    hashes that are present only in one of the entries.
+    """
+
+    assert e1.path == e2.path
+    assert isinstance(e1, gemato.manifest.ManifestPathEntry)
+    assert isinstance(e2, gemato.manifest.ManifestPathEntry)
+
+    # 1. compare types
+    t1 = e1.tag
+    t2 = e2.tag
+    if t1 != t2:
+        # all those tags have compatible semantics
+        COMPATIBLE_TAGS = ('MANIFEST', 'DATA', 'EBUILD', 'AUX')
+        if t1 not in COMPATIBLE_TAGS or t2 not in COMPATIBLE_TAGS:
+            return (False, [('__type__', t1, t2)])
+
+    # 2. compare sizes
+    if e1.size != e2.size:
+        return (False, [('__size__', e1.size, e2.size)])
+
+    # 3. compare checksums
+    hashes = frozenset(e1.checksums) | frozenset(e2.checksums)
+    ret = True
+    diff = []
+    for h in sorted(hashes):
+        h1 = e1.checksums.get(h)
+        h2 = e2.checksums.get(h)
+        if h1 != h2:
+            diff.append((h, h1, h2))
+            if h1 is not None and h2 is not None:
+                ret = False
+
+    return (ret, diff)
+
+
 class ManifestMismatch(Exception):
     """
     An exception raised for verification failure.

@@ -435,3 +435,102 @@ class ExceptionVerificationTest(object):
     def testNone(self):
         self.assertRaises(gemato.verify.ManifestMismatch,
                 gemato.verify.gemato.verify.assert_path_verifies, self.path, None)
+
+
+class EntryCompatibilityVerificationTest(unittest.TestCase):
+    def test_matching_entry(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (True, []))
+
+    def test_compatible_types(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryEBUILD.from_list(
+                ('EBUILD', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (True, []))
+
+    def test_compatible_types_AUX(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'files/test.patch', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryAUX.from_list(
+                ('AUX', 'test.patch', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (True, []))
+
+    def test_compatible_types_MANIFEST(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryMANIFEST.from_list(
+                ('MANIFEST', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (True, []))
+
+    def test_incompatible_types_DATA_MISC(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryMISC.from_list(
+                ('MISC', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (False, [('__type__', 'DATA', 'MISC')]))
+
+    def test_incompatible_types_DATA_OPTIONAL(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryOPTIONAL.from_list(
+                ('OPTIONAL', 'test'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (False, [('__type__', 'DATA', 'OPTIONAL')]))
+
+    def test_incompatible_types_MISC_OPTIONAL(self):
+        e1 = gemato.manifest.ManifestEntryMISC.from_list(
+                ('MISC', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryOPTIONAL.from_list(
+                ('OPTIONAL', 'test'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (False, [('__type__', 'MISC', 'OPTIONAL')]))
+
+    def test_incompatible_types_DATA_IGNORE(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryIGNORE.from_list(
+                ('IGNORE', 'test'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (False, [('__type__', 'DATA', 'IGNORE')]))
+
+    def test_incompatible_types_DATA_DIST(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryDIST.from_list(
+                ('DIST', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (False, [('__type__', 'DATA', 'DIST')]))
+
+    def test_mismatched_size(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '32', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (False, [('__size__', 0, 32)]))
+
+    def test_mismatched_md5(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', '9e107d9d372bb6826bd81d3542a419d6'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (False, [('MD5', 'd41d8cd98f00b204e9800998ecf8427e', '9e107d9d372bb6826bd81d3542a419d6')]))
+
+    def test_different_hashsets(self):
+        e1 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
+        e2 = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', 'test', '0', 'SHA1', 'da39a3ee5e6b4b0d3255bfef95601890afd80709'))
+        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
+                (True, [('MD5', 'd41d8cd98f00b204e9800998ecf8427e', None),
+                        ('SHA1', None, 'da39a3ee5e6b4b0d3255bfef95601890afd80709')]))
