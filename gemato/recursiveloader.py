@@ -48,6 +48,8 @@ class ManifestRecursiveLoader(object):
             gemato.verify.assert_path_verifies(path, verify_entry)
         with io.open(path, 'r', encoding='utf8') as f:
             m.load(f)
+            st = os.fstat(f.fileno())
+            self.manifest_device = st.st_dev
         self.loaded_manifests[relpath] = m
 
     def _iter_manifests_for_path(self, path, recursive=False):
@@ -197,7 +199,8 @@ class ManifestRecursiveLoader(object):
 
     def _verify_one_file(self, path, e, strict):
         try:
-            gemato.verify.assert_path_verifies(path, e)
+            gemato.verify.assert_path_verifies(path, e,
+                    expected_dev=self.manifest_device)
         except gemato.exceptions.ManifestMismatch:
             if strict:
                 raise
@@ -238,6 +241,10 @@ class ManifestRecursiveLoader(object):
                 dpath = os.path.join(relpath, d)
                 de = entry_dict.pop(dpath, None)
                 if de is None:
+                    syspath = os.path.join(dirpath, d)
+                    st = os.stat(syspath)
+                    if st.st_dev != self.manifest_device:
+                        raise gemato.exceptions.ManifestCrossDevice(syspath)
                     continue
 
                 if isinstance(de, gemato.manifest.ManifestEntryIGNORE):
