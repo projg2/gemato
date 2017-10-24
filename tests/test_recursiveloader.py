@@ -164,17 +164,17 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         m.assert_path_verifies('sub/deeper/test')
 
-    def test_verify_optional_path(self):
+    def test_assert_path_verifies_optional_path(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.assert_path_verifies('sub/nonstray')
 
-    def test_verify_nonexistent_path(self):
+    def test_assert_path_verifies_nonexistent_path(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.assert_path_verifies('sub/deeper/nonexist')
 
-    def test_verify_stray_path(self):
+    def test_assert_path_verifies_stray_path(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.verify.ManifestMismatch,
@@ -438,7 +438,7 @@ AUX test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertEqual(entries['files/test.patch'].path, 'files/test.patch')
 
 
-class DuplicateFileEntryTest(TempDirTestCase):
+class DuplicateDifferentHashSetFileEntryTest(TempDirTestCase):
     """
     Test for specifying the entry for the same file twice,
     with different hash sets (and both of them mismatched).
