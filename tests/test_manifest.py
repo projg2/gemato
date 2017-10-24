@@ -65,6 +65,11 @@ class ManifestTest(unittest.TestCase):
         self.assertEqual(m.find_timestamp().ts,
                 datetime.datetime(2017, 10, 22, 18, 6, 41))
 
+    def test_find_timestamp_none(self):
+        m = gemato.manifest.ManifestFile()
+        m.load(io.StringIO(u''))
+        self.assertIsNone(m.find_timestamp())
+
     def test_find_path_entry(self):
         m = gemato.manifest.ManifestFile()
         m.load(io.StringIO(TEST_MANIFEST))
