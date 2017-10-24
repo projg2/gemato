@@ -11,14 +11,10 @@ except ImportError:
 	import Queue as queue
 import threading
 
+import gemato.exceptions
+
 
 HASH_BUFFER_SIZE = 65536
-
-
-class UnsupportedHash(Exception):
-	def __init__(self, hash_name):
-		super(UnsupportedHash, self).__init__(
-				'Unsupported hash name: {}'.format(hash_name))
 
 
 class SizeHash(object):
@@ -71,7 +67,7 @@ def get_hash_by_name(name):
 			except AttributeError:
 				pass
 
-	raise UnsupportedHash(name)
+	raise gemato.exceptions.UnsupportedHash(name)
 
 
 def hash_one(hn, h, q, ret, retlock):

@@ -8,6 +8,7 @@ import fcntl
 import os
 import stat
 
+import gemato.exceptions
 import gemato.hash
 import gemato.manifest
 
@@ -168,21 +169,6 @@ def verify_entry_compatibility(e1, e2):
     return (ret, diff)
 
 
-class ManifestMismatch(Exception):
-    """
-    An exception raised for verification failure.
-    """
-
-    def __init__(self, path, entry, diff):
-        msg = "Manifest mismatch for {}".format(path)
-        for k, exp, got in diff:
-            msg += "\n  {}: expected: {}, have: {}".format(k, exp, got)
-        super(ManifestMismatch, self).__init__(msg)
-        self.path = path
-        self.entry = entry
-        self.diff = diff
-
-
 def assert_path_verifies(path, e):
     """
     Verify the path @path against entry @e. Raises an exception if it
@@ -191,4 +177,4 @@ def assert_path_verifies(path, e):
 
     ret, diff = verify_path(path, e)
     if not ret:
-        raise ManifestMismatch(path, e, diff)
+        raise gemato.exceptions.ManifestMismatch(path, e, diff)

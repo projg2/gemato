@@ -6,12 +6,8 @@
 import datetime
 import os.path
 
+import gemato.exceptions
 import gemato.util
-
-
-class ManifestSyntaxError(Exception):
-    def __init__(self, message):
-        super(ManifestSyntaxError, self).__init__(message)
 
 
 class ManifestEntryTIMESTAMP(object):
@@ -29,12 +25,12 @@ class ManifestEntryTIMESTAMP(object):
     def from_list(cls, l):
         assert l[0] == cls.tag
         if len(l) != 2:
-            raise ManifestSyntaxError(
+            raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: expects 1 value, got: {}'.format(l[0], l[1:]))
         try:
             ts = datetime.datetime.strptime(l[1], '%Y-%m-%dT%H:%M:%SZ')
         except ValueError:
-            raise ManifestSyntaxError(
+            raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: expected ISO8601 timestamp, got: {}'.format(l[0], l[1:]))
         return cls(ts)
 
@@ -54,10 +50,10 @@ class ManifestPathEntry(object):
     @staticmethod
     def process_path(l):
         if len(l) != 2:
-            raise ManifestSyntaxError(
+            raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: expects 1 value, got: {}'.format(l[0], l[1:]))
         if not l[1] or l[1][0] == '/':
-            raise ManifestSyntaxError(
+            raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: expected relative path, got: {}'.format(l[0], l[1:]))
         return l[1]
 
@@ -112,7 +108,7 @@ class ManifestFileEntry(ManifestPathEntry):
     @staticmethod
     def process_checksums(l):
         if len(l) < 3:
-            raise ManifestSyntaxError(
+            raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: expects at least 2 values, got: {}'.format(l[0], l[1:]))
 
         try:
@@ -120,7 +116,7 @@ class ManifestFileEntry(ManifestPathEntry):
             if size < 0:
                 raise ValueError()
         except ValueError:
-            raise ManifestSyntaxError(
+            raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: size must be a non-negative integer, got: {}'.format(l[0], l[2]))
 
         checksums = {}
@@ -133,7 +129,7 @@ class ManifestFileEntry(ManifestPathEntry):
             try:
                 ckval = next(it)
             except StopIteration:
-                raise ManifestSyntaxError(
+                raise gemato.exceptions.ManifestSyntaxError(
                         '{} line: checksum {} has no value'.format(l[0], ckname))
             checksums[ckname] = ckval
 
@@ -211,7 +207,7 @@ class ManifestEntryDIST(ManifestFileEntry):
     def from_list(cls, l):
         path = cls.process_path(l[:2])
         if '/' in path:
-            raise ManifestSyntaxError(
+            raise gemato.exceptions.ManifestSyntaxError(
                     'DIST line: file name expected, got directory path: {}'.format(path))
         size, checksums = cls.process_checksums(l)
         return cls(path, size, checksums)

@@ -9,6 +9,7 @@ import socket
 import tempfile
 import unittest
 
+import gemato.exceptions
 import gemato.manifest
 import gemato.verify
 
@@ -496,11 +497,11 @@ class ExceptionVerificationTest(object):
     def testWrongSizeDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
                 ('DATA', os.path.basename(self.path), '0'))
-        self.assertRaises(gemato.verify.ManifestMismatch,
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
                 gemato.verify.assert_path_verifies, self.path, e)
 
     def testNone(self):
-        self.assertRaises(gemato.verify.ManifestMismatch,
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
                 gemato.verify.gemato.verify.assert_path_verifies, self.path, None)
 
 

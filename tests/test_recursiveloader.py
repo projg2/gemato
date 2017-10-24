@@ -9,6 +9,7 @@ import os
 import tempfile
 import unittest
 
+import gemato.exceptions
 import gemato.recursiveloader
 
 
@@ -177,7 +178,7 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
     def test_assert_path_verifies_stray_path(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.verify.ManifestMismatch,
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
                 m.assert_path_verifies, 'sub/stray')
 
     def test_get_file_entry_dict(self):
@@ -227,7 +228,7 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
     def test_assert_directory_verifies_stray_file(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.verify.ManifestMismatch,
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
                 m.assert_directory_verifies, 'sub')
 
 
@@ -499,7 +500,7 @@ DATA test 0 SHA1 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        with self.assertRaises(gemato.verify.ManifestMismatch) as cm:
+        with self.assertRaises(gemato.exceptions.ManifestMismatch) as cm:
             m.assert_directory_verifies('')
         self.assertListEqual(cm.exception.diff,
             [
@@ -529,7 +530,7 @@ MISC test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
     def test_get_file_entry_dict(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.recursiveloader.ManifestIncompatibleEntry,
+        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
 
 
@@ -554,7 +555,7 @@ OPTIONAL test.ebuild
     def test_get_file_entry_dict(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.recursiveloader.ManifestIncompatibleEntry,
+        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
 
 
@@ -579,7 +580,7 @@ OPTIONAL test.ebuild
     def test_get_file_entry_dict(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.recursiveloader.ManifestIncompatibleEntry,
+        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
 
 
@@ -604,7 +605,7 @@ DATA test.ebuild 32 MD5 d41d8cd98f00b204e9800998ecf8427e
     def test_get_file_entry_dict(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.recursiveloader.ManifestIncompatibleEntry,
+        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
 
 
@@ -629,13 +630,13 @@ DATA test.ebuild 0 MD5 9e107d9d372bb6826bd81d3542a419d6
     def test_get_file_entry_dict(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.recursiveloader.ManifestIncompatibleEntry,
+        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.recursiveloader.ManifestIncompatibleEntry,
+        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
             m.assert_directory_verifies, '')
 
 
@@ -674,7 +675,7 @@ MISC foo 0 MD5 d41d8cd98f00b204e9800998ecf8427e
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.verify.ManifestMismatch,
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
                 m.assert_directory_verifies, '')
 
     def test_assert_directory_verifies_nonstrict(self):
@@ -698,7 +699,7 @@ OPTIONAL foo
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.verify.ManifestMismatch,
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
                 m.assert_directory_verifies, '')
 
     def test_assert_directory_verifies_nonstrict(self):

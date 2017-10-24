@@ -6,20 +6,10 @@
 import io
 import os.path
 
+import gemato.exceptions
 import gemato.manifest
 import gemato.util
 import gemato.verify
-
-
-class ManifestIncompatibleEntry(Exception):
-    def __init__(self, e1, e2, diff):
-        msg = "Incompatible Manifest entries for {}".format(e1.path)
-        for k, d1, d2 in diff:
-            msg += "\n  {}: e1: {}, e2: {}".format(k, e1, e2)
-        super(ManifestIncompatibleEntry, self).__init__(msg)
-        self.e1 = e1
-        self.e2 = e2
-        self.diff = diff
 
 
 def throw_exception(e):
@@ -194,7 +184,7 @@ class ManifestRecursiveLoader(object):
                             ret, diff = gemato.verify.verify_entry_compatibility(
                                     out[fullpath], e)
                             if not ret:
-                                raise ManifestIncompatibleEntry(out[fullpath], e, diff)
+                                raise gemato.exceptions.ManifestIncompatibleEntry(out[fullpath], e, diff)
                             # we need to construct a single entry with both checksums
                             if diff:
                                 new_checksums = dict(e.checksums)
@@ -208,7 +198,7 @@ class ManifestRecursiveLoader(object):
     def _verify_one_file(self, path, e, strict):
         try:
             gemato.verify.assert_path_verifies(path, e)
-        except gemato.verify.ManifestMismatch:
+        except gemato.exceptions.ManifestMismatch:
             if strict:
                 raise
             # skip MISC/OPTIONAL in non-strict mode
