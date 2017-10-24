@@ -231,6 +231,12 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertRaises(gemato.exceptions.ManifestMismatch,
                 m.assert_directory_verifies, 'sub')
 
+    def test_assert_directory_verifies_stray_file_nonstrict(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
+                m.assert_directory_verifies, 'sub', strict=False)
+
 
 class MultipleManifestTest(TempDirTestCase):
     DIRS = ['sub']
@@ -655,6 +661,13 @@ IGNORE bar
         'bar/baz': u'test',
     }
 
+    def test_find_path_entry(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.find_path_entry('foo').path, 'foo')
+        self.assertEqual(m.find_path_entry('bar').path, 'bar')
+        self.assertEqual(m.find_path_entry('bar/baz').path, 'bar')
+
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -795,3 +808,40 @@ IGNORE sub
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.assert_directory_verifies('')
+
+
+class DotfileManifestTest(TempDirTestCase):
+    """
+    Test for implicitly ignoring dotfiles.
+    """
+
+    DIRS = ['.bar']
+    FILES = {
+        'Manifest': u'',
+        '.foo': u'',
+        '.bar/baz': u'',
+    }
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies()
+
+
+class DirectoryInPlaceOfFileManifestTest(TempDirTestCase):
+    """
+    Test a tree where an expected file was replaced by a directory.
+    """
+
+    DIRS = ['test']
+    FILES = {
+        'Manifest': u'''
+DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+'''
+    }
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
+                m.assert_directory_verifies)
