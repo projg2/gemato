@@ -3,7 +3,6 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
-import multiprocessing
 import os
 import os.path
 import socket

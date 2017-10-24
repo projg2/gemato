@@ -5,7 +5,6 @@
 
 import io
 import os.path
-import weakref
 
 import gemato.manifest
 import gemato.util
