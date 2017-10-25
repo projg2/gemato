@@ -50,10 +50,11 @@ class OpenPGPEnvironment(object):
     def __exit__(self, exc_type, exc_value, exc_cb):
         if self._home is not None:
             self.close()
-            self._home = None
 
     def close(self):
-        shutil.rmtree(self._home)
+        if self._home is not None:
+            shutil.rmtree(self._home)
+            self._home = None
 
     def import_key(self, keyfile):
         """
@@ -77,7 +78,7 @@ class OpenPGPEnvironment(object):
     def home(self):
         if self._home is None:
             raise RuntimeError(
-                    'OpenPGPEnvironment must be used via context manager')
+                    'OpenPGPEnvironment has been closed')
         return self._home
 
 

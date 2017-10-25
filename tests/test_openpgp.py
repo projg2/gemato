@@ -222,3 +222,15 @@ class OpenPGPContextManagerTest(unittest.TestCase):
                     env.verify_file(f)
                 except gemato.exceptions.OpenPGPNoImplementation as e:
                     raise unittest.SkipTest(str(e))
+
+    def test_double_close(self):
+        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+            with gemato.openpgp.OpenPGPEnvironment() as env:
+                env.close()
+
+    def test_home_after_close(self):
+        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+            with gemato.openpgp.OpenPGPEnvironment() as env:
+                env.close()
+                with self.assertRaises(RuntimeError):
+                    env.home
