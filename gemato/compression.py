@@ -27,7 +27,7 @@ except ImportError:
 import gemato.exceptions
 
 
-def open_compressed_file(suffix, f):
+def open_compressed_file(suffix, f, mode='r'):
     """
     Get a file-like object for an open compressed file @fileobj
     of format @suffix. The file should be open in binary mode
@@ -37,10 +37,10 @@ def open_compressed_file(suffix, f):
     """
 
     if suffix == "gz":
-        return gzip.GzipFile(fileobj=f)
+        return gzip.GzipFile(fileobj=f, mode=mode)
     elif suffix == "bz2" and bz2 is not None:
-        return bz2.BZ2File(f)
+        return bz2.BZ2File(f, mode=mode)
     elif suffix in ("lzma", "xz") and lzma is not None:
-        return lzma.LZMAFile(f)
+        return lzma.LZMAFile(f, mode=mode)
 
     raise gemato.exceptions.UnsupportedCompression(suffix)

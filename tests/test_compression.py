@@ -30,17 +30,27 @@ L0stUijJSFXISayqVEjJTwcAlGd4GBcAAAA=
 
     def test_gzip(self):
         with io.BytesIO(base64.b64decode(self.BASE64)) as f:
-            with gemato.compression.open_compressed_file('gz', f) as gz:
+            with gemato.compression.open_compressed_file('gz', f, "rb") as gz:
                 self.assertEqual(gz.read(), TEST_STRING)
 
     def test_gzip_empty(self):
         with io.BytesIO(base64.b64decode(self.EMPTY_BASE64)) as f:
-            with gemato.compression.open_compressed_file('gz', f) as gz:
+            with gemato.compression.open_compressed_file('gz', f, "rb") as gz:
                 self.assertEqual(gz.read(), b'')
 
     def test_gzip_split(self):
         with io.BytesIO(base64.b64decode(self.SPLIT_BASE64)) as f:
-            with gemato.compression.open_compressed_file('gz', f) as gz:
+            with gemato.compression.open_compressed_file('gz', f, "rb") as gz:
+                self.assertEqual(gz.read(), TEST_STRING)
+
+    def test_gzip_write(self):
+        with io.BytesIO() as f:
+            with gemato.compression.open_compressed_file('gz', f, 'wb') as gz:
+                gz.write(TEST_STRING)
+
+            f.seek(0)
+
+            with gemato.compression.open_compressed_file('gz', f, 'rb') as gz:
                 self.assertEqual(gz.read(), TEST_STRING)
 
 
@@ -63,7 +73,7 @@ OxleaA==
     def test_bzip2(self):
         with io.BytesIO(base64.b64decode(self.BASE64)) as f:
             try:
-                with gemato.compression.open_compressed_file('bz2', f) as bz2:
+                with gemato.compression.open_compressed_file('bz2', f, "rb") as bz2:
                     self.assertEqual(bz2.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('bz2 compression unsupported')
@@ -71,7 +81,7 @@ OxleaA==
     def test_bzip2_empty(self):
         with io.BytesIO(base64.b64decode(self.EMPTY_BASE64)) as f:
             try:
-                with gemato.compression.open_compressed_file('bz2', f) as bz2:
+                with gemato.compression.open_compressed_file('bz2', f, "rb") as bz2:
                     self.assertEqual(bz2.read(), b'')
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('bz2 compression unsupported')
@@ -79,7 +89,20 @@ OxleaA==
     def test_bzip2_split(self):
         with io.BytesIO(base64.b64decode(self.SPLIT_BASE64)) as f:
             try:
-                with gemato.compression.open_compressed_file('bz2', f) as bz2:
+                with gemato.compression.open_compressed_file('bz2', f, "rb") as bz2:
+                    self.assertEqual(bz2.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('bz2 compression unsupported')
+
+    def test_bzip2_write(self):
+        with io.BytesIO() as f:
+            try:
+                with gemato.compression.open_compressed_file('bz2', f, 'wb') as bz2:
+                    bz2.write(TEST_STRING)
+
+                f.seek(0)
+
+                with gemato.compression.open_compressed_file('bz2', f, 'rb') as bz2:
                     self.assertEqual(bz2.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('bz2 compression unsupported')
@@ -103,7 +126,7 @@ ADUdSd6zBOkOpekGFH46zix9wE9VT65OVeV479//7uUAAA==
     def test_lzma_legacy(self):
         with io.BytesIO(base64.b64decode(self.BASE64)) as f:
             try:
-                with gemato.compression.open_compressed_file('lzma', f) as lzma:
+                with gemato.compression.open_compressed_file('lzma', f, "rb") as lzma:
                     self.assertEqual(lzma.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('lzma compression unsupported')
@@ -111,7 +134,7 @@ ADUdSd6zBOkOpekGFH46zix9wE9VT65OVeV479//7uUAAA==
     def test_lzma_legacy_empty(self):
         with io.BytesIO(base64.b64decode(self.EMPTY_BASE64)) as f:
             try:
-                with gemato.compression.open_compressed_file('lzma', f) as lzma:
+                with gemato.compression.open_compressed_file('lzma', f, "rb") as lzma:
                     self.assertEqual(lzma.read(), b'')
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('lzma compression unsupported')
@@ -119,7 +142,20 @@ ADUdSd6zBOkOpekGFH46zix9wE9VT65OVeV479//7uUAAA==
     def test_lzma_legacy_split(self):
         with io.BytesIO(base64.b64decode(self.SPLIT_BASE64)) as f:
             try:
-                with gemato.compression.open_compressed_file('lzma', f) as lzma:
+                with gemato.compression.open_compressed_file('lzma', f, "rb") as lzma:
+                    self.assertEqual(lzma.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('lzma compression unsupported')
+
+    def test_lzma_legacy_write(self):
+        with io.BytesIO() as f:
+            try:
+                with gemato.compression.open_compressed_file('lzma', f, 'wb') as lzma:
+                    lzma.write(TEST_STRING)
+
+                f.seek(0)
+
+                with gemato.compression.open_compressed_file('lzma', f, 'rb') as lzma:
                     self.assertEqual(lzma.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('lzma compression unsupported')
@@ -144,7 +180,7 @@ dGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
     def test_xz(self):
         with io.BytesIO(base64.b64decode(self.BASE64)) as f:
             try:
-                with gemato.compression.open_compressed_file('xz', f) as xz:
+                with gemato.compression.open_compressed_file('xz', f, "rb") as xz:
                     self.assertEqual(xz.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('xz compression unsupported')
@@ -152,7 +188,7 @@ dGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
     def test_xz_empty(self):
         with io.BytesIO(base64.b64decode(self.EMPTY_BASE64)) as f:
             try:
-                with gemato.compression.open_compressed_file('xz', f) as xz:
+                with gemato.compression.open_compressed_file('xz', f, "rb") as xz:
                     self.assertEqual(xz.read(), b'')
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('xz compression unsupported')
@@ -160,7 +196,20 @@ dGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
     def test_xz_split(self):
         with io.BytesIO(base64.b64decode(self.SPLIT_BASE64)) as f:
             try:
-                with gemato.compression.open_compressed_file('xz', f) as xz:
+                with gemato.compression.open_compressed_file('xz', f, "rb") as xz:
+                    self.assertEqual(xz.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('xz compression unsupported')
+
+    def test_xz_write(self):
+        with io.BytesIO() as f:
+            try:
+                with gemato.compression.open_compressed_file('xz', f, 'wb') as xz:
+                    xz.write(TEST_STRING)
+
+                f.seek(0)
+
+                with gemato.compression.open_compressed_file('xz', f, 'rb') as xz:
                     self.assertEqual(xz.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('xz compression unsupported')
