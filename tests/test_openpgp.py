@@ -30,6 +30,26 @@ jCvJNJ7pU8YnJSRTQDH0PZEupAdzDU/AhGSrBz5+Jr7N0pQIxq4duE/Q
 -----END PGP PUBLIC KEY BLOCK-----
 '''
 
+MALFORMED_PUBLIC_KEY = u'''
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mQENBFnwXJMBCACgaTVz+d10TGL9zR920sb0GBFsitAJ5ZFzO4E0cg3SHhwI+reM
+JQ6LLKmHowY/E1dl5FBbnJoRMxXP7/eScQ7HlhYj1gMPN5XiS2pkPwVkmJKBDV42
+DLwoytC+ot0frRTJvSdEPCX81BNMgFiBSpkeZfXqb9XmU03bh6mFnrdd4CsHpTQG
+csVXHK8QKhaxuqmHTALdpSzKCb/r0N/Z3sQExZhfLcBf/9UUVXj44Nwc6ooqZLRi
+zHydxwQdxNu0aOFGEBn9WTi8Slf7MfR/pF0dI8rs9w6zMzVEq0lhDPpKFGDveoGf
+g/+TpvBNXZ7DWH23GM4kID3pk4LLMc24U1PhABEBAAG0D2dlbWF0byB0ZXN0IGtl
+eYkBRgQTAQoAMBYhBIHhLBa9jc1gvhgIRRNogOcqexOEBQJZ8FyTAhsDBQsJCg0E
+AxUKCAIeAQIXgAAKCRATaIDnKnsThCnkB/0fhTH230idhlfZhFbVgTLxrj4rpsGg
+20K8HkMaWzshsONdKkqYaYuRcm2UQZ0Kg5rm9jQsGYuAnzH/7XwmOleY95ycVfBk
+je9aXF6BEoGick6C/AK5w77vd1kcBtJDrT4I7vwD4wRkyUdCkpVMVT4z4aZ7lHJ4
+ECrrrI/mg0b+sGRyHfXPvIPp7F2959L/dpbhBZDfMOFC0A9LBQBJldKFbQLg3xzX
+4tniz/BBrp7KjTOMKU0sufsedI50xc6cvCYCwJElqo86vv69klZHahE/k9nJaUAM
+jCvJNJ7pU8YnJSRTQDH0PZEupAdzDU/AhGSrBz5+Jr7N0pQIxq4duE/Q
+=r7JK
+-----END PGP PUBLIC KEY BLOCK-----
+'''
+
 SIGNED_MANIFEST = u'''
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA512
@@ -209,6 +229,32 @@ class OpenPGPContextManagerTest(unittest.TestCase):
     Test the context manager API for OpenPGPEnvironment.
     """
 
+    def test_import_key(self):
+        with gemato.openpgp.OpenPGPEnvironment() as env:
+            try:
+                env.import_key(
+                        io.BytesIO(PUBLIC_KEY.encode('utf8')))
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+
+    def test_import_malformed_key(self):
+        with gemato.openpgp.OpenPGPEnvironment() as env:
+            try:
+                self.assertRaises(RuntimeError,
+                        env.import_key,
+                        io.BytesIO(MALFORMED_PUBLIC_KEY.encode('utf8')))
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+
+    def test_import_no_keys(self):
+        with gemato.openpgp.OpenPGPEnvironment() as env:
+            try:
+                self.assertRaises(RuntimeError,
+                        env.import_key,
+                        io.BytesIO(b''))
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+
     def test_verify_manifest(self):
         with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
             with gemato.openpgp.OpenPGPEnvironment() as env:
@@ -224,13 +270,11 @@ class OpenPGPContextManagerTest(unittest.TestCase):
                     raise unittest.SkipTest(str(e))
 
     def test_double_close(self):
-        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
-            with gemato.openpgp.OpenPGPEnvironment() as env:
-                env.close()
+        with gemato.openpgp.OpenPGPEnvironment() as env:
+            env.close()
 
     def test_home_after_close(self):
-        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
-            with gemato.openpgp.OpenPGPEnvironment() as env:
-                env.close()
-                with self.assertRaises(RuntimeError):
-                    env.home
+        with gemato.openpgp.OpenPGPEnvironment() as env:
+            env.close()
+            with self.assertRaises(RuntimeError):
+                env.home
