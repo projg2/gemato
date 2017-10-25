@@ -3,7 +3,6 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
-import io
 import os.path
 
 import gemato.exceptions
@@ -40,13 +39,15 @@ class ManifestRecursiveLoader(object):
         """
         Load a single Manifest file whose relative path within Manifest
         tree is @relpath. If @verify_entry is not null, the Manifest
-        file is verified against the entry.
+        file is verified against the entry. If the file is compressed,
+        it is decompressed transparently.
         """
         m = gemato.manifest.ManifestFile()
         path = os.path.join(self.root_directory, relpath)
         if verify_entry is not None:
             gemato.verify.assert_path_verifies(path, verify_entry)
-        with io.open(path, 'r', encoding='utf8') as f:
+        with gemato.compression.open_potentially_compressed_path(
+                path, 'r', encoding='utf8') as f:
             m.load(f)
             st = os.fstat(f.fileno())
             self.manifest_device = st.st_dev
@@ -264,7 +265,8 @@ class ManifestRecursiveLoader(object):
                 fpath = os.path.join(relpath, f)
                 # skip top-level Manifest, we obviously can't have
                 # an entry for it
-                if fpath == 'Manifest':
+                if fpath in (gemato.compression
+                        .get_potential_compressed_names('Manifest')):
                     continue
                 fe = entry_dict.pop(fpath, None)
                 self._verify_one_file(os.path.join(dirpath, f), fe, strict)

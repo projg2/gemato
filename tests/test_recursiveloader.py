@@ -3,7 +3,10 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import base64
 import datetime
+import gzip
+import io
 import os
 
 import gemato.exceptions
@@ -844,3 +847,75 @@ class UnreadableDirectoryTest(TempDirTestCase):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(OSError, m.assert_directory_verifies)
+
+
+class CompressedTopManifestTest(TempDirTestCase):
+    """
+    Test a tree with top-level Manifest being compressed.
+    """
+
+    MANIFEST = b'''
+DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+'''
+    FILES = {
+        'test': u'',
+    }
+
+    def setUp(self):
+        super(CompressedTopManifestTest, self).setUp()
+        self.manifest_gz = os.path.join(self.dir, 'Manifest.gz')
+        with gzip.GzipFile(self.manifest_gz, 'wb') as f:
+            f.write(self.MANIFEST)
+
+    def tearDown(self):
+        os.unlink(self.manifest_gz)
+        super(CompressedTopManifestTest, self).tearDown()
+
+    def test_find_path_entry(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.manifest_gz)
+        self.assertEqual(m.find_path_entry('test').path, 'test')
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.manifest_gz)
+        m.assert_directory_verifies('')
+
+
+class CompressedSubManifestTest(TempDirTestCase):
+    """
+    Test a tree with top-level Manifest being compressed.
+    """
+
+    # we can't compress locally here since we need stable result
+    SUB_MANIFEST = b'''
+H4sICHX68FkCA01hbmlmZXN0AHNxDHFUKEktLlEwUPB1MVVIMTFMsUhOsbRIMzBIMjIwSbW0MDCw
+tLRITU6zMDEyT+UCAJqyznMxAAAA
+'''
+    DIRS = ['sub']
+    FILES = {
+        'Manifest': u'''
+MANIFEST sub/Manifest.gz 78 MD5 9c158f87b2445279d7c8aac439612fba
+''',
+        'sub/test': u'',
+    }
+
+    def setUp(self):
+        super(CompressedSubManifestTest, self).setUp()
+        self.manifest_gz = os.path.join(self.dir, 'sub/Manifest.gz')
+        with io.open(self.manifest_gz, 'wb') as f:
+            f.write(base64.b64decode(self.SUB_MANIFEST))
+
+    def tearDown(self):
+        os.unlink(self.manifest_gz)
+        super(CompressedSubManifestTest, self).tearDown()
+
+    def test_find_path_entry(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                os.path.join(self.dir, 'Manifest'))
+        self.assertEqual(m.find_path_entry('sub/test').path, 'test')
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('')
