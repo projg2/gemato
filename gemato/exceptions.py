@@ -61,3 +61,13 @@ class ManifestUnsignedData(Exception):
     def __init__(self):
         super(ManifestUnsignedData, self).__init__(
                 "Unsigned data found in an OpenPGP signed Manifest")
+
+
+class OpenPGPVerificationFailure(Exception):
+    """
+    An exception raised when OpenPGP verification fails.
+    """
+
+    def __init__(self, output):
+        super(OpenPGPVerificationFailure, self).__init__(
+                "OpenPGP verification failed:\n{}".format(output))

@@ -7,7 +7,28 @@ import io
 import unittest
 
 import gemato.manifest
+import gemato.openpgp
 
+
+PUBLIC_KEY = u'''
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mQENBFnwXJMBCACgaTVz+d10TGL9zR920sb0GBFsitAJ5ZFzO4E0cg3SHhwI+reM
+JQ6LLKmHowY/E1dl5FBbnJoRMxXP7/eScQ7HlhYj1gMPN5XiS2pkPwVkmJKBDV42
+DLwoytC+ot0frRTJvSdEPCX81BNMgFiBSpkeZfXqb9XmU03bh6mFnrdd4CsHpTQG
+csVXHK8QKhaxuqmHTALdpSzKCb/r0N/Z3sQExZhfLcBf/9UUVXj44Nwc6ooqZLRi
+zHydxwQdxNu0aOFGEBn9WTi8Slf7MfR/pF0dI8rs9w6zMzVEq0lhDPpKFGDveoGf
+g/+TpvBNXZ7DWH23GM4kID3pk4LLMc24U1PhABEBAAG0D2dlbWF0byB0ZXN0IGtl
+eYkBRgQTAQoAMBYhBIHhLBa9jc1gvhgIRRNogOcqexOEBQJZ8FyTAhsDBQsJCg0E
+AxUKCAIeAQIXgAAKCRATaIDnKnsThCnkB/0fhTH230idhlfZhFbVgTLxrj4rpsGg
+20K8HkMaWzChsONdKkqYaYuRcm2UQZ0Kg5rm9jQsGYuAnzH/7XwmOleY95ycVfBk
+je9aXF6BEoGick6C/AK5w77vd1kcBtJDrT4I7vwD4wRkyUdCkpVMVT4z4aZ7lHJ4
+ECrrrI/mg0b+sGRyHfXPvIPp7F2959L/dpbhBZDfMOFC0A9LBQBJldKFbQLg3xzX
+4tniz/BBrp7KjTOMKU0sufsedI50xc6cvCYCwJElqo86vv69klZHahE/k9nJaUAM
+jCvJNJ7pU8YnJSRTQDH0PZEupAdzDU/AhGSrBz5+Jr7N0pQIxq4duE/Q
+=r7JK
+-----END PGP PUBLIC KEY BLOCK-----
+'''
 
 SIGNED_MANIFEST = u'''
 -----BEGIN PGP SIGNED MESSAGE-----
@@ -129,3 +150,50 @@ class SignedManifestTest(unittest.TestCase):
         with io.StringIO(SIGNED_MANIFEST + 'OPTIONAL test\n') as f:
             self.assertRaises(gemato.exceptions.ManifestUnsignedData,
                     m.load, f)
+
+
+class OpenPGPCorrectKeyTest(unittest.TestCase):
+    """
+    Tests performed with correct OpenPGP key set.
+    """
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(
+                    io.BytesIO(PUBLIC_KEY.encode('utf8')))
+        except RuntimeError:
+            raise unittest.SkipTest('Unable to import OpenPGP key')
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_verify_manifest(self):
+        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+            self.env.verify_file(f)
+
+    def test_verify_dash_escaped_manifest(self):
+        with io.BytesIO(DASH_ESCAPED_SIGNED_MANIFEST.encode('utf8')) as f:
+            self.env.verify_file(f)
+
+    def test_verify_modified_manifest(self):
+        with io.BytesIO(MODIFIED_SIGNED_MANIFEST.encode('utf8')) as f:
+            self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                    self.env.verify_file, f)
+
+
+class OpenPGPNoKeyTest(unittest.TestCase):
+    """
+    Tests performed without correct OpenPGP key set.
+    """
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_verify_manifest(self):
+        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+            self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                    self.env.verify_file, f)
