@@ -71,29 +71,40 @@ class FileStack(object):
             f.close()
 
 
-def open_potentially_compressed_path(path, mode):
+def open_potentially_compressed_path(path, mode, **kwargs):
     """
     Open the potentially compressed file at specified path @path
     with mode @mode. If the path ends with one of the known compression
     suffixes, the file will be decompressed transparently. Otherwise,
     it will be open directly.
 
+    @kwargs can be used to pass additional options for text files.
+    Only arguments supported by io.TextIOWrapper should be used there.
+
     Returns an object that must be used via the context manager API.
     """
 
     base, ext = os.path.splitext(path)
     if ext not in ('.gz', '.bz2', '.lzma', '.xz'):
-        return io.open(path, mode)
+        return io.open(path, mode, **kwargs)
 
     bmode = mode
     if 'b' not in bmode:
         bmode += 'b'
 
     f = io.open(path, bmode)
+    fs = FileStack([f])
     try:
-        cf = open_compressed_file(ext[1:], f, mode)
+        cf = open_compressed_file(ext[1:], f, bmode if kwargs else mode)
+        fs.files.append(cf)
+
+        # special args are not supported by compressor backends
+        # so add a TextIOWrapper on top
+        if kwargs:
+            iow = io.TextIOWrapper(cf, **kwargs)
+            fs.files.append(iow)
     except:
-        f.close()
+        fs.close()
         raise
 
-    return FileStack((f, cf))
+    return fs

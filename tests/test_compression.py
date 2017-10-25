@@ -12,6 +12,8 @@ import gemato.compression
 
 
 TEST_STRING = b'The quick brown fox jumps over the lazy dog'
+# we need to be specific on endianness to avoid unreliably writing BOM
+UTF16_TEST_STRING = TEST_STRING.decode('utf8').encode('utf_16_be')
 
 
 class GzipCompressionTest(unittest.TestCase):
@@ -71,6 +73,25 @@ L0stUijJSFXISayqVEjJTwcAlGd4GBcAAAA=
 
             with gemato.compression.open_compressed_file('gz', rf, 'rb') as gz:
                 self.assertEqual(gz.read(), TEST_STRING)
+
+    def test_open_potentially_compressed_path_with_encoding(self):
+        with tempfile.NamedTemporaryFile(suffix='.gz') as wf:
+            with gemato.compression.open_compressed_file('gz', wf, 'wb') as gz:
+                gz.write(UTF16_TEST_STRING)
+            wf.flush()
+
+            with gemato.compression.open_potentially_compressed_path(
+                    wf.name, 'r', encoding='utf_16_be') as cf:
+                self.assertEqual(cf.read(), TEST_STRING.decode('utf8'))
+
+    def test_open_potentially_compressed_path_write_with_encoding(self):
+        with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
+            with gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'w', encoding='utf_16_be') as cf:
+                cf.write(TEST_STRING.decode('utf8'))
+
+            with gemato.compression.open_compressed_file('gz', rf, 'rb') as gz:
+                self.assertEqual(gz.read(), UTF16_TEST_STRING)
 
 
 class Bzip2CompressionTest(unittest.TestCase):
@@ -147,6 +168,31 @@ OxleaA==
 
                 with gemato.compression.open_compressed_file('bz2', rf, 'rb') as bz2:
                     self.assertEqual(bz2.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('bz2 compression unsupported')
+
+    def test_open_potentially_compressed_path_with_encoding(self):
+        with tempfile.NamedTemporaryFile(suffix='.bz2') as wf:
+            try:
+                with gemato.compression.open_compressed_file('bz2', wf, 'wb') as bz2:
+                    bz2.write(UTF16_TEST_STRING)
+                wf.flush()
+
+                with gemato.compression.open_potentially_compressed_path(
+                        wf.name, 'r', encoding='utf_16_be') as cf:
+                    self.assertEqual(cf.read(), TEST_STRING.decode('utf8'))
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('bz2 compression unsupported')
+
+    def test_open_potentially_compressed_path_write_with_encoding(self):
+        with tempfile.NamedTemporaryFile(suffix='.bz2') as rf:
+            try:
+                with gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'w', encoding='utf_16_be') as cf:
+                    cf.write(TEST_STRING.decode('utf8'))
+
+                with gemato.compression.open_compressed_file('bz2', rf, 'rb') as bz2:
+                    self.assertEqual(bz2.read(), UTF16_TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('bz2 compression unsupported')
 
@@ -236,6 +282,31 @@ ADUdSd6zBOkOpekGFH46zix9wE9VT65OVeV479//7uUAAA==
 
                 with gemato.compression.open_compressed_file('lzma', rf, 'rb') as lzma:
                     self.assertEqual(lzma.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('lzma compression unsupported')
+
+    def test_open_potentially_compressed_path_with_encoding(self):
+        with tempfile.NamedTemporaryFile(suffix='.lzma') as wf:
+            try:
+                with gemato.compression.open_compressed_file('lzma', wf, 'wb') as lzma:
+                    lzma.write(UTF16_TEST_STRING)
+                wf.flush()
+
+                with gemato.compression.open_potentially_compressed_path(
+                        wf.name, 'r', encoding='utf_16_be') as cf:
+                    self.assertEqual(cf.read(), TEST_STRING.decode('utf8'))
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('lzma compression unsupported')
+
+    def test_open_potentially_compressed_path_write_with_encoding(self):
+        with tempfile.NamedTemporaryFile(suffix='.lzma') as rf:
+            try:
+                with gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'w', encoding='utf_16_be') as cf:
+                    cf.write(TEST_STRING.decode('utf8'))
+
+                with gemato.compression.open_compressed_file('lzma', rf, 'rb') as lzma:
+                    self.assertEqual(lzma.read(), UTF16_TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('lzma compression unsupported')
 
@@ -351,3 +422,20 @@ class NoCompressionTest(unittest.TestCase):
                 cf.write(TEST_STRING)
 
             self.assertEqual(rf.read(), TEST_STRING)
+
+    def test_open_potentially_compressed_path_with_encoding(self):
+        with tempfile.NamedTemporaryFile() as wf:
+            wf.write(UTF16_TEST_STRING)
+            wf.flush()
+
+            with gemato.compression.open_potentially_compressed_path(
+                    wf.name, 'r', encoding='utf_16_be') as cf:
+                self.assertEqual(cf.read(), TEST_STRING.decode('utf8'))
+
+    def test_open_potentially_compressed_path_write_with_encoding(self):
+        with tempfile.NamedTemporaryFile() as rf:
+            with gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'w', encoding='utf_16_be') as cf:
+                cf.write(TEST_STRING.decode('utf8'))
+
+            self.assertEqual(rf.read(), UTF16_TEST_STRING)
