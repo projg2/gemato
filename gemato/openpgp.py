@@ -3,11 +3,33 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import errno
 import shutil
 import subprocess
 import tempfile
 
 import gemato.exceptions
+
+
+def _spawn_gpg(options, home, stdin):
+    env = None
+    if home is not None:
+        env={'HOME': home}
+
+    try:
+        p = subprocess.Popen(['gpg', '--batch'] + options,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env)
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            raise gemato.exceptions.OpenPGPNoImplementation()
+        else:
+            raise
+
+    out, err = p.communicate(stdin.read())
+    return (p.wait(), out, err)
 
 
 class OpenPGPEnvironment(object):
@@ -40,14 +62,8 @@ class OpenPGPEnvironment(object):
         at the beginning.
         """
 
-        p = subprocess.Popen(['gpg', '--import', '--batch'],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env={'HOME': self.home})
-        out, err = p.communicate(keyfile.read())
-
-        if p.wait() != 0:
+        exitst, out, err = _spawn_gpg(['--import'], self.home, keyfile)
+        if exitst != 0:
             raise RuntimeError('Unable to import key: {}'.format(err.decode('utf8')))
 
     def verify_file(self, f):
@@ -77,16 +93,8 @@ def verify_file(f, env=None):
     results, prepare a dedicated OpenPGPEnvironment and pass it as @env.
     """
 
-    penv = None
-    if env is not None:
-        penv = {'HOME': env.home}
-
-    p = subprocess.Popen(['gpg', '--verify', '--batch'],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            env=penv)
-    out, err = p.communicate(f.read())
-
-    if p.wait() != 0:
+    exitst, out, err = _spawn_gpg(['--verify'],
+            env.home if env is not None else None,
+            f)
+    if exitst != 0:
         raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))

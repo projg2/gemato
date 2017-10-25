@@ -162,6 +162,8 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
         try:
             self.env.import_key(
                     io.BytesIO(PUBLIC_KEY.encode('utf8')))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
         except RuntimeError:
             raise unittest.SkipTest('Unable to import OpenPGP key')
 
@@ -195,5 +197,8 @@ class OpenPGPNoKeyTest(unittest.TestCase):
 
     def test_verify_manifest(self):
         with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
-            self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
-                    self.env.verify_file, f)
+            try:
+                self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                        self.env.verify_file, f)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))

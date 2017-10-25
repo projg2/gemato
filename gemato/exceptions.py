@@ -71,3 +71,14 @@ class OpenPGPVerificationFailure(Exception):
     def __init__(self, output):
         super(OpenPGPVerificationFailure, self).__init__(
                 "OpenPGP verification failed:\n{}".format(output))
+
+
+class OpenPGPNoImplementation(Exception):
+    """
+    An exception raised when no supported OpenPGP implementation
+    is available.
+    """
+
+    def __init__(self):
+        super(OpenPGPNoImplementation, self).__init__(
+                "No supported OpenPGP implementation found (install gnupg)")
