@@ -108,3 +108,12 @@ def open_potentially_compressed_path(path, mode, **kwargs):
         raise
 
     return fs
+
+
+def get_potential_compressed_names(path):
+    """
+    Get a list of all possible variants of @path with supported
+    compressions (including the uncompressed path).
+    """
+
+    return [path + x for x in ('', '.gz', '.bz2', '.lzma', '.xz')]

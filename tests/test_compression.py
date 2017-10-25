@@ -495,3 +495,16 @@ class NoCompressionTest(unittest.TestCase):
                 cf.write(TEST_STRING.decode('utf8'))
 
             self.assertEqual(rf.read(), UTF16_TEST_STRING)
+
+
+class OtherUtilityTests(unittest.TestCase):
+    def test_get_potential_compressed_names(self):
+        self.assertSetEqual(frozenset(gemato.compression
+            .get_potential_compressed_names('test')),
+            frozenset([
+                'test',
+                'test.gz',
+                'test.bz2',
+                'test.lzma',
+                'test.xz',
+            ]))
