@@ -4,6 +4,8 @@
 # Licensed under the terms of 2-clause BSD license
 
 import gzip
+import io
+import os.path
 import sys
 
 if sys.version_info >= (3, 3):
@@ -46,3 +48,52 @@ def open_compressed_file(suffix, f, mode='r'):
         return lzma.LZMAFile(f, format=lzma.FORMAT_XZ, mode=mode)
 
     raise gemato.exceptions.UnsupportedCompression(suffix)
+
+
+class FileStack(object):
+    """
+    A context manager for stacked files. Maintains handles for all files
+    on stack, returns the topmost (last) layer on enter and closes them
+    all on exit.
+    """
+
+    def __init__(self, files=[]):
+        self.files = files
+
+    def __enter__(self):
+        return self.files[-1]
+
+    def __exit__(self, exc_type, exc_value, exc_cb):
+        self.close()
+
+    def close(self):
+        for f in reversed(self.files):
+            f.close()
+
+
+def open_potentially_compressed_path(path, mode):
+    """
+    Open the potentially compressed file at specified path @path
+    with mode @mode. If the path ends with one of the known compression
+    suffixes, the file will be decompressed transparently. Otherwise,
+    it will be open directly.
+
+    Returns an object that must be used via the context manager API.
+    """
+
+    base, ext = os.path.splitext(path)
+    if ext not in ('.gz', '.bz2', '.lzma', '.xz'):
+        return io.open(path, mode)
+
+    bmode = mode
+    if 'b' not in bmode:
+        bmode += 'b'
+
+    f = io.open(path, bmode)
+    try:
+        cf = open_compressed_file(ext[1:], f, mode)
+    except:
+        f.close()
+        raise
+
+    return FileStack((f, cf))

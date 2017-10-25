@@ -5,6 +5,7 @@
 
 import base64
 import io
+import tempfile
 import unittest
 
 import gemato.compression
@@ -51,6 +52,24 @@ L0stUijJSFXISayqVEjJTwcAlGd4GBcAAAA=
             f.seek(0)
 
             with gemato.compression.open_compressed_file('gz', f, 'rb') as gz:
+                self.assertEqual(gz.read(), TEST_STRING)
+
+    def test_open_potentially_compressed_path(self):
+        with tempfile.NamedTemporaryFile(suffix='.gz') as wf:
+            wf.write(base64.b64decode(self.BASE64))
+            wf.flush()
+
+            with gemato.compression.open_potentially_compressed_path(
+                    wf.name, 'rb') as cf:
+                self.assertEqual(cf.read(), TEST_STRING)
+
+    def test_open_potentially_compressed_path_write(self):
+        with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
+            with gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'wb') as cf:
+                cf.write(TEST_STRING)
+
+            with gemato.compression.open_compressed_file('gz', rf, 'rb') as gz:
                 self.assertEqual(gz.read(), TEST_STRING)
 
 
@@ -103,6 +122,30 @@ OxleaA==
                 f.seek(0)
 
                 with gemato.compression.open_compressed_file('bz2', f, 'rb') as bz2:
+                    self.assertEqual(bz2.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('bz2 compression unsupported')
+
+    def test_open_potentially_compressed_path(self):
+        with tempfile.NamedTemporaryFile(suffix='.bz2') as wf:
+            wf.write(base64.b64decode(self.BASE64))
+            wf.flush()
+
+            try:
+                with gemato.compression.open_potentially_compressed_path(
+                        wf.name, 'rb') as cf:
+                    self.assertEqual(cf.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('bz2 compression unsupported')
+
+    def test_open_potentially_compressed_path_write(self):
+        with tempfile.NamedTemporaryFile(suffix='.bz2') as rf:
+            try:
+                with gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'wb') as cf:
+                    cf.write(TEST_STRING)
+
+                with gemato.compression.open_compressed_file('bz2', rf, 'rb') as bz2:
                     self.assertEqual(bz2.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('bz2 compression unsupported')
@@ -172,6 +215,30 @@ ADUdSd6zBOkOpekGFH46zix9wE9VT65OVeV479//7uUAAA==
                 with gemato.compression.open_compressed_file('xz', f, "rb") as xz:
                     xz.read()
 
+    def test_open_potentially_compressed_path(self):
+        with tempfile.NamedTemporaryFile(suffix='.lzma') as wf:
+            wf.write(base64.b64decode(self.BASE64))
+            wf.flush()
+
+            try:
+                with gemato.compression.open_potentially_compressed_path(
+                        wf.name, 'rb') as cf:
+                    self.assertEqual(cf.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('lzma compression unsupported')
+
+    def test_open_potentially_compressed_path_write(self):
+        with tempfile.NamedTemporaryFile(suffix='.lzma') as rf:
+            try:
+                with gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'wb') as cf:
+                    cf.write(TEST_STRING)
+
+                with gemato.compression.open_compressed_file('lzma', rf, 'rb') as lzma:
+                    self.assertEqual(lzma.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('lzma compression unsupported')
+
 
 class XZCompressionTest(unittest.TestCase):
     BASE64 = b'''
@@ -237,3 +304,27 @@ dGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
             with self.assertRaises(gemato.compression.lzma.LZMAError):
                 with gemato.compression.open_compressed_file('lzma', f, "rb") as lzma:
                     lzma.read()
+
+    def test_open_potentially_compressed_path(self):
+        with tempfile.NamedTemporaryFile(suffix='.xz') as wf:
+            wf.write(base64.b64decode(self.BASE64))
+            wf.flush()
+
+            try:
+                with gemato.compression.open_potentially_compressed_path(
+                        wf.name, 'rb') as cf:
+                    self.assertEqual(cf.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('xz compression unsupported')
+
+    def test_open_potentially_compressed_path_write(self):
+        with tempfile.NamedTemporaryFile(suffix='.xz') as rf:
+            try:
+                with gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'wb') as cf:
+                    cf.write(TEST_STRING)
+
+                with gemato.compression.open_compressed_file('xz', rf, 'rb') as xz:
+                    self.assertEqual(xz.read(), TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('xz compression unsupported')
