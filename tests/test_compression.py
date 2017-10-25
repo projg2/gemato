@@ -328,3 +328,26 @@ dGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
                     self.assertEqual(xz.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('xz compression unsupported')
+
+
+class NoCompressionTest(unittest.TestCase):
+    """
+    Tests for non-compressed data.
+    """
+
+    def test_open_potentially_compressed_path(self):
+        with tempfile.NamedTemporaryFile() as wf:
+            wf.write(TEST_STRING)
+            wf.flush()
+
+            with gemato.compression.open_potentially_compressed_path(
+                    wf.name, 'rb') as cf:
+                self.assertEqual(cf.read(), TEST_STRING)
+
+    def test_open_potentially_compressed_path_write(self):
+        with tempfile.NamedTemporaryFile() as rf:
+            with gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'wb') as cf:
+                cf.write(TEST_STRING)
+
+            self.assertEqual(rf.read(), TEST_STRING)
