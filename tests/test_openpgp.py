@@ -202,3 +202,23 @@ class OpenPGPNoKeyTest(unittest.TestCase):
                         self.env.verify_file, f)
             except gemato.exceptions.OpenPGPNoImplementation as e:
                 raise unittest.SkipTest(str(e))
+
+
+class OpenPGPContextManagerTest(unittest.TestCase):
+    """
+    Test the context manager API for OpenPGPEnvironment.
+    """
+
+    def test_verify_manifest(self):
+        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+            with gemato.openpgp.OpenPGPEnvironment() as env:
+                try:
+                    try:
+                        env.import_key(
+                                io.BytesIO(PUBLIC_KEY.encode('utf8')))
+                    except RuntimeError:
+                        raise unittest.SkipTest('Unable to import OpenPGP key')
+
+                    env.verify_file(f)
+                except gemato.exceptions.OpenPGPNoImplementation as e:
+                    raise unittest.SkipTest(str(e))

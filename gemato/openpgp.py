@@ -45,7 +45,7 @@ class OpenPGPEnvironment(object):
         self._home = tempfile.mkdtemp()
 
     def __enter__(self):
-        pass
+        return self
 
     def __exit__(self, exc_type, exc_value, exc_cb):
         if self._home is not None:
