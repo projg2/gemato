@@ -160,6 +160,18 @@ ADUdSd6zBOkOpekGFH46zix9wE9VT65OVeV479//7uUAAA==
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('lzma compression unsupported')
 
+    def test_lzma_legacy_as_xz(self):
+        """
+        Test that the class rejects mislabel files.
+        """
+        if gemato.compression.lzma is None:
+            raise unittest.SkipTest('xz compression unsupported')
+
+        with io.BytesIO(base64.b64decode(self.BASE64)) as f:
+            with self.assertRaises(gemato.compression.lzma.LZMAError):
+                with gemato.compression.open_compressed_file('xz', f, "rb") as xz:
+                    xz.read()
+
 
 class XZCompressionTest(unittest.TestCase):
     BASE64 = b'''
@@ -213,3 +225,15 @@ dGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
                     self.assertEqual(xz.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('xz compression unsupported')
+
+    def test_xz_as_lzma_legacy(self):
+        """
+        Test that the class rejects mislabel files.
+        """
+        if gemato.compression.lzma is None:
+            raise unittest.SkipTest('xz compression unsupported')
+
+        with io.BytesIO(base64.b64decode(self.BASE64)) as f:
+            with self.assertRaises(gemato.compression.lzma.LZMAError):
+                with gemato.compression.open_compressed_file('lzma', f, "rb") as lzma:
+                    lzma.read()

@@ -40,7 +40,9 @@ def open_compressed_file(suffix, f, mode='r'):
         return gzip.GzipFile(fileobj=f, mode=mode)
     elif suffix == "bz2" and bz2 is not None:
         return bz2.BZ2File(f, mode=mode)
-    elif suffix in ("lzma", "xz") and lzma is not None:
-        return lzma.LZMAFile(f, mode=mode)
+    elif suffix == "lzma" and lzma is not None:
+        return lzma.LZMAFile(f, format=lzma.FORMAT_ALONE, mode=mode)
+    elif suffix == "xz" and lzma is not None:
+        return lzma.LZMAFile(f, format=lzma.FORMAT_XZ, mode=mode)
 
     raise gemato.exceptions.UnsupportedCompression(suffix)
