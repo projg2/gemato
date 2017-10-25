@@ -4,10 +4,10 @@
 # Licensed under the terms of 2-clause BSD license
 
 import errno
-import io
 import os
 import os.path
 
+import gemato.compression
 import gemato.manifest
 
 
@@ -35,26 +35,31 @@ def find_top_level_manifest(path='.'):
             break
 
         m_path = os.path.join(cur_path, 'Manifest')
-        try:
-            with io.open(m_path, 'r', encoding='utf8') as f:
-                fst = os.fstat(f.fileno())
-                if fst.st_dev != original_dev:
-                    break
+        for m_path in (gemato.compression
+                .get_potential_compressed_names(m_path)):
+            try:
+                with (gemato.compression
+                        .open_potentially_compressed_path(m_path, 'r',
+                            encoding='utf8')) as f:
+                    fst = os.fstat(f.fileno())
+                    if fst.st_dev != original_dev:
+                        return last_found
 
-                m.load(f)
-        except IOError as e:
-            if e.errno != errno.ENOENT:
-                raise
-        else:
-            # check if the initial path is ignored
-            relpath = os.path.relpath(path, cur_path)
-            if relpath == '.':
-                relpath = ''
-            fe = m.find_path_entry(relpath)
-            if isinstance(fe, gemato.manifest.ManifestEntryIGNORE):
+                    m.load(f)
+            except IOError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+            else:
+                # check if the initial path is ignored
+                relpath = os.path.relpath(path, cur_path)
+                if relpath == '.':
+                    relpath = ''
+                fe = m.find_path_entry(relpath)
+                if isinstance(fe, gemato.manifest.ManifestEntryIGNORE):
+                    return last_found
+
+                last_found = m_path
                 break
-
-            last_found = m_path
 
         # check if we reached root directory
         if st.st_dev == root_st.st_dev and st.st_ino == root_st.st_ino:

@@ -3,6 +3,7 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import gzip
 import os
 import os.path
 import unittest
@@ -195,3 +196,105 @@ class TestCrossDeviceManifest(TempDirTestCase):
         self.assertIsNone(
                 gemato.find_top_level.find_top_level_manifest(
                     os.path.join(self.dir, 'sub')))
+
+
+class TestCompressedManifest(TempDirTestCase):
+    """
+    Test for finding compressed Manifest in a plain tree.
+    """
+
+    DIRS = ['suba', 'subb', 'subc', 'subc/sub']
+    FILES = {
+        'subb/Manifest': u'',
+    }
+
+    def setUp(self):
+        super(TestCompressedManifest, self).setUp()
+        with gzip.GzipFile(os.path.join(self.dir, 'Manifest.gz'), 'wb'):
+            pass
+        with gzip.GzipFile(os.path.join(self.dir, 'subc/sub/Manifest.gz'), 'wb'):
+            pass
+
+    def tearDown(self):
+        os.unlink(os.path.join(self.dir, 'subc/sub/Manifest.gz'))
+        os.unlink(os.path.join(self.dir, 'Manifest.gz'))
+        super(TestCompressedManifest, self).tearDown()
+
+    def test_find_top_level_manifest(self):
+        self.assertEqual(
+                os.path.relpath(
+                    gemato.find_top_level.find_top_level_manifest(self.dir),
+                    self.dir),
+                'Manifest.gz')
+
+    def test_find_top_level_manifest_from_empty_subdir(self):
+        self.assertEqual(
+                os.path.relpath(
+                    gemato.find_top_level.find_top_level_manifest(
+                        os.path.join(self.dir, 'suba')),
+                    self.dir),
+                'Manifest.gz')
+
+    def test_find_top_level_manifest_from_manifest_subdir(self):
+        self.assertEqual(
+                os.path.relpath(
+                    gemato.find_top_level.find_top_level_manifest(
+                        os.path.join(self.dir, 'subb')),
+                    self.dir),
+                'Manifest.gz')
+
+    def test_find_top_level_manifest_from_deep_manifest_subdir(self):
+        self.assertEqual(
+                os.path.relpath(
+                    gemato.find_top_level.find_top_level_manifest(
+                        os.path.join(self.dir, 'subc', 'sub')),
+                    self.dir),
+                'Manifest.gz')
+
+
+class TestCompressedManifestWithIgnore(TempDirTestCase):
+    DIRS = ['suba', 'subb', 'subc', 'subc/sub']
+    FILES = {
+        'subb/Manifest': u'',
+    }
+
+    def setUp(self):
+        super(TestCompressedManifestWithIgnore, self).setUp()
+        with gzip.GzipFile(os.path.join(self.dir, 'Manifest.gz'), 'wb') as f:
+            f.write(b'IGNORE suba\n')
+            f.write(b'IGNORE subc\n')
+        with gzip.GzipFile(os.path.join(self.dir, 'subc/sub/Manifest.gz'), 'wb'):
+            pass
+
+    def tearDown(self):
+        os.unlink(os.path.join(self.dir, 'subc/sub/Manifest.gz'))
+        os.unlink(os.path.join(self.dir, 'Manifest.gz'))
+        super(TestCompressedManifestWithIgnore, self).tearDown()
+
+    def test_find_top_level_manifest(self):
+        self.assertEqual(
+                os.path.relpath(
+                    gemato.find_top_level.find_top_level_manifest(self.dir),
+                    self.dir),
+                'Manifest.gz')
+
+    def test_find_top_level_manifest_from_ignored_empty_subdir(self):
+        self.assertIsNone(
+                gemato.find_top_level.find_top_level_manifest(
+                    os.path.join(self.dir, 'suba')))
+
+    def test_find_top_level_manifest_from_manifest_subdir(self):
+        self.assertEqual(
+                os.path.relpath(
+                    gemato.find_top_level.find_top_level_manifest(
+                        os.path.join(self.dir, 'subb')),
+                    self.dir),
+                'Manifest.gz')
+
+    def test_find_top_level_manifest_from_deep_ignored_subdir(self):
+        self.assertEqual(
+                os.path.relpath(
+                    gemato.find_top_level.find_top_level_manifest(
+                        os.path.join(self.dir, 'subc', 'sub')),
+                    self.dir),
+                'subc/sub/Manifest.gz')
