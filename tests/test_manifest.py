@@ -104,6 +104,17 @@ class ManifestTest(unittest.TestCase):
         self.assertListEqual(list(m.find_manifests_for_path('eclass/foo.eclass')),
                 [m.find_path_entry('eclass/Manifest')])
 
+    def test_multiple_load(self):
+        """
+        Test that calling load() multiple times overwrites previously
+        loaded data.
+        """
+        m = gemato.manifest.ManifestFile()
+        m.load(io.StringIO(TEST_MANIFEST))
+        m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
+        self.assertIsNone(m.find_timestamp())
+        self.assertIsNone(m.find_path_entry('eclass/Manifest'))
+
 
 class ManifestEntryTest(unittest.TestCase):
     """

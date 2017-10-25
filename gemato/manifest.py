@@ -284,8 +284,8 @@ class ManifestFile(object):
         Create a new instance. If @f is provided, reads the entries
         from open Manifest file @f (see load()).
         """
-        self.entries = []
 
+        self.entries = []
         if f is not None:
             self.load(f)
 
@@ -295,6 +295,7 @@ class ManifestFile(object):
         in text mode, and oriented at the beginning.
         """
 
+        self.entries = []
         for l in f:
             sl = l.strip().split()
             # skip empty lines
