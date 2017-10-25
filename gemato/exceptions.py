@@ -3,6 +3,12 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+class UnsupportedCompression(Exception):
+    def __init__(self, suffix):
+        super(UnsupportedCompression, self).__init__(
+                'Unsupported compression suffix: {}'.format(suffix))
+
+
 class UnsupportedHash(Exception):
     def __init__(self, hash_name):
         super(UnsupportedHash, self).__init__(
