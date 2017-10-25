@@ -93,6 +93,20 @@ L0stUijJSFXISayqVEjJTwcAlGd4GBcAAAA=
             with gemato.compression.open_compressed_file('gz', rf, 'rb') as gz:
                 self.assertEqual(gz.read(), UTF16_TEST_STRING)
 
+    def test_open_potentially_compressed_path_fileno_passthrough(self):
+        with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
+            fs1 = gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'w', encoding='utf_16_be')
+            with fs1 as cf:
+                self.assertListEqual([f.fileno() for f in fs1.files],
+                                     [cf.fileno() for f in fs1.files])
+
+            fs2 = gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'r', encoding='utf_16_be')
+            with fs2 as cf:
+                self.assertListEqual([f.fileno() for f in fs2.files],
+                                     [cf.fileno() for f in fs2.files])
+
 
 class Bzip2CompressionTest(unittest.TestCase):
     BASE64 = b'''
@@ -195,6 +209,20 @@ OxleaA==
                     self.assertEqual(bz2.read(), UTF16_TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('bz2 compression unsupported')
+
+    def test_open_potentially_compressed_path_fileno_passthrough(self):
+        with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
+            fs1 = gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'w', encoding='utf_16_be')
+            with fs1 as cf:
+                self.assertListEqual([f.fileno() for f in fs1.files],
+                                     [cf.fileno() for f in fs1.files])
+
+            fs2 = gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'r', encoding='utf_16_be')
+            with fs2 as cf:
+                self.assertListEqual([f.fileno() for f in fs2.files],
+                                     [cf.fileno() for f in fs2.files])
 
 
 class LZMALegacyCompressionTest(unittest.TestCase):
@@ -310,6 +338,20 @@ ADUdSd6zBOkOpekGFH46zix9wE9VT65OVeV479//7uUAAA==
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('lzma compression unsupported')
 
+    def test_open_potentially_compressed_path_fileno_passthrough(self):
+        with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
+            fs1 = gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'w', encoding='utf_16_be')
+            with fs1 as cf:
+                self.assertListEqual([f.fileno() for f in fs1.files],
+                                     [cf.fileno() for f in fs1.files])
+
+            fs2 = gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'r', encoding='utf_16_be')
+            with fs2 as cf:
+                self.assertListEqual([f.fileno() for f in fs2.files],
+                                     [cf.fileno() for f in fs2.files])
+
 
 class XZCompressionTest(unittest.TestCase):
     BASE64 = b'''
@@ -399,6 +441,20 @@ dGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
                     self.assertEqual(xz.read(), TEST_STRING)
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('xz compression unsupported')
+
+    def test_open_potentially_compressed_path_fileno_passthrough(self):
+        with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
+            fs1 = gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'w', encoding='utf_16_be')
+            with fs1 as cf:
+                self.assertListEqual([f.fileno() for f in fs1.files],
+                                     [cf.fileno() for f in fs1.files])
+
+            fs2 = gemato.compression.open_potentially_compressed_path(
+                    rf.name, 'r', encoding='utf_16_be')
+            with fs2 as cf:
+                self.assertListEqual([f.fileno() for f in fs2.files],
+                                     [cf.fileno() for f in fs2.files])
 
 
 class NoCompressionTest(unittest.TestCase):
