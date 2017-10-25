@@ -50,3 +50,14 @@ class ManifestCrossDevice(Exception):
         super(ManifestCrossDevice, self).__init__(
             "Path {} crosses filesystem boundaries, it must be IGNORE-d explicitly"
             .format(path))
+
+
+class ManifestUnsignedData(Exception):
+    """
+    An exception caused by a Manifest file containing non-whitespace
+    outside the OpenPGP-signed part.
+    """
+
+    def __init__(self):
+        super(ManifestUnsignedData, self).__init__(
+                "Unsigned data found in an OpenPGP signed Manifest")

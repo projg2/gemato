@@ -273,6 +273,18 @@ MANIFEST_TAG_MAPPING = {
 }
 
 
+class ManifestState(object):
+    """
+    FSM constants for loading Manifest.
+    """
+
+    DATA = 0
+    SIGNED_PREAMBLE = 1
+    SIGNED_DATA = 2
+    SIGNATURE = 3
+    POST_SIGNED_DATA = 4
+
+
 class ManifestFile(object):
     """
     A class encapsulating a single Manifest file. It supports reading
@@ -296,11 +308,44 @@ class ManifestFile(object):
         """
 
         self.entries = []
+        state = ManifestState.DATA
+
         for l in f:
+            if state == ManifestState.DATA:
+                if l == '-----BEGIN PGP SIGNED MESSAGE-----\n':
+                    if self.entries:
+                        raise gemato.exceptions.ManifestUnsignedData()
+                    state = ManifestState.SIGNED_PREAMBLE
+                    continue
+            elif state == ManifestState.SIGNED_PREAMBLE:
+                # skip header lines up to the empty line
+                if l.strip():
+                    continue
+                state = ManifestState.SIGNED_DATA
+            elif state == ManifestState.SIGNED_DATA:
+                if l == '-----BEGIN PGP SIGNATURE-----\n':
+                    state = ManifestState.SIGNATURE
+                    continue
+                # dash-escaping, RFC 4880 says any line can suffer from it
+                if l.startswith('- '):
+                    l = l[2:]
+            elif state == ManifestState.SIGNATURE:
+                if l == '-----END PGP SIGNATURE-----\n':
+                    state = ManifestState.POST_SIGNED_DATA
+                    continue
+
+            if l.startswith('-----') and l.rstrip().endswith('-----'):
+                raise gemato.exceptions.ManifestSyntaxError(
+                        "Unexpected OpenPGP header: {}".format(l))
+            if state in (ManifestState.SIGNED_PREAMBLE, ManifestState.SIGNATURE):
+                continue
+
             sl = l.strip().split()
             # skip empty lines
             if not sl:
                 continue
+            if state == ManifestState.POST_SIGNED_DATA:
+                raise gemato.exceptions.ManifestUnsignedData()
             tag = sl[0]
             self.entries.append(MANIFEST_TAG_MAPPING[tag].from_list(sl))
 
