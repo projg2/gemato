@@ -93,6 +93,17 @@ L0stUijJSFXISayqVEjJTwcAlGd4GBcAAAA=
             with gemato.compression.open_compressed_file('gz', rf, 'rb') as gz:
                 self.assertEqual(gz.read(), UTF16_TEST_STRING)
 
+    def test_open_potentially_compressed_path_with_encoding_line_api(self):
+        with tempfile.NamedTemporaryFile(suffix='.gz') as wf:
+            with gemato.compression.open_compressed_file('gz', wf, 'wb') as gz:
+                gz.write(UTF16_TEST_STRING)
+            wf.flush()
+
+            with gemato.compression.open_potentially_compressed_path(
+                    wf.name, 'r', encoding='utf_16_be') as cf:
+                self.assertListEqual([x for x in cf],
+                        [TEST_STRING.decode('utf8')])
+
     def test_open_potentially_compressed_path_fileno_passthrough(self):
         with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
             fs1 = gemato.compression.open_potentially_compressed_path(
@@ -207,6 +218,20 @@ OxleaA==
 
                 with gemato.compression.open_compressed_file('bz2', rf, 'rb') as bz2:
                     self.assertEqual(bz2.read(), UTF16_TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('bz2 compression unsupported')
+
+    def test_open_potentially_compressed_path_with_encoding_line_api(self):
+        with tempfile.NamedTemporaryFile(suffix='.bz2') as wf:
+            try:
+                with gemato.compression.open_compressed_file('bz2', wf, 'wb') as bz2:
+                    bz2.write(UTF16_TEST_STRING)
+                wf.flush()
+
+                with gemato.compression.open_potentially_compressed_path(
+                        wf.name, 'r', encoding='utf_16_be') as cf:
+                    self.assertListEqual([x for x in cf],
+                            [TEST_STRING.decode('utf8')])
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('bz2 compression unsupported')
 
@@ -338,6 +363,20 @@ ADUdSd6zBOkOpekGFH46zix9wE9VT65OVeV479//7uUAAA==
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('lzma compression unsupported')
 
+    def test_open_potentially_compressed_path_with_encoding_line_api(self):
+        with tempfile.NamedTemporaryFile(suffix='.lzma') as wf:
+            try:
+                with gemato.compression.open_compressed_file('lzma', wf, 'wb') as lzma:
+                    lzma.write(UTF16_TEST_STRING)
+                wf.flush()
+
+                with gemato.compression.open_potentially_compressed_path(
+                        wf.name, 'r', encoding='utf_16_be') as cf:
+                    self.assertListEqual([x for x in cf],
+                            [TEST_STRING.decode('utf8')])
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('lzma compression unsupported')
+
     def test_open_potentially_compressed_path_fileno_passthrough(self):
         with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
             fs1 = gemato.compression.open_potentially_compressed_path(
@@ -442,6 +481,45 @@ dGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
             except gemato.exceptions.UnsupportedCompression:
                 raise unittest.SkipTest('xz compression unsupported')
 
+    def test_open_potentially_compressed_path_with_encoding(self):
+        with tempfile.NamedTemporaryFile(suffix='.xz') as wf:
+            try:
+                with gemato.compression.open_compressed_file('xz', wf, 'wb') as xz:
+                    xz.write(UTF16_TEST_STRING)
+                wf.flush()
+
+                with gemato.compression.open_potentially_compressed_path(
+                        wf.name, 'r', encoding='utf_16_be') as cf:
+                    self.assertEqual(cf.read(), TEST_STRING.decode('utf8'))
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('xz compression unsupported')
+
+    def test_open_potentially_compressed_path_write_with_encoding(self):
+        with tempfile.NamedTemporaryFile(suffix='.xz') as rf:
+            try:
+                with gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'w', encoding='utf_16_be') as cf:
+                    cf.write(TEST_STRING.decode('utf8'))
+
+                with gemato.compression.open_compressed_file('xz', rf, 'rb') as xz:
+                    self.assertEqual(xz.read(), UTF16_TEST_STRING)
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('xz compression unsupported')
+
+    def test_open_potentially_compressed_path_with_encoding_line_api(self):
+        with tempfile.NamedTemporaryFile(suffix='.xz') as wf:
+            try:
+                with gemato.compression.open_compressed_file('xz', wf, 'wb') as xz:
+                    xz.write(UTF16_TEST_STRING)
+                wf.flush()
+
+                with gemato.compression.open_potentially_compressed_path(
+                        wf.name, 'r', encoding='utf_16_be') as cf:
+                    self.assertListEqual([x for x in cf],
+                            [TEST_STRING.decode('utf8')])
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('xz compression unsupported')
+
     def test_open_potentially_compressed_path_fileno_passthrough(self):
         with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
             fs1 = gemato.compression.open_potentially_compressed_path(
@@ -495,6 +573,16 @@ class NoCompressionTest(unittest.TestCase):
                 cf.write(TEST_STRING.decode('utf8'))
 
             self.assertEqual(rf.read(), UTF16_TEST_STRING)
+
+    def test_open_potentially_compressed_path_with_encoding_line_api(self):
+        with tempfile.NamedTemporaryFile() as wf:
+            wf.write(UTF16_TEST_STRING)
+            wf.flush()
+
+            with gemato.compression.open_potentially_compressed_path(
+                    wf.name, 'r', encoding='utf_16_be') as cf:
+                self.assertListEqual([x for x in cf],
+                        [TEST_STRING.decode('utf8')])
 
 
 class OtherUtilityTests(unittest.TestCase):

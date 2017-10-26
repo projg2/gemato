@@ -39,6 +39,15 @@ def open_compressed_file(suffix, f, mode='r'):
     """
 
     if suffix == "gz":
+        # work-around the deficiency in GzipFile class in py<3.3 causing
+        # it to break with TextIOWrapper
+        if sys.version_info < (3, 3):
+            class FixedGzipFile(gzip.GzipFile):
+                def read1(self, *args, **kwargs):
+                    return self.read(*args, **kwargs)
+
+            return FixedGzipFile(fileobj=f, mode=mode)
+
         return gzip.GzipFile(fileobj=f, mode=mode)
     elif suffix == "bz2" and bz2 is not None:
         return bz2.BZ2File(f, mode=mode)
