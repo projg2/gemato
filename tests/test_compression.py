@@ -236,18 +236,21 @@ OxleaA==
                 raise unittest.SkipTest('bz2 compression unsupported')
 
     def test_open_potentially_compressed_path_fileno_passthrough(self):
-        with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
-            fs1 = gemato.compression.open_potentially_compressed_path(
-                    rf.name, 'w', encoding='utf_16_be')
-            with fs1 as cf:
-                self.assertListEqual([f.fileno() for f in fs1.files],
-                                     [cf.fileno() for f in fs1.files])
+        with tempfile.NamedTemporaryFile(suffix='.bz2') as rf:
+            try:
+                fs1 = gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'w', encoding='utf_16_be')
+                with fs1 as cf:
+                    self.assertListEqual([f.fileno() for f in fs1.files],
+                                         [cf.fileno() for f in fs1.files])
 
-            fs2 = gemato.compression.open_potentially_compressed_path(
-                    rf.name, 'r', encoding='utf_16_be')
-            with fs2 as cf:
-                self.assertListEqual([f.fileno() for f in fs2.files],
-                                     [cf.fileno() for f in fs2.files])
+                fs2 = gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'r', encoding='utf_16_be')
+                with fs2 as cf:
+                    self.assertListEqual([f.fileno() for f in fs2.files],
+                                         [cf.fileno() for f in fs2.files])
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('bz2 compression unsupported')
 
 
 class LZMALegacyCompressionTest(unittest.TestCase):
@@ -378,18 +381,21 @@ ADUdSd6zBOkOpekGFH46zix9wE9VT65OVeV479//7uUAAA==
                 raise unittest.SkipTest('lzma compression unsupported')
 
     def test_open_potentially_compressed_path_fileno_passthrough(self):
-        with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
-            fs1 = gemato.compression.open_potentially_compressed_path(
-                    rf.name, 'w', encoding='utf_16_be')
-            with fs1 as cf:
-                self.assertListEqual([f.fileno() for f in fs1.files],
-                                     [cf.fileno() for f in fs1.files])
+        with tempfile.NamedTemporaryFile(suffix='.lzma') as rf:
+            try:
+                fs1 = gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'w', encoding='utf_16_be')
+                with fs1 as cf:
+                    self.assertListEqual([f.fileno() for f in fs1.files],
+                                         [cf.fileno() for f in fs1.files])
 
-            fs2 = gemato.compression.open_potentially_compressed_path(
-                    rf.name, 'r', encoding='utf_16_be')
-            with fs2 as cf:
-                self.assertListEqual([f.fileno() for f in fs2.files],
-                                     [cf.fileno() for f in fs2.files])
+                fs2 = gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'r', encoding='utf_16_be')
+                with fs2 as cf:
+                    self.assertListEqual([f.fileno() for f in fs2.files],
+                                         [cf.fileno() for f in fs2.files])
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('lzma compression unsupported')
 
 
 class XZCompressionTest(unittest.TestCase):
@@ -521,18 +527,21 @@ dGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
                 raise unittest.SkipTest('xz compression unsupported')
 
     def test_open_potentially_compressed_path_fileno_passthrough(self):
-        with tempfile.NamedTemporaryFile(suffix='.gz') as rf:
-            fs1 = gemato.compression.open_potentially_compressed_path(
-                    rf.name, 'w', encoding='utf_16_be')
-            with fs1 as cf:
-                self.assertListEqual([f.fileno() for f in fs1.files],
-                                     [cf.fileno() for f in fs1.files])
+        with tempfile.NamedTemporaryFile(suffix='.xz') as rf:
+            try:
+                fs1 = gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'w', encoding='utf_16_be')
+                with fs1 as cf:
+                    self.assertListEqual([f.fileno() for f in fs1.files],
+                                         [cf.fileno() for f in fs1.files])
 
-            fs2 = gemato.compression.open_potentially_compressed_path(
-                    rf.name, 'r', encoding='utf_16_be')
-            with fs2 as cf:
-                self.assertListEqual([f.fileno() for f in fs2.files],
-                                     [cf.fileno() for f in fs2.files])
+                fs2 = gemato.compression.open_potentially_compressed_path(
+                        rf.name, 'r', encoding='utf_16_be')
+                with fs2 as cf:
+                    self.assertListEqual([f.fileno() for f in fs2.files],
+                                         [cf.fileno() for f in fs2.files])
+            except gemato.exceptions.UnsupportedCompression:
+                raise unittest.SkipTest('xz compression unsupported')
 
 
 class NoCompressionTest(unittest.TestCase):
