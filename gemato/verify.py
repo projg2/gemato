@@ -176,14 +176,3 @@ def verify_entry_compatibility(e1, e2):
                 ret = False
 
     return (ret, diff)
-
-
-def assert_path_verifies(path, e, expected_dev=None):
-    """
-    Verify the path @path against entry @e. Raises an exception if it
-    does not pass the verification.
-    """
-
-    ret, diff = verify_path(path, e, expected_dev=expected_dev)
-    if not ret:
-        raise gemato.exceptions.ManifestMismatch(path, e, diff)

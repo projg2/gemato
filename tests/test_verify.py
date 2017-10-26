@@ -262,7 +262,7 @@ class EmptyFileVerificationTest(unittest.TestCase):
         e = gemato.manifest.ManifestEntryDATA.from_list(
                 ('DATA', os.path.basename(self.path), '0'))
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
-                gemato.verify.assert_path_verifies, self.path, e,
+                gemato.verify.verify_path, self.path, e,
                 expected_dev=st.st_dev)
 
 
@@ -493,40 +493,6 @@ class UnreadableFileVerificationTest(unittest.TestCase):
                 ('DATA', 'test', '0'))
         self.assertRaises(OSError, gemato.verify.verify_path,
                 os.path.join(self.dir, e.path), e)
-
-
-class ExceptionVerificationTest(object):
-    def setUp(self):
-        TEST_STRING = b'The quick brown fox jumps over the lazy dog'
-        self.f = tempfile.NamedTemporaryFile()
-        self.f.write(TEST_STRING)
-        self.f.flush()
-        self.path = self.f.name
-
-    def tearDown(self):
-        self.f.close()
-
-    def testDATA(self):
-        e = gemato.manifest.ManifestEntryDATA.from_list(
-                ('DATA', os.path.basename(self.path), '43'))
-        gemato.verify.assert_path_verifies(self.path, e)
-
-    def testChecksumDATA(self):
-        e = gemato.manifest.ManifestEntryDATA.from_list(
-                ('DATA', os.path.basename(self.path), '43',
-                    'MD5', '9e107d9d372bb6826bd81d3542a419d6',
-                    'SHA1', '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12'))
-        gemato.verify.assert_path_verifies(self.path, e)
-
-    def testWrongSizeDATA(self):
-        e = gemato.manifest.ManifestEntryDATA.from_list(
-                ('DATA', os.path.basename(self.path), '0'))
-        self.assertRaises(gemato.exceptions.ManifestMismatch,
-                gemato.verify.assert_path_verifies, self.path, e)
-
-    def testNone(self):
-        self.assertRaises(gemato.exceptions.ManifestMismatch,
-                gemato.verify.gemato.verify.assert_path_verifies, self.path, None)
 
 
 class EntryCompatibilityVerificationTest(unittest.TestCase):
