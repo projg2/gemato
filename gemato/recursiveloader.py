@@ -5,6 +5,7 @@
 
 import os.path
 
+import gemato.compression
 import gemato.exceptions
 import gemato.manifest
 import gemato.util
