@@ -19,3 +19,11 @@ def path_inside_dir(path, directory):
     """
     return ((directory == "" and path != "")
             or path.rstrip("/").startswith(directory.rstrip("/") + "/"))
+
+
+def throw_exception(e):
+    """
+    Raise the given exception. Needed for onerror= argument
+    to os.walk(). Useful for other callbacks.
+    """
+    raise e

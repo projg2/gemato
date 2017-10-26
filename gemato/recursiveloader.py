@@ -11,14 +11,6 @@ import gemato.util
 import gemato.verify
 
 
-def throw_exception(e):
-    """
-    Raise the given exception. Needed for onerror= argument
-    to os.walk().
-    """
-    raise e
-
-
 class ManifestRecursiveLoader(object):
     """
     A class encapsulating a tree covered by multiple Manifests.
@@ -223,7 +215,7 @@ class ManifestRecursiveLoader(object):
 
         entry_dict = self.get_file_entry_dict(path)
         it = os.walk(os.path.join(self.root_directory, path),
-                onerror=throw_exception,
+                onerror=gemato.util.throw_exception,
                 followlinks=True)
 
         for dirpath, dirnames, filenames in it:
