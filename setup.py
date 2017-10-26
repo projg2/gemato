@@ -14,6 +14,7 @@ setup(
     url='http://github.com/mgorny/gemato',
 
     packages=['gemato'],
+    scripts=['bin/gemato'],
 
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

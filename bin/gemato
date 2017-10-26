@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+# vim:fileencoding=utf-8
+# (c) 2017 Michał Górny
+# Licensed under the terms of 2-clause BSD license
+
+import logging
+import os.path
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from gemato.cli import main
+
+
+if __name__ == '__main__':
+    logging.getLogger().setLevel(logging.INFO)
+    sys.exit(main(sys.argv))
