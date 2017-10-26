@@ -23,16 +23,23 @@ def write_manifest_entry(manifest_file, t, path, relpath, hashes):
 
 def write_manifest_entries_for_dir(manifest_file, topdir, hashes):
     for dirpath, dirs, files in os.walk(topdir):
-        if 'Manifest' in files and dirpath != topdir:
-            fp = os.path.join(dirpath, 'Manifest')
-            write_manifest_entry(manifest_file, 'MANIFEST',
-                    fp, os.path.relpath(fp, topdir), hashes)
-            # do not descend
-            dirs.clear()
-            continue
+        if dirpath != topdir:
+            for f in files:
+                if f.startswith('Manifest'):
+                    fp = os.path.join(dirpath, f)
+                    write_manifest_entry(manifest_file, 'MANIFEST',
+                            fp, os.path.relpath(fp, topdir), hashes)
+                    # do not descend
+                    dirs.clear()
+                    skip = True
+                    break
+            else:
+                skip = False
+            if skip:
+                continue
 
         for f in files:
-            if f == 'Manifest':
+            if f.startswith('Manifest'):
                 continue
             fp = os.path.join(dirpath, f)
             write_manifest_entry(manifest_file, 'DATA',
@@ -57,7 +64,7 @@ def gen_metamanifests(top_dir, hashes):
 
     for bm in alldirs:
         bmdir = os.path.join(top_dir, bm)
-        if not os.path.exists(os.path.join(bmdir, 'Manifest')):
+        if not list(glob.glob(os.path.join(bmdir, 'Manifest*'))):
             with io.open(os.path.join(bmdir, 'Manifest'), 'w') as f:
                 write_manifest_entries_for_dir(f, bmdir, hashes)
 
