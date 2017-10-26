@@ -137,16 +137,18 @@ class SignedManifestTest(unittest.TestCase):
     def test_manifest_load(self):
         m = gemato.manifest.ManifestFile()
         with io.StringIO(SIGNED_MANIFEST) as f:
-            m.load(f)
+            m.load(f, verify_openpgp=False)
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
+        self.assertFalse(m.openpgp_signed)
 
     def test_dash_escaped_manifest_load(self):
         m = gemato.manifest.ManifestFile()
         with io.StringIO(DASH_ESCAPED_SIGNED_MANIFEST) as f:
-            m.load(f)
+            m.load(f, verify_openpgp=False)
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
+        self.assertFalse(m.openpgp_signed)
 
     def test_modified_manifest_load(self):
         """
@@ -155,39 +157,40 @@ class SignedManifestTest(unittest.TestCase):
         """
         m = gemato.manifest.ManifestFile()
         with io.StringIO(MODIFIED_SIGNED_MANIFEST) as f:
-            m.load(f)
+            m.load(f, verify_openpgp=False)
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
+        self.assertFalse(m.openpgp_signed)
 
     def test_junk_before_manifest_load(self):
         m = gemato.manifest.ManifestFile()
         with io.StringIO('OPTIONAL test\n' + SIGNED_MANIFEST) as f:
             self.assertRaises(gemato.exceptions.ManifestUnsignedData,
-                    m.load, f)
+                    m.load, f, verify_openpgp=False)
 
     def test_junk_after_manifest_load(self):
         m = gemato.manifest.ManifestFile()
         with io.StringIO(SIGNED_MANIFEST + 'OPTIONAL test\n') as f:
             self.assertRaises(gemato.exceptions.ManifestUnsignedData,
-                    m.load, f)
+                    m.load, f, verify_openpgp=False)
 
     def test_signed_manifest_terminated_before_data(self):
         m = gemato.manifest.ManifestFile()
         with io.StringIO('\n'.join(SIGNED_MANIFEST.splitlines()[:3])) as f:
             self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                    m.load, f)
+                    m.load, f, verify_openpgp=False)
 
     def test_signed_manifest_terminated_before_signature(self):
         m = gemato.manifest.ManifestFile()
         with io.StringIO('\n'.join(SIGNED_MANIFEST.splitlines()[:7])) as f:
             self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                    m.load, f)
+                    m.load, f, verify_openpgp=False)
 
     def test_signed_manifest_terminated_before_end(self):
         m = gemato.manifest.ManifestFile()
         with io.StringIO('\n'.join(SIGNED_MANIFEST.splitlines()[:15])) as f:
             self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                    m.load, f)
+                    m.load, f, verify_openpgp=False)
 
 
 class OpenPGPCorrectKeyTest(unittest.TestCase):
@@ -221,6 +224,28 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
             self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
                     self.env.verify_file, f)
 
+    def test_manifest_load(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(SIGNED_MANIFEST) as f:
+            m.load(f, openpgp_env=self.env)
+        self.assertIsNotNone(m.find_timestamp())
+        self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
+        self.assertTrue(m.openpgp_signed)
+
+    def test_dash_escaped_manifest_load(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(DASH_ESCAPED_SIGNED_MANIFEST) as f:
+            m.load(f, openpgp_env=self.env)
+        self.assertIsNotNone(m.find_timestamp())
+        self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
+        self.assertTrue(m.openpgp_signed)
+
+    def test_modified_manifest_load(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(MODIFIED_SIGNED_MANIFEST) as f:
+            self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                m.load, f, openpgp_env=self.env)
+
 
 class OpenPGPNoKeyTest(unittest.TestCase):
     """
@@ -240,6 +265,31 @@ class OpenPGPNoKeyTest(unittest.TestCase):
                         self.env.verify_file, f)
             except gemato.exceptions.OpenPGPNoImplementation as e:
                 raise unittest.SkipTest(str(e))
+
+    def test_manifest_load(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(SIGNED_MANIFEST) as f:
+            try:
+                self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                        m.load, f, openpgp_env=self.env)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+
+    def test_manifest_load_exception_caught(self):
+        """
+        Test that the Manifest is loaded even if exception is raised.
+        """
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(SIGNED_MANIFEST) as f:
+            try:
+                m.load(f, openpgp_env=self.env)
+            except gemato.exceptions.OpenPGPVerificationFailure:
+                pass
+            except gemato.exceptions.OpenPGPNoImplementation:
+                pass
+        self.assertIsNotNone(m.find_timestamp())
+        self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
+        self.assertFalse(m.openpgp_signed)
 
 
 class OpenPGPContextManagerTest(unittest.TestCase):

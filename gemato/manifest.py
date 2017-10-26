@@ -4,9 +4,11 @@
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
+import io
 import os.path
 
 import gemato.exceptions
+import gemato.openpgp
 import gemato.util
 
 
@@ -298,31 +300,50 @@ class ManifestFile(object):
         """
 
         self.entries = []
+        self.openpgp_signed = None
         if f is not None:
             self.load(f)
 
-    def load(self, f):
+    def load(self, f, verify_openpgp=True, openpgp_env=None):
         """
         Load data from file @f. The file should be open for reading
         in text mode, and oriented at the beginning.
+
+        If @verify_openpgp is True and the Manifest contains an OpenPGP
+        signature, the signature will be verified. Provide @openpgp_env
+        to perform the verification in specific environment.
+
+        If the verification succeeds, the openpgp_signed property will
+        be set to True. If it fails or OpenPGP is not available,
+        an exception will be raised. If the exception is caught,
+        the caller can continue using the ManifestFile instance
+        -- it will be loaded completely.
         """
 
         self.entries = []
+        self.openpgp_signed = False
         state = ManifestState.DATA
+        openpgp_data = ''
 
         for l in f:
             if state == ManifestState.DATA:
                 if l == '-----BEGIN PGP SIGNED MESSAGE-----\n':
                     if self.entries:
                         raise gemato.exceptions.ManifestUnsignedData()
+                    if verify_openpgp:
+                        openpgp_data += l
                     state = ManifestState.SIGNED_PREAMBLE
                     continue
             elif state == ManifestState.SIGNED_PREAMBLE:
+                if verify_openpgp:
+                    openpgp_data += l
                 # skip header lines up to the empty line
                 if l.strip():
                     continue
                 state = ManifestState.SIGNED_DATA
             elif state == ManifestState.SIGNED_DATA:
+                if verify_openpgp:
+                    openpgp_data += l
                 if l == '-----BEGIN PGP SIGNATURE-----\n':
                     state = ManifestState.SIGNATURE
                     continue
@@ -330,6 +351,8 @@ class ManifestFile(object):
                 if l.startswith('- '):
                     l = l[2:]
             elif state == ManifestState.SIGNATURE:
+                if verify_openpgp:
+                    openpgp_data += l
                 if l == '-----END PGP SIGNATURE-----\n':
                     state = ManifestState.POST_SIGNED_DATA
                     continue
@@ -358,6 +381,11 @@ class ManifestFile(object):
         elif state == ManifestState.SIGNATURE:
             raise gemato.exceptions.ManifestSyntaxError(
                     "Manifest terminated early, inside signature")
+
+        if verify_openpgp and state == ManifestState.POST_SIGNED_DATA:
+            with io.BytesIO(openpgp_data.encode('utf8')) as f:
+                gemato.openpgp.verify_file(f, env=openpgp_env)
+            self.openpgp_signed = True
 
     def dump(self, f):
         """
