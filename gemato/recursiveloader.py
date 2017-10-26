@@ -19,14 +19,24 @@ class ManifestRecursiveLoader(object):
     and provides methods to access the entries in them.
     """
 
-    def __init__(self, top_manifest_path):
+    def __init__(self, top_manifest_path,
+            verify_openpgp=True, openpgp_env=None):
         """
         Instantiate the loader for a Manifest tree starting at top-level
         Manifest @top_manifest_path.
+
+        @verify_openpgp and @openpgp_env are passed down
+        to ManifestFile. If the top-level Manifest is OpenPGP-signed
+        and the verification succeeds, openpgp_signed property
+        is set to True.
         """
         self.root_directory = os.path.dirname(top_manifest_path)
         self.loaded_manifests = {}
-        self.load_manifest(os.path.basename(top_manifest_path))
+        self.verify_openpgp = verify_openpgp
+        self.openpgp_env = openpgp_env
+        # TODO: allow catching OpenPGP exceptions somehow?
+        m = self.load_manifest(os.path.basename(top_manifest_path))
+        self.openpgp_signed = m.openpgp_signed
 
     def load_manifest(self, relpath, verify_entry=None):
         """
@@ -44,10 +54,11 @@ class ManifestRecursiveLoader(object):
                         relpath, verify_entry, diff)
         with gemato.compression.open_potentially_compressed_path(
                 path, 'r', encoding='utf8') as f:
-            m.load(f)
+            m.load(f, self.verify_openpgp, self.openpgp_env)
             st = os.fstat(f.fileno())
             self.manifest_device = st.st_dev
         self.loaded_manifests[relpath] = m
+        return m
 
     def _iter_manifests_for_path(self, path, recursive=False):
         """

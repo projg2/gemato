@@ -4,10 +4,15 @@
 # Licensed under the terms of 2-clause BSD license
 
 import io
+import os.path
+import shutil
+import tempfile
 import unittest
 
+import gemato.compression
 import gemato.manifest
 import gemato.openpgp
+import gemato.recursiveloader
 
 
 PUBLIC_KEY = u'''
@@ -192,6 +197,19 @@ class SignedManifestTest(unittest.TestCase):
             self.assertRaises(gemato.exceptions.ManifestSyntaxError,
                     m.load, f, verify_openpgp=False)
 
+    def test_recursive_manifest_loader(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(MODIFIED_SIGNED_MANIFEST)
+
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(d, 'Manifest'),
+                    verify_openpgp=False)
+            self.assertFalse(m.openpgp_signed)
+        finally:
+            shutil.rmtree(d)
+
 
 class OpenPGPCorrectKeyTest(unittest.TestCase):
     """
@@ -246,6 +264,35 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
             self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
                 m.load, f, openpgp_env=self.env)
 
+    def test_recursive_manifest_loader(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(SIGNED_MANIFEST)
+
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(d, 'Manifest'),
+                    verify_openpgp=True,
+                    openpgp_env=self.env)
+            self.assertTrue(m.openpgp_signed)
+        finally:
+            shutil.rmtree(d)
+
+    def test_recursive_manifest_loader_compressed(self):
+        d = tempfile.mkdtemp()
+        try:
+            with gemato.compression.open_potentially_compressed_path(
+                    os.path.join(d, 'Manifest.gz'), 'w') as cf:
+                cf.write(SIGNED_MANIFEST)
+
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(d, 'Manifest.gz'),
+                    verify_openpgp=True,
+                    openpgp_env=self.env)
+            self.assertTrue(m.openpgp_signed)
+        finally:
+            shutil.rmtree(d)
+
 
 class OpenPGPNoKeyTest(unittest.TestCase):
     """
@@ -290,6 +337,35 @@ class OpenPGPNoKeyTest(unittest.TestCase):
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
         self.assertFalse(m.openpgp_signed)
+
+    def test_recursive_manifest_loader(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(SIGNED_MANIFEST)
+
+            self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                    gemato.recursiveloader.ManifestRecursiveLoader,
+                    os.path.join(d, 'Manifest'),
+                    verify_openpgp=True,
+                    openpgp_env=self.env)
+        finally:
+            shutil.rmtree(d)
+
+    def test_recursive_manifest_loader_compressed(self):
+        d = tempfile.mkdtemp()
+        try:
+            with gemato.compression.open_potentially_compressed_path(
+                    os.path.join(d, 'Manifest.gz'), 'w') as cf:
+                cf.write(SIGNED_MANIFEST)
+
+            self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                    gemato.recursiveloader.ManifestRecursiveLoader,
+                    os.path.join(d, 'Manifest.gz'),
+                    verify_openpgp=True,
+                    openpgp_env=self.env)
+        finally:
+            shutil.rmtree(d)
 
 
 class OpenPGPContextManagerTest(unittest.TestCase):
