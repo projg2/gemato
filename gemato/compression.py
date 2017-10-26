@@ -29,13 +29,17 @@ except ImportError:
 import gemato.exceptions
 
 
-def open_compressed_file(suffix, f, mode='r'):
+def open_compressed_file(suffix, f, mode='rb'):
     """
     Get a file-like object for an open compressed file @fileobj
     of format @suffix. The file should be open in binary mode
     and positioned at the beginning. @suffix should specify a standard
     suffix for the compression format without the leading dot,
-    e.g. "gz", "bz2".
+    e.g. "gz", "bz2". @mode specifies the mode to pass to
+    the compressor.
+
+    Note that independently of @mode, the returned file objects
+    are always open in binary mode (i.e. expect bytestrings).
     """
 
     if suffix == "gz":
@@ -107,9 +111,9 @@ def open_potentially_compressed_path(path, mode, **kwargs):
         cf = open_compressed_file(ext[1:], f, bmode if kwargs else mode)
         fs.files.append(cf)
 
-        # special args are not supported by compressor backends
-        # so add a TextIOWrapper on top
-        if kwargs:
+        # add a TextIOWrapper on top whenever we do not want
+        # the standard compressor file binary mode
+        if 'b' not in mode:
             iow = io.TextIOWrapper(cf, **kwargs)
             fs.files.append(iow)
     except:
