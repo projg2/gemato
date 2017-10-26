@@ -217,7 +217,7 @@ class ManifestRecursiveLoader(object):
 
     def assert_directory_verifies(self, path='',
             fail_handler=gemato.util.throw_exception,
-            warn_handler=gemato.util.throw_exception):
+            warn_handler=None):
         """
         Verify the complete directory tree starting at @path (relative
         to top Manifest directory). Includes testing for stray files.
@@ -229,9 +229,10 @@ class ManifestRecursiveLoader(object):
         is called whenever verification fails for MISC/OPTIONAL entries.
 
         The handlers are passed a ManifestMismatch exception object.
-        The default handlers raise the exception. However, custom
-        handlers can be used to provide a non-strict mode, or continue
-        the scan after the first failure.
+        The default fail handler raises the exception. Unless specified
+        explicitly, the warn handler defaults to fail handler. However,
+        custom handlers can be used to provide a non-strict mode,
+        or continue the scan after the first failure.
 
         If none of the handlers raise exceptions, the function returns
         boolean. It returns False if at least one of the handler calls
@@ -243,6 +244,9 @@ class ManifestRecursiveLoader(object):
                 onerror=gemato.util.throw_exception,
                 followlinks=True)
         ret = True
+
+        if warn_handler is None:
+            warn_handler = fail_handler
 
         for dirpath, dirnames, filenames in it:
             relpath = os.path.relpath(dirpath, self.root_directory)

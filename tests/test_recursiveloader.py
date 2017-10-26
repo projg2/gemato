@@ -698,6 +698,12 @@ MISC foo 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertFalse(m.assert_directory_verifies('',
                 warn_handler=lambda x: False))
 
+    def test_assert_directory_verifies_nonstrict_via_fail_handler(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertTrue(m.assert_directory_verifies('',
+                fail_handler=lambda x: True))
+
 
 class ManifestOptionalEntryTest(TempDirTestCase):
     """
