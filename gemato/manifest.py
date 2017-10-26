@@ -349,6 +349,16 @@ class ManifestFile(object):
             tag = sl[0]
             self.entries.append(MANIFEST_TAG_MAPPING[tag].from_list(sl))
 
+        if state == ManifestState.SIGNED_PREAMBLE:
+            raise gemato.exceptions.ManifestSyntaxError(
+                    "Manifest terminated early, in OpenPGP headers")
+        elif state == ManifestState.SIGNED_DATA:
+            raise gemato.exceptions.ManifestSyntaxError(
+                    "Manifest terminated early, before signature")
+        elif state == ManifestState.SIGNATURE:
+            raise gemato.exceptions.ManifestSyntaxError(
+                    "Manifest terminated early, inside signature")
+
     def dump(self, f):
         """
         Dump data into file @f. The file should be open for writing

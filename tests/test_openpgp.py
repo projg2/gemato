@@ -171,6 +171,24 @@ class SignedManifestTest(unittest.TestCase):
             self.assertRaises(gemato.exceptions.ManifestUnsignedData,
                     m.load, f)
 
+    def test_signed_manifest_terminated_before_data(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO('\n'.join(SIGNED_MANIFEST.splitlines()[:3])) as f:
+            self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                    m.load, f)
+
+    def test_signed_manifest_terminated_before_signature(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO('\n'.join(SIGNED_MANIFEST.splitlines()[:7])) as f:
+            self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                    m.load, f)
+
+    def test_signed_manifest_terminated_before_end(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO('\n'.join(SIGNED_MANIFEST.splitlines()[:15])) as f:
+            self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                    m.load, f)
+
 
 class OpenPGPCorrectKeyTest(unittest.TestCase):
     """
