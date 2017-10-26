@@ -18,6 +18,11 @@ def verify_warning(e):
     return True
 
 
+def verify_failure(e):
+    logging.error(str(e))
+    return False
+
+
 def do_verify(args):
     for p in args.paths:
         tlm = gemato.find_top_level.find_top_level_manifest(p)
@@ -26,19 +31,22 @@ def do_verify(args):
             return 1
 
         kwargs = {}
+        if args.keep_going:
+            kwargs['fail_handler'] = verify_failure
         if not args.strict:
             kwargs['warn_handler'] = verify_warning
 
         start = timeit.default_timer()
         m = gemato.recursiveloader.ManifestRecursiveLoader(tlm)
         try:
-            m.assert_directory_verifies(**kwargs)
+            ret = m.assert_directory_verifies(**kwargs)
         except gemato.exceptions.ManifestMismatch as e:
             logging.error(str(e))
             return 1
 
         stop = timeit.default_timer()
         logging.info('{} validated in {:.2f} seconds'.format(p, stop - start))
+        return 0 if ret else 1
 
 
 def main(argv):
@@ -50,6 +58,8 @@ def main(argv):
     verify = subp.add_parser('verify')
     verify.add_argument('paths', nargs='*', default=['.'],
             help='Paths to verify (defaults to "." if none specified)')
+    verify.add_argument('-k', '--keep-going', action='store_true',
+            help='Continue reporting errors rather than terminating on the first failure')
     verify.add_argument('-S', '--no-strict', action='store_false',
             dest='strict',
             help='Do not fail on non-strict Manifest issues (MISC/OPTIONAL entries)')
