@@ -5,11 +5,6 @@
 
 import hashlib
 import io
-try:
-	import queue
-except ImportError:
-	import Queue as queue
-import threading
 
 import gemato.exceptions
 
@@ -70,44 +65,18 @@ def get_hash_by_name(name):
 	raise gemato.exceptions.UnsupportedHash(name)
 
 
-def hash_one(hn, h, q, ret, retlock):
-	while True:
-		data = q.get()
-		if data is not None:
-			h.update(data)
-		if data is None:
-			break
-
-	retlock.acquire()
-	ret[hn] = h.hexdigest()
-	retlock.release()
-
-
 def hash_file(f, hash_names):
 	"""
 	Hash the contents of file object @f using all hashes specified
 	as @hash_names. Returns a dict of (hash_name -> hex value) mappings.
 	"""
-	queues = []
-	threads = []
-	ret = {}
-	retlock = threading.Lock()
-	for hn in hash_names:
-		h = get_hash_by_name(hn)
-		q = queue.Queue(8)
-		queues.append(q)
-		threads.append(threading.Thread(target=hash_one,
-			args=(hn, h, q, ret, retlock)))
-	for t in threads:
-		t.start()
+	hashes = {}
+	for h in hash_names:
+		hashes[h] = get_hash_by_name(h)
 	for block in iter(lambda: f.read(HASH_BUFFER_SIZE), b''):
-		for q in queues:
-			q.put(block)
-	for q in queues:
-		q.put(None)
-	for t in threads:
-		t.join()
-	return ret
+		for h in hashes.values():
+			h.update(block)
+	return dict((k, h.hexdigest()) for k, h in hashes.items())
 
 
 def hash_path(path, hash_names):
