@@ -37,7 +37,10 @@ class ManifestRecursiveLoader(object):
         m = gemato.manifest.ManifestFile()
         path = os.path.join(self.root_directory, relpath)
         if verify_entry is not None:
-            gemato.verify.assert_path_verifies(path, verify_entry)
+            ret, diff = gemato.verify.verify_path(path, verify_entry)
+            if not ret:
+                raise gemato.exceptions.ManifestMismatch(
+                        relpath, verify_entry, diff)
         with gemato.compression.open_potentially_compressed_path(
                 path, 'r', encoding='utf8') as f:
             m.load(f)
@@ -139,7 +142,11 @@ class ManifestRecursiveLoader(object):
         """
         real_path = os.path.join(self.root_directory, relpath)
         path_entry = self.find_path_entry(relpath)
-        gemato.verify.assert_path_verifies(real_path, path_entry)
+        ret, diff = gemato.verify.verify_path(real_path, path_entry,
+                expected_dev=self.manifest_device)
+        if not ret:
+            raise gemato.exceptions.ManifestMismatch(
+                    relpath, path_entry, diff)
 
     def find_dist_entry(self, filename, relpath=''):
         """
@@ -190,18 +197,16 @@ class ManifestRecursiveLoader(object):
                         out[fullpath] = e
         return out
 
-    def _verify_one_file(self, path, e, strict):
-        try:
-            gemato.verify.assert_path_verifies(path, e,
-                    expected_dev=self.manifest_device)
-        except gemato.exceptions.ManifestMismatch:
-            if strict:
-                raise
-            # skip MISC/OPTIONAL in non-strict mode
-            # TODO: provide a way to deliver warnings?
-            if (not isinstance(e, gemato.manifest.ManifestEntryOPTIONAL)
-                    and not isinstance(e, gemato.manifest.ManifestEntryMISC)):
-                raise
+    def _verify_one_file(self, path, relpath, e, strict):
+        ret, diff = gemato.verify.verify_path(path, e,
+                expected_dev=self.manifest_device)
+
+        if not ret:
+            if not strict and (isinstance(e, gemato.manifest.ManifestEntryOPTIONAL)
+                               or isinstance(e, gemato.manifest.ManifestEntryMISC)):
+                return
+            raise gemato.exceptions.ManifestMismatch(
+                    relpath, e, diff)
 
     def assert_directory_verifies(self, path='', strict=True):
         """
@@ -243,7 +248,7 @@ class ManifestRecursiveLoader(object):
                 if isinstance(de, gemato.manifest.ManifestEntryIGNORE):
                     skip_dirs.append(d)
                 else:
-                    self._verify_one_file(os.path.join(dirpath, d), de, strict)
+                    self._verify_one_file(os.path.join(dirpath, d), dpath, de, strict)
 
             # skip scanning ignored directories
             for d in skip_dirs:
@@ -261,9 +266,9 @@ class ManifestRecursiveLoader(object):
                         .get_potential_compressed_names('Manifest')):
                     continue
                 fe = entry_dict.pop(fpath, None)
-                self._verify_one_file(os.path.join(dirpath, f), fe, strict)
+                self._verify_one_file(os.path.join(dirpath, f), fpath, fe, strict)
 
         # check for missing files
         for relpath, e in entry_dict.items():
             syspath = os.path.join(self.root_directory, relpath)
-            self._verify_one_file(syspath, e, strict)
+            self._verify_one_file(syspath, relpath, e, strict)
