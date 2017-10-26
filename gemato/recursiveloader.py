@@ -197,31 +197,51 @@ class ManifestRecursiveLoader(object):
                         out[fullpath] = e
         return out
 
-    def _verify_one_file(self, path, relpath, e, strict):
+    def _verify_one_file(self, path, relpath, e, fail_handler, warn_handler):
         ret, diff = gemato.verify.verify_path(path, e,
                 expected_dev=self.manifest_device)
 
         if not ret:
-            if not strict and (isinstance(e, gemato.manifest.ManifestEntryOPTIONAL)
-                               or isinstance(e, gemato.manifest.ManifestEntryMISC)):
-                return
-            raise gemato.exceptions.ManifestMismatch(
-                    relpath, e, diff)
+            if (isinstance(e, gemato.manifest.ManifestEntryOPTIONAL)
+                    or isinstance(e, gemato.manifest.ManifestEntryMISC)):
+                h = warn_handler
+            else:
+                h = fail_handler
+            err = gemato.exceptions.ManifestMismatch(relpath, e, diff)
+            ret = h(err)
+            if ret is None:
+                ret = True
 
-    def assert_directory_verifies(self, path='', strict=True):
+        return ret
+
+    def assert_directory_verifies(self, path='',
+            fail_handler=gemato.util.throw_exception,
+            warn_handler=gemato.util.throw_exception):
         """
         Verify the complete directory tree starting at @path (relative
         to top Manifest directory). Includes testing for stray files.
         Raises an exception if any of the files does not pass
         verification.
 
-        If @strict is False, MISC/OPTIONAL mismatches will be ignored.
+        @fail_handler is the callback called whenever verification
+        fails for 'strong' entries (or stray files). @warn_handler
+        is called whenever verification fails for MISC/OPTIONAL entries.
+
+        The handlers are passed a ManifestMismatch exception object.
+        The default handlers raise the exception. However, custom
+        handlers can be used to provide a non-strict mode, or continue
+        the scan after the first failure.
+
+        If none of the handlers raise exceptions, the function returns
+        boolean. It returns False if at least one of the handler calls
+        returned explicit False; True otherwise.
         """
 
         entry_dict = self.get_file_entry_dict(path)
         it = os.walk(os.path.join(self.root_directory, path),
                 onerror=gemato.util.throw_exception,
                 followlinks=True)
+        ret = True
 
         for dirpath, dirnames, filenames in it:
             relpath = os.path.relpath(dirpath, self.root_directory)
@@ -248,7 +268,8 @@ class ManifestRecursiveLoader(object):
                 if isinstance(de, gemato.manifest.ManifestEntryIGNORE):
                     skip_dirs.append(d)
                 else:
-                    self._verify_one_file(os.path.join(dirpath, d), dpath, de, strict)
+                    ret &= self._verify_one_file(os.path.join(dirpath, d),
+                            dpath, de, fail_handler, warn_handler)
 
             # skip scanning ignored directories
             for d in skip_dirs:
@@ -266,9 +287,13 @@ class ManifestRecursiveLoader(object):
                         .get_potential_compressed_names('Manifest')):
                     continue
                 fe = entry_dict.pop(fpath, None)
-                self._verify_one_file(os.path.join(dirpath, f), fpath, fe, strict)
+                ret &= self._verify_one_file(os.path.join(dirpath, f),
+                        fpath, fe, fail_handler, warn_handler)
 
         # check for missing files
         for relpath, e in entry_dict.items():
             syspath = os.path.join(self.root_directory, relpath)
-            self._verify_one_file(syspath, relpath, e, strict)
+            ret &= self._verify_one_file(syspath, relpath, e,
+                            fail_handler, warn_handler)
+
+        return ret

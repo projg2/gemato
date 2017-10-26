@@ -217,7 +217,20 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestMismatch,
-                m.assert_directory_verifies, 'sub', strict=False)
+                m.assert_directory_verifies, 'sub',
+                warn_handler=lambda x: True)
+
+    def test_assert_directory_verifies_stray_file_nofail(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertTrue(m.assert_directory_verifies(
+                'sub', fail_handler=lambda x: True))
+
+    def test_assert_directory_verifies_stray_file_nofail_false(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertFalse(m.assert_directory_verifies(
+                'sub', fail_handler=lambda x: False))
 
 
 class MultipleManifestTest(TempDirTestCase):
@@ -676,7 +689,14 @@ MISC foo 0 MD5 d41d8cd98f00b204e9800998ecf8427e
     def test_assert_directory_verifies_nonstrict(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        m.assert_directory_verifies('', strict=False)
+        self.assertTrue(m.assert_directory_verifies('',
+                warn_handler=lambda x: True))
+
+    def test_assert_directory_verifies_nonstrict_false(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertFalse(m.assert_directory_verifies('',
+                warn_handler=lambda x: False))
 
 
 class ManifestOptionalEntryTest(TempDirTestCase):
@@ -700,7 +720,14 @@ OPTIONAL foo
     def test_assert_directory_verifies_nonstrict(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        m.assert_directory_verifies('', strict=False)
+        self.assertTrue(m.assert_directory_verifies('',
+                warn_handler=lambda x: True))
+
+    def test_assert_directory_verifies_nonstrict_false(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertFalse(m.assert_directory_verifies('',
+                warn_handler=lambda x: False))
 
 
 class CrossDeviceManifestTest(TempDirTestCase):
@@ -732,7 +759,9 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
-                m.assert_directory_verifies, '', strict=False)
+                m.assert_directory_verifies, '',
+                fail_handler=lambda x: True,
+                warn_handler=lambda x: True)
 
 
 class CrossDeviceEmptyManifestTest(TempDirTestCase):
@@ -763,7 +792,9 @@ class CrossDeviceEmptyManifestTest(TempDirTestCase):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
-                m.assert_directory_verifies, '', strict=False)
+                m.assert_directory_verifies, '',
+                fail_handler=lambda x: True,
+                warn_handler=lambda x: True)
 
 
 class CrossDeviceIgnoreManifestTest(TempDirTestCase):
