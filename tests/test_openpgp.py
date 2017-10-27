@@ -16,7 +16,7 @@ import gemato.openpgp
 import gemato.recursiveloader
 
 
-PUBLIC_KEY = u'''
+PUBLIC_KEY = b'''
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQENBFnwXJMBCACgaTVz+d10TGL9zR920sb0GBFsitAJ5ZFzO4E0cg3SHhwI+reM
@@ -36,7 +36,7 @@ jCvJNJ7pU8YnJSRTQDH0PZEupAdzDU/AhGSrBz5+Jr7N0pQIxq4duE/Q
 -----END PGP PUBLIC KEY BLOCK-----
 '''
 
-PRIVATE_KEY = u'''
+PRIVATE_KEY = b'''
 -----BEGIN PGP PRIVATE KEY BLOCK-----
 
 lQOYBFnwXJMBCACgaTVz+d10TGL9zR920sb0GBFsitAJ5ZFzO4E0cg3SHhwI+reM
@@ -73,7 +73,7 @@ DU/AhGSrBz5+Jr7N0pQIxq4duE/Q
 
 PRIVATE_KEY_ID = b'0x136880E72A7B1384'
 
-MALFORMED_PUBLIC_KEY = u'''
+MALFORMED_PUBLIC_KEY = b'''
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQENBFnwXJMBCACgaTVz+d10TGL9zR920sb0GBFsitAJ5ZFzO4E0cg3SHhwI+reM
@@ -278,8 +278,7 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
     def setUp(self):
         self.env = gemato.openpgp.OpenPGPEnvironment()
         try:
-            self.env.import_key(
-                    io.BytesIO(PUBLIC_KEY.encode('utf8')))
+            self.env.import_key(io.BytesIO(PUBLIC_KEY))
         except gemato.exceptions.OpenPGPNoImplementation as e:
             raise unittest.SkipTest(str(e))
         except RuntimeError:
@@ -289,15 +288,15 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
         self.env.close()
 
     def test_verify_manifest(self):
-        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+        with io.StringIO(SIGNED_MANIFEST) as f:
             self.env.verify_file(f)
 
     def test_verify_dash_escaped_manifest(self):
-        with io.BytesIO(DASH_ESCAPED_SIGNED_MANIFEST.encode('utf8')) as f:
+        with io.StringIO(DASH_ESCAPED_SIGNED_MANIFEST) as f:
             self.env.verify_file(f)
 
     def test_verify_modified_manifest(self):
-        with io.BytesIO(MODIFIED_SIGNED_MANIFEST.encode('utf8')) as f:
+        with io.StringIO(MODIFIED_SIGNED_MANIFEST) as f:
             self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
                     self.env.verify_file, f)
 
@@ -355,7 +354,7 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
     def test_cli(self):
         d = tempfile.mkdtemp()
         try:
-            with io.open(os.path.join(d, '.key.asc'), 'w') as f:
+            with io.open(os.path.join(d, '.key.asc'), 'wb') as f:
                 f.write(PUBLIC_KEY)
             with io.open(os.path.join(d, 'Manifest'), 'w') as f:
                 f.write(SIGNED_MANIFEST)
@@ -389,7 +388,7 @@ class OpenPGPNoKeyTest(unittest.TestCase):
         self.env.close()
 
     def test_verify_manifest(self):
-        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+        with io.StringIO(SIGNED_MANIFEST) as f:
             try:
                 self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
                         self.env.verify_file, f)
@@ -477,8 +476,7 @@ class OpenPGPContextManagerTest(unittest.TestCase):
     def test_import_key(self):
         with gemato.openpgp.OpenPGPEnvironment() as env:
             try:
-                env.import_key(
-                        io.BytesIO(PUBLIC_KEY.encode('utf8')))
+                env.import_key(io.BytesIO(PUBLIC_KEY))
             except gemato.exceptions.OpenPGPNoImplementation as e:
                 raise unittest.SkipTest(str(e))
 
@@ -487,7 +485,7 @@ class OpenPGPContextManagerTest(unittest.TestCase):
             try:
                 self.assertRaises(RuntimeError,
                         env.import_key,
-                        io.BytesIO(MALFORMED_PUBLIC_KEY.encode('utf8')))
+                        io.BytesIO(MALFORMED_PUBLIC_KEY))
             except gemato.exceptions.OpenPGPNoImplementation as e:
                 raise unittest.SkipTest(str(e))
 
@@ -501,12 +499,11 @@ class OpenPGPContextManagerTest(unittest.TestCase):
                 raise unittest.SkipTest(str(e))
 
     def test_verify_manifest(self):
-        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+        with io.StringIO(SIGNED_MANIFEST) as f:
             with gemato.openpgp.OpenPGPEnvironment() as env:
                 try:
                     try:
-                        env.import_key(
-                                io.BytesIO(PUBLIC_KEY.encode('utf8')))
+                        env.import_key(io.BytesIO(PUBLIC_KEY))
                     except RuntimeError:
                         raise unittest.SkipTest('Unable to import OpenPGP key')
 
@@ -530,13 +527,12 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
     Tests performed with the private key available.
     """
 
-    TEST_STRING = b'The quick brown fox jumps over the lazy dog'
+    TEST_STRING = u'The quick brown fox jumps over the lazy dog'
 
     def setUp(self):
         self.env = gemato.openpgp.OpenPGPEnvironment()
         try:
-            self.env.import_key(
-                    io.BytesIO(PRIVATE_KEY.encode('utf8')))
+            self.env.import_key(io.BytesIO(PRIVATE_KEY))
         except gemato.exceptions.OpenPGPNoImplementation as e:
             raise unittest.SkipTest(str(e))
         except RuntimeError:
@@ -546,19 +542,19 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
         self.env.close()
 
     def test_verify_manifest(self):
-        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+        with io.StringIO(SIGNED_MANIFEST) as f:
             self.env.verify_file(f)
 
     def test_sign_data(self):
-        with io.BytesIO(self.TEST_STRING) as f:
-            with io.BytesIO() as wf:
+        with io.StringIO(self.TEST_STRING) as f:
+            with io.StringIO() as wf:
                 self.env.clear_sign_file(f, wf)
                 wf.seek(0)
                 self.env.verify_file(wf)
 
     def test_sign_data_keyid(self):
-        with io.BytesIO(self.TEST_STRING) as f:
-            with io.BytesIO() as wf:
+        with io.StringIO(self.TEST_STRING) as f:
+            with io.StringIO() as wf:
                 self.env.clear_sign_file(f, wf, keyid=PRIVATE_KEY_ID)
                 wf.seek(0)
                 self.env.verify_file(wf)

@@ -94,7 +94,7 @@ class OpenPGPEnvironment(object):
 def verify_file(f, env=None):
     """
     Perform an OpenPGP verification of Manifest data in open file @f.
-    The file should be open in binary mode and set at the beginning
+    The file should be open in text mode and set at the beginning
     (or start of signed part). Raises an exception if the verification
     fails.
 
@@ -105,7 +105,7 @@ def verify_file(f, env=None):
 
     exitst, out, err = _spawn_gpg(['--verify'],
             env.home if env is not None else None,
-            f.read())
+            f.read().encode('utf8'))
     if exitst != 0:
         raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
 
@@ -114,7 +114,7 @@ def clear_sign_file(f, outf, keyid=None, env=None):
     """
     Create an OpenPGP cleartext signed message containing the data
     from open file @f, and writing it into open file @outf.
-    Both files should be open in binary mode and set at the appropriate
+    Both files should be open in text mode and set at the appropriate
     position. Raises an exception if signing fails.
 
     Pass @keyid to specify the key to use. If not specified,
@@ -127,8 +127,8 @@ def clear_sign_file(f, outf, keyid=None, env=None):
         args += ['--local-user', keyid]
     exitst, out, err = _spawn_gpg(['--clearsign'] + args,
             env.home if env is not None else None,
-            f.read())
+            f.read().encode('utf8'))
     if exitst != 0:
         raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
 
-    outf.write(out)
+    outf.write(out.decode('utf8'))

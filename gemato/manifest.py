@@ -383,7 +383,7 @@ class ManifestFile(object):
                     "Manifest terminated early, inside signature")
 
         if verify_openpgp and state == ManifestState.POST_SIGNED_DATA:
-            with io.BytesIO(openpgp_data.encode('utf8')) as f:
+            with io.StringIO(openpgp_data) as f:
                 gemato.openpgp.verify_file(f, env=openpgp_env)
             self.openpgp_signed = True
 
