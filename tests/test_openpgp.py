@@ -367,6 +367,18 @@ class OpenPGPNoKeyTest(unittest.TestCase):
         finally:
             shutil.rmtree(d)
 
+    def test_find_top_level_manifest(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(SIGNED_MANIFEST)
+
+            self.assertEqual(
+                    gemato.find_top_level.find_top_level_manifest(d),
+                    os.path.join(d, 'Manifest'))
+        finally:
+            shutil.rmtree(d)
+
 
 class OpenPGPContextManagerTest(unittest.TestCase):
     """

@@ -45,7 +45,7 @@ def find_top_level_manifest(path='.'):
                     if fst.st_dev != original_dev:
                         return last_found
 
-                    m.load(f)
+                    m.load(f, verify_openpgp=False)
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
