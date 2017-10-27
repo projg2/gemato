@@ -8,7 +8,7 @@ import io
 import os.path
 import sys
 
-if sys.version_info >= (3, 3):
+if sys.hexversion >= 0x03030000:
     import bz2
 else:
     # older bz2 module versions do not handle multiple streams correctly
@@ -45,7 +45,7 @@ def open_compressed_file(suffix, f, mode='rb'):
     if suffix == "gz":
         # work-around the deficiency in GzipFile class in py<3.3 causing
         # it to break with TextIOWrapper
-        if sys.version_info < (3, 3):
+        if sys.hexversion < 0x03030000:
             class FixedGzipFile(gzip.GzipFile):
                 def read1(self, *args, **kwargs):
                     return self.read(*args, **kwargs)

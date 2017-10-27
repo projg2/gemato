@@ -14,7 +14,7 @@ import unittest
 
 class LoggingTestCase(unittest.TestCase):
     def setUp(self):
-        if sys.version_info < (3,):
+        if sys.hexversion < 0x03000000:
             self.log = io.BytesIO()
         else:
             self.log = io.StringIO()
