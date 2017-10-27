@@ -72,10 +72,7 @@ class ManifestRecursiveLoader(object):
         path = os.path.join(self.root_directory, relpath)
         with gemato.compression.open_potentially_compressed_path(
                 path, 'w', encoding='utf8') as f:
-            if m.openpgp_signed:
-                raise NotImplementedError(
-                        'Manifest signing not implemented yet')
-            m.dump(f)
+            m.dump(f, openpgp_env=self.openpgp_env)
 
     def _iter_manifests_for_path(self, path, recursive=False):
         """

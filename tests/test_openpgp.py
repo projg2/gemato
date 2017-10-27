@@ -173,6 +173,13 @@ XUy2tNfupdu72q9ske3dhVLhUEjtBzq5MlTf6gUjLBEsIHCGSafO2VG00lii3q4E
 '''
 
 
+def strip_openpgp(text):
+    lines = text.lstrip().splitlines()
+    start = lines.index('')
+    stop = lines.index('-----BEGIN PGP SIGNATURE-----')
+    return '\n'.join(lines[start+1:stop-start+2]) + '\n'
+
+
 class SignedManifestTest(unittest.TestCase):
     """
     Test whether signed Manifest is read correctly.
@@ -267,6 +274,24 @@ class SignedManifestTest(unittest.TestCase):
                     gemato.cli.main(['gemato', 'verify',
                         '--no-openpgp-verify', d]),
                     0)
+        finally:
+            shutil.rmtree(d)
+
+    def test_recursive_manifest_loader_save_manifest(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(MODIFIED_SIGNED_MANIFEST)
+
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(d, 'Manifest'),
+                    verify_openpgp=False)
+            self.assertFalse(m.openpgp_signed)
+            m.save_manifest('Manifest')
+
+            with io.open(os.path.join(d, 'Manifest'), 'r') as f:
+                self.assertEqual(f.read(),
+                        strip_openpgp(MODIFIED_SIGNED_MANIFEST))
         finally:
             shutil.rmtree(d)
 
@@ -609,3 +634,49 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
             f.seek(0)
             m.load(f, openpgp_env=self.env)
         self.assertFalse(m.openpgp_signed)
+
+    def test_recursive_manifest_loader_save_manifest(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(SIGNED_MANIFEST)
+
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(d, 'Manifest'),
+                    verify_openpgp=True,
+                    openpgp_env=self.env)
+            self.assertTrue(m.openpgp_signed)
+
+            self.env.import_key(io.BytesIO(PRIVATE_KEY))
+            m.save_manifest('Manifest')
+
+            m2 = gemato.manifest.ManifestFile()
+            with io.open(os.path.join(d, 'Manifest'), 'r') as f:
+                m2.load(f, openpgp_env=self.env)
+            self.assertTrue(m2.openpgp_signed)
+        finally:
+            shutil.rmtree(d)
+
+    def test_recursive_manifest_loader_save_manifest_compressed(self):
+        d = tempfile.mkdtemp()
+        try:
+            with gemato.compression.open_potentially_compressed_path(
+                    os.path.join(d, 'Manifest.gz'), 'w') as cf:
+                cf.write(SIGNED_MANIFEST)
+
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(d, 'Manifest.gz'),
+                    verify_openpgp=True,
+                    openpgp_env=self.env)
+            self.assertTrue(m.openpgp_signed)
+
+            self.env.import_key(io.BytesIO(PRIVATE_KEY))
+            m.save_manifest('Manifest.gz')
+
+            m2 = gemato.manifest.ManifestFile()
+            with gemato.compression.open_potentially_compressed_path(
+                    os.path.join(d, 'Manifest.gz'), 'r') as cf:
+                m2.load(cf, openpgp_env=self.env)
+            self.assertTrue(m2.openpgp_signed)
+        finally:
+            shutil.rmtree(d)
