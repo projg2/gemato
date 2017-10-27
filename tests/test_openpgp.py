@@ -306,8 +306,10 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
         try:
             self.env.import_key(io.BytesIO(PUBLIC_KEY))
         except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
             raise unittest.SkipTest(str(e))
         except RuntimeError:
+            self.env.close()
             raise unittest.SkipTest('Unable to import OpenPGP key')
 
     def tearDown(self):
@@ -568,8 +570,10 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
         try:
             self.env.import_key(io.BytesIO(PRIVATE_KEY))
         except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
             raise unittest.SkipTest(str(e))
         except RuntimeError:
+            self.env.close()
             raise unittest.SkipTest('Unable to import OpenPGP key')
 
     def tearDown(self):
