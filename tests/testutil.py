@@ -4,17 +4,30 @@
 # Licensed under the terms of 2-clause BSD license
 
 import io
+import logging
 import os
 import os.path
 import tempfile
 import unittest
 
 
-class TempDirTestCase(unittest.TestCase):
+class LoggingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.log = io.StringIO()
+        self.log_handler = logging.getLogger().addHandler(
+                logging.StreamHandler(self.log))
+
+    def tearDown(self):
+        # TODO: make some use of the log output?
+        logging.getLogger().removeHandler(self.log_handler)
+
+
+class TempDirTestCase(LoggingTestCase):
     DIRS = []
     FILES = {}
 
     def setUp(self):
+        super(TempDirTestCase, self).setUp()
         self.dir = tempfile.mkdtemp()
         for k in self.DIRS:
             os.mkdir(os.path.join(self.dir, k))
@@ -28,3 +41,4 @@ class TempDirTestCase(unittest.TestCase):
         for k in reversed(self.DIRS):
             os.rmdir(os.path.join(self.dir, k))
         os.rmdir(self.dir)
+        super(TempDirTestCase, self).tearDown()
