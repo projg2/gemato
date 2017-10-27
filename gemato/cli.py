@@ -8,6 +8,7 @@ from __future__ import print_function
 import argparse
 import io
 import logging
+import os.path
 import timeit
 
 import gemato.find_top_level
@@ -57,8 +58,12 @@ def do_verify(args):
         if args.require_signed_manifest and not m.openpgp_signed:
             logging.error('Top-level Manifest {} is not OpenPGP signed'.format(tlm))
             return 1
+
+        relpath = os.path.relpath(p, os.path.dirname(tlm))
+        if relpath == '.':
+            relpath = ''
         try:
-            ret = m.assert_directory_verifies(**kwargs)
+            ret = m.assert_directory_verifies(relpath, **kwargs)
         except gemato.exceptions.ManifestMismatch as e:
             logging.error(str(e))
             return 1
