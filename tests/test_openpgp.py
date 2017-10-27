@@ -318,6 +318,8 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
     def test_cli(self):
         d = tempfile.mkdtemp()
         try:
+            with io.open(os.path.join(d, '.key.asc'), 'w') as f:
+                f.write(PUBLIC_KEY)
             with io.open(os.path.join(d, 'Manifest'), 'w') as f:
                 f.write(SIGNED_MANIFEST)
 
@@ -331,6 +333,7 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
 
             self.assertEqual(
                     gemato.cli.main(['gemato', 'verify',
+                        '--openpgp-key', os.path.join(d, '.key.asc'),
                         '--require-signed-manifest', d]),
                     0)
         finally:
