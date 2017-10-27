@@ -64,6 +64,12 @@ def do_verify(args):
             relpath = ''
         try:
             ret = m.assert_directory_verifies(relpath, **kwargs)
+        except gemato.exceptions.ManifestCrossDevice as e:
+            logging.error(str(e))
+            return 1
+        except gemato.exceptions.ManifestIncompatibleEntry as e:
+            logging.error(str(e))
+            return 1
         except gemato.exceptions.ManifestMismatch as e:
             logging.error(str(e))
             return 1
