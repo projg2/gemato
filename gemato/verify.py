@@ -6,6 +6,7 @@
 import contextlib
 import errno
 import fcntl
+import io
 import os
 import stat
 
@@ -91,7 +92,7 @@ def get_file_metadata(path, hashes):
         # 4. st_size
         yield st.st_size
 
-        f = os.fdopen(fd, 'rb')
+        f = io.open(fd, 'rb')
     except:
         if opened:
             os.close(fd)
