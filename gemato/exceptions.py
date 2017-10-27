@@ -79,6 +79,16 @@ class OpenPGPVerificationFailure(Exception):
                 "OpenPGP verification failed:\n{}".format(output))
 
 
+class OpenPGPSigningFailure(Exception):
+    """
+    An exception raised when OpenPGP signing fails.
+    """
+
+    def __init__(self, output):
+        super(OpenPGPSigningFailure, self).__init__(
+                "OpenPGP signing failed:\n{}".format(output))
+
+
 class OpenPGPNoImplementation(Exception):
     """
     An exception raised when no supported OpenPGP implementation

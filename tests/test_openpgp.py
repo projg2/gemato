@@ -36,6 +36,43 @@ jCvJNJ7pU8YnJSRTQDH0PZEupAdzDU/AhGSrBz5+Jr7N0pQIxq4duE/Q
 -----END PGP PUBLIC KEY BLOCK-----
 '''
 
+PRIVATE_KEY = u'''
+-----BEGIN PGP PRIVATE KEY BLOCK-----
+
+lQOYBFnwXJMBCACgaTVz+d10TGL9zR920sb0GBFsitAJ5ZFzO4E0cg3SHhwI+reM
+JQ6LLKmHowY/E1dl5FBbnJoRMxXP7/eScQ7HlhYj1gMPN5XiS2pkPwVkmJKBDV42
+DLwoytC+ot0frRTJvSdEPCX81BNMgFiBSpkeZfXqb9XmU03bh6mFnrdd4CsHpTQG
+csVXHK8QKhaxuqmHTALdpSzKCb/r0N/Z3sQExZhfLcBf/9UUVXj44Nwc6ooqZLRi
+zHydxwQdxNu0aOFGEBn9WTi8Slf7MfR/pF0dI8rs9w6zMzVEq0lhDPpKFGDveoGf
+g/+TpvBNXZ7DWH23GM4kID3pk4LLMc24U1PhABEBAAEAB/sEgeBMIXW9ClZvvj9H
+lfWcLz7yF1ZwKMC1BbOENz43LLxp7i2RJQtrErayxnxq8k6u4ML3SAe2OwK+ZIZG
+2aFqL0fw+tb8KvotsSPMrE6o/HaFZMxEZYg19zj1WlsvRCxE3OlJDA2fNJBUQnj6
+LQ/vYDsQOtM+VRHnfMDhLcwGObZnNPMwtmwkHLKWTgyTwAGnLObSheVutVbdyU6+
+wI3UXwAoilW2e+9pKtwaODjqT7pQ2maVSCY4MPGdLQpbPy61COstdpK/hRdI3liL
+uwszdlnT1QhiLsOTHPt4JjYdv2jgDjQobbe/ziKNzFp1eoMHDkbjzAh7oD2FxJcZ
+EYLnBADE5oryW+9GlyYQe3x74QD5BGTZfvJctvEOgUg8BsoIfXJgBzwnEwOD0XBg
+Jcl5qgt3IBH9Fn3JnYMpw12SEG2W4N8VCIBxIkDEBABVJfp1Q7HAJ8GSmzENnvt1
+iaAZPUscaFVpMyuajsCDmyK92NMymGiNAb1H5MU4gaFGaEaajwQA0I7gglsehQA2
+MSyJD0Uj+0b6n9KtiUzjyWEOcITXn4buf4O8Llor8gU0BWuv3hmIcvNsuJfmgXav
+Vxq2UHtiGaO7T9Vk4Sr8MKS9EYrLNbK41Lyb+tjxk3jYjEyFqCDNEtWKIZR4ENdR
+jo5gYKBtuqv1AYYSkflOTeaRlv/kIo8D/jVcyjmO19tNJM8lQE1xCvhp5maXOoSk
+1UoUmDprsKA2Em47J83sVivrIwBySB2n9srQynnV+8I47mX7YzYtNQ6uXdL3p/5e
+FRW+yfqVCShhSfyQdOmJ978UyQEwY0+0hhK372KatmaL9KEkKSuXgsqshv3XiB9y
+u3Su1jw5y2IQNP20D2dlbWF0byB0ZXN0IGtleYkBRgQTAQoAMBYhBIHhLBa9jc1g
+vhgIRRNogOcqexOEBQJZ8FyTAhsDBQsJCg0EAxUKCAIeAQIXgAAKCRATaIDnKnsT
+hCnkB/0fhTH230idhlfZhFbVgTLxrj4rpsGg20K8HkMaWzChsONdKkqYaYuRcm2U
+QZ0Kg5rm9jQsGYuAnzH/7XwmOleY95ycVfBkje9aXF6BEoGick6C/AK5w77vd1kc
+BtJDrT4I7vwD4wRkyUdCkpVMVT4z4aZ7lHJ4ECrrrI/mg0b+sGRyHfXPvIPp7F29
+59L/dpbhBZDfMOFC0A9LBQBJldKFbQLg3xzX4tniz/BBrp7KjTOMKU0sufsedI50
+xc6cvCYCwJElqo86vv69klZHahE/k9nJaUAMjCvJNJ7pU8YnJSRTQDH0PZEupAdz
+DU/AhGSrBz5+Jr7N0pQIxq4duE/Q
+=wOFB
+-----END PGP PRIVATE KEY BLOCK-----
+
+'''
+
+PRIVATE_KEY_ID = b'0x136880E72A7B1384'
+
 MALFORMED_PUBLIC_KEY = u'''
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
@@ -486,3 +523,42 @@ class OpenPGPContextManagerTest(unittest.TestCase):
             env.close()
             with self.assertRaises(RuntimeError):
                 env.home
+
+
+class OpenPGPPrivateKeyTest(unittest.TestCase):
+    """
+    Tests performed with the private key available.
+    """
+
+    TEST_STRING = b'The quick brown fox jumps over the lazy dog'
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(
+                    io.BytesIO(PRIVATE_KEY.encode('utf8')))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
+        except RuntimeError:
+            raise unittest.SkipTest('Unable to import OpenPGP key')
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_verify_manifest(self):
+        with io.BytesIO(SIGNED_MANIFEST.encode('utf8')) as f:
+            self.env.verify_file(f)
+
+    def test_sign_data(self):
+        with io.BytesIO(self.TEST_STRING) as f:
+            with io.BytesIO() as wf:
+                self.env.clear_sign_file(f, wf)
+                wf.seek(0)
+                self.env.verify_file(wf)
+
+    def test_sign_data_keyid(self):
+        with io.BytesIO(self.TEST_STRING) as f:
+            with io.BytesIO() as wf:
+                self.env.clear_sign_file(f, wf, keyid=PRIVATE_KEY_ID)
+                wf.seek(0)
+                self.env.verify_file(wf)
