@@ -28,7 +28,7 @@ def _spawn_gpg(options, home, stdin):
         else:
             raise
 
-    out, err = p.communicate(stdin.read())
+    out, err = p.communicate(stdin)
     return (p.wait(), out, err)
 
 
@@ -63,7 +63,8 @@ class OpenPGPEnvironment(object):
         at the beginning.
         """
 
-        exitst, out, err = _spawn_gpg(['--import'], self.home, keyfile)
+        exitst, out, err = _spawn_gpg(['--import'], self.home,
+                keyfile.read())
         if exitst != 0:
             raise RuntimeError('Unable to import key: {}'.format(err.decode('utf8')))
 
@@ -104,7 +105,7 @@ def verify_file(f, env=None):
 
     exitst, out, err = _spawn_gpg(['--verify'],
             env.home if env is not None else None,
-            f)
+            f.read())
     if exitst != 0:
         raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
 
@@ -126,7 +127,7 @@ def clear_sign_file(f, outf, keyid=None, env=None):
         args += ['--local-user', keyid]
     exitst, out, err = _spawn_gpg(['--clearsign'] + args,
             env.home if env is not None else None,
-            f)
+            f.read())
     if exitst != 0:
         raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
 
