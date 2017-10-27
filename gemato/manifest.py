@@ -387,14 +387,34 @@ class ManifestFile(object):
                 gemato.openpgp.verify_file(f, env=openpgp_env)
             self.openpgp_signed = True
 
-    def dump(self, f):
+    def dump(self, f, sign_openpgp=None, openpgp_keyid=None,
+            openpgp_env=None):
         """
         Dump data into file @f. The file should be open for writing
         in text mode, and truncated to zero length.
+
+        If @sign_openpgp is True, the file will include an OpenPGP
+        cleartext signature. If it False, the signature will be omitted.
+        If it is None (the default), the file will be signed if it
+        was originally signed with a valid signature.
+
+        @openpgp_keyid and @openpgp_env specify the key
+        and the environment to use for signing.
         """
-        
-        for e in self.entries:
-            f.write(u' '.join(e.to_list()) + '\n')
+
+        if sign_openpgp is None:
+            sign_openpgp = self.openpgp_signed
+
+        if sign_openpgp:
+            with io.StringIO() as data:
+                # get the plain data into a stream
+                self.dump(data, sign_openpgp=False)
+                data.seek(0)
+                gemato.openpgp.clear_sign_file(data, f,
+                        keyid=openpgp_keyid, env=openpgp_env)
+        else:
+            for e in self.entries:
+                f.write(u' '.join(e.to_list()) + '\n')
 
     def find_timestamp(self):
         """

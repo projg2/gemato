@@ -567,3 +567,45 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                 self.env.clear_sign_file(f, wf, keyid=PRIVATE_KEY_ID)
                 wf.seek(0)
                 self.env.verify_file(wf)
+
+    def test_dump_signed_manifest(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(SIGNED_MANIFEST) as f:
+            m.load(f, openpgp_env=self.env)
+        with io.StringIO() as f:
+            m.dump(f, openpgp_env=self.env)
+            f.seek(0)
+            m.load(f, openpgp_env=self.env)
+        self.assertTrue(m.openpgp_signed)
+
+    def test_dump_signed_manifest_keyid(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(SIGNED_MANIFEST) as f:
+            m.load(f, openpgp_env=self.env)
+        with io.StringIO() as f:
+            m.dump(f, openpgp_keyid=PRIVATE_KEY_ID, openpgp_env=self.env)
+            f.seek(0)
+            m.load(f, openpgp_env=self.env)
+        self.assertTrue(m.openpgp_signed)
+
+    def test_dump_force_signed_manifest(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(SIGNED_MANIFEST) as f:
+            m.load(f, verify_openpgp=False, openpgp_env=self.env)
+        self.assertFalse(m.openpgp_signed)
+        with io.StringIO() as f:
+            m.dump(f, sign_openpgp=True, openpgp_env=self.env)
+            f.seek(0)
+            m.load(f, openpgp_env=self.env)
+        self.assertTrue(m.openpgp_signed)
+
+    def test_dump_force_unsigned_manifest(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(SIGNED_MANIFEST) as f:
+            m.load(f, openpgp_env=self.env)
+        self.assertTrue(m.openpgp_signed)
+        with io.StringIO() as f:
+            m.dump(f, sign_openpgp=False, openpgp_env=self.env)
+            f.seek(0)
+            m.load(f, openpgp_env=self.env)
+        self.assertFalse(m.openpgp_signed)
