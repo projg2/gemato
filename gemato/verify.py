@@ -13,6 +13,107 @@ import gemato.hash
 import gemato.manifest
 
 
+def get_file_metadata(path, hashes):
+    """
+    Get a generator for the metadata of the file at system path @path.
+
+    The generator yields, in order:
+    1. A boolean indicating whether the file exists.
+    2. st_dev, if the file exists.
+    3. Tuple of (S_IFMT(st_mode), file type as string), if the file
+       exists.
+    4. st_size, if the file exists and is a regular file. Note that
+       it may be 0 on some filesystems, so treat the value with caution.
+    5. A dict of @hashes and their values, if the file exists and is
+       a regular file. Special __size__ member is added unconditionally.
+
+    Note that the generator acquires resources, and does not release
+    them until terminated. Always make sure to pull it until
+    StopIteration, or close it explicitly.
+    """
+
+    try:
+        # we want O_NONBLOCK to avoid blocking when opening pipes
+        fd = os.open(path, os.O_RDONLY|os.O_NONBLOCK)
+    except OSError as err:
+        if err.errno == errno.ENOENT:
+            exists = False
+            opened = False
+        elif err.errno == errno.ENXIO:
+            # unconnected device or socket
+            exists = True
+            opened = False
+        else:
+            raise
+    else:
+        exists = True
+        opened = True
+
+    try:
+        # 1. does it exist?
+        yield exists
+
+        # we can't provide any more data for a file that does not exist
+        if not exists:
+            return
+
+        if opened:
+            st = os.fstat(fd)
+        else:
+            st = os.stat(path)
+
+        # 2. st_dev
+        yield st.st_dev
+
+        # 3. file type tuple
+        if stat.S_ISREG(st.st_mode):
+            ftype = 'regular file'
+        elif stat.S_ISDIR(st.st_mode):
+            ftype = 'directory'
+        elif stat.S_ISCHR(st.st_mode):
+            ftype = 'character device'
+        elif stat.S_ISBLK(st.st_mode):
+            ftype = 'block device'
+        elif stat.S_ISFIFO(st.st_mode):
+            ftype = 'named pipe'
+        elif stat.S_ISSOCK(st.st_mode):
+            ftype = 'UNIX socket'
+        else:
+            ftype = 'unknown'
+        yield (stat.S_IFMT(st.st_mode), ftype)
+
+        if not stat.S_ISREG(st.st_mode):
+            if opened:
+                os.close(fd)
+            return
+
+        # 4. st_size
+        yield st.st_size
+
+        f = os.fdopen(fd, 'rb')
+    except:
+        if opened:
+            os.close(fd)
+        raise
+
+    with f:
+        # open() might have left the file as O_NONBLOCK
+        # make sure to fix that
+        fcntl.fcntl(fd, fcntl.F_SETFL, 0)
+
+        # 5. checksums
+        e_hashes = sorted(hashes)
+        hashes = list(gemato.manifest.manifest_hashes_to_hashlib(e_hashes))
+        e_hashes.append('__size__')
+        hashes.append('__size__')
+        checksums = gemato.hash.hash_file(f, hashes)
+
+        ret = {}
+        for ek, k in zip(e_hashes, hashes):
+            ret[ek] = checksums[k]
+        yield ret
+
+
 def verify_path(path, e, expected_dev=None):
     """
     Verify the file at system path @path against the data in entry @e.

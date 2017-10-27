@@ -6,6 +6,7 @@
 import os
 import os.path
 import socket
+import stat
 import tempfile
 import unittest
 
@@ -20,6 +21,11 @@ class NonExistingFileVerificationTest(unittest.TestCase):
 
     def tearDown(self):
         os.rmdir(self.dir)
+
+    def test_get_file_metadata(self):
+        self.assertEqual(list(gemato.verify.get_file_metadata(
+            os.path.join(self.dir, 'test'), hashes=[])),
+            [False])
 
     def testDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
@@ -51,6 +57,12 @@ class DirectoryVerificationTest(unittest.TestCase):
     def tearDown(self):
         os.rmdir(self.dir)
 
+    def test_get_file_metadata(self):
+        st = os.stat(self.dir)
+        self.assertEqual(list(gemato.verify.get_file_metadata(
+            self.dir, hashes=[])),
+            [True, st.st_dev, (stat.S_IFDIR, 'directory')])
+
     def testDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
                 ('DATA', os.path.basename(self.dir), '0'))
@@ -77,6 +89,12 @@ class DirectoryVerificationTest(unittest.TestCase):
 class CharacterDeviceVerificationTest(unittest.TestCase):
     def setUp(self):
         self.path = '/dev/null'
+
+    def test_get_file_metadata(self):
+        st = os.stat(self.path)
+        self.assertEqual(list(gemato.verify.get_file_metadata(
+            self.path, hashes=[])),
+            [True, st.st_dev, (stat.S_IFCHR, 'character device')])
 
     def testDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
@@ -110,6 +128,12 @@ class NamedPipeVerificationTest(unittest.TestCase):
     def tearDown(self):
         os.unlink(self.path)
         os.rmdir(self.dir)
+
+    def test_get_file_metadata(self):
+        st = os.stat(self.path)
+        self.assertEqual(list(gemato.verify.get_file_metadata(
+            self.path, hashes=[])),
+            [True, st.st_dev, (stat.S_IFIFO, 'named pipe')])
 
     def testDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
@@ -147,6 +171,12 @@ class UNIXSocketVerificationTest(unittest.TestCase):
         os.unlink(self.path)
         os.rmdir(self.dir)
 
+    def test_get_file_metadata(self):
+        st = os.stat(self.path)
+        self.assertEqual(list(gemato.verify.get_file_metadata(
+            self.path, hashes=[])),
+            [True, st.st_dev, (stat.S_IFSOCK, 'UNIX socket')])
+
     def testDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
                 ('DATA', os.path.basename(self.path), '0'))
@@ -177,6 +207,17 @@ class EmptyFileVerificationTest(unittest.TestCase):
 
     def tearDown(self):
         self.f.close()
+
+    def test_get_file_metadata(self):
+        st = os.stat(self.path)
+        self.assertEqual(list(gemato.verify.get_file_metadata(
+            self.path, hashes=['MD5', 'SHA1'])),
+            [True, st.st_dev, (stat.S_IFREG, 'regular file'),
+                0, {
+                    'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
+                    'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                    '__size__': 0,
+                }])
 
     def testDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
@@ -276,6 +317,17 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
 
     def tearDown(self):
         self.f.close()
+
+    def test_get_file_metadata(self):
+        st = os.stat(self.path)
+        self.assertEqual(list(gemato.verify.get_file_metadata(
+            self.path, hashes=['MD5', 'SHA1'])),
+            [True, st.st_dev, (stat.S_IFREG, 'regular file'),
+                st.st_size, {
+                    'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1': '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12',
+                    '__size__': 43,
+                }])
 
     def testDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
@@ -412,6 +464,17 @@ class ProcFileVerificationTest(unittest.TestCase):
         self.md5 = gemato.hash.hash_bytes(data, 'md5')
         self.sha1 = gemato.hash.hash_bytes(data, 'sha1')
 
+    def test_get_file_metadata(self):
+        st = os.stat(self.path)
+        self.assertEqual(list(gemato.verify.get_file_metadata(
+            self.path, hashes=['MD5', 'SHA1'])),
+            [True, st.st_dev, (stat.S_IFREG, 'regular file'),
+                st.st_size, {
+                    'MD5': self.md5,
+                    'SHA1': self.sha1,
+                    '__size__': self.size,
+                }])
+
     def testDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
                 ('DATA', os.path.basename(self.path), str(self.size)))
@@ -487,6 +550,11 @@ class UnreadableFileVerificationTest(unittest.TestCase):
     def tearDown(self):
         os.unlink(self.path)
         os.rmdir(self.dir)
+
+    def test_get_file_metadata(self):
+        with self.assertRaises(OSError):
+            list(gemato.verify.get_file_metadata(
+                os.path.join(self.dir, self.path), []))
 
     def testDATA(self):
         e = gemato.manifest.ManifestEntryDATA.from_list(
