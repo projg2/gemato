@@ -65,8 +65,14 @@ class ManifestRecursiveLoader(object):
         Iterate over loaded Manifests that can apply to path.
         If @recursive is True, returns also Manifests for subdirectories
         of @path. Yields a tuple of (relative_path, manifest).
+
+        The function guarantees that the Manifests for subdirectories
+        (more specific) will always be returned before the Manifests
+        for parent directories. The order is otherwise undefined.
         """
-        for k, v in self.loaded_manifests.items():
+        for k, v in sorted(self.loaded_manifests.items(),
+                           key=lambda x: len(x[0]),
+                           reverse=True):
             d = os.path.dirname(k)
             if gemato.util.path_starts_with(path, d):
                 yield (d, v)
