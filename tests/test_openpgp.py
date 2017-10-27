@@ -3,6 +3,7 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import base64
 import io
 import os.path
 import shutil
@@ -495,6 +496,14 @@ class OpenPGPContextManagerTest(unittest.TestCase):
                 self.assertRaises(RuntimeError,
                         env.import_key,
                         io.BytesIO(b''))
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+
+    def test_import_binary_key(self):
+        with gemato.openpgp.OpenPGPEnvironment() as env:
+            enc = b''.join(PUBLIC_KEY.splitlines()[2:-1])
+            try:
+                env.import_key(io.BytesIO(base64.b64decode(enc)))
             except gemato.exceptions.OpenPGPNoImplementation as e:
                 raise unittest.SkipTest(str(e))
 
