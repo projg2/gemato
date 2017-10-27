@@ -60,6 +60,23 @@ class ManifestRecursiveLoader(object):
         self.loaded_manifests[relpath] = m
         return m
 
+    def save_manifest(self, relpath):
+        """
+        Save a single Manifest file whose relative path within Manifest
+        tree is @relpath. The Manifest must already be loaded.
+        If the name indicates compression, it will be compressed
+        transparently. If it was OpenPGP-signed, a new signature
+        will be created.
+        """
+        m = self.loaded_manifests[relpath]
+        path = os.path.join(self.root_directory, relpath)
+        with gemato.compression.open_potentially_compressed_path(
+                path, 'w', encoding='utf8') as f:
+            if m.openpgp_signed:
+                raise NotImplementedError(
+                        'Manifest signing not implemented yet')
+            m.dump(f)
+
     def _iter_manifests_for_path(self, path, recursive=False):
         """
         Iterate over loaded Manifests that can apply to path.

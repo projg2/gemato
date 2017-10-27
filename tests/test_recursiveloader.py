@@ -284,6 +284,17 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 os.path.join(self.dir, 'other')]),
             1)
 
+    def test_save_manifest(self):
+        """
+        Test if saving the (unmodified) Manifest works.
+        """
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.save_manifest('Manifest')
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['Manifest'].lstrip())
+
 
 class MultipleManifestTest(TempDirTestCase):
     DIRS = ['sub']
@@ -1044,6 +1055,14 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertEqual(
             gemato.cli.main(['gemato', 'verify', self.dir]),
             0)
+
+    def test_save_manifest(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest.gz'))
+        m.save_manifest('Manifest.gz')
+        with gemato.compression.open_potentially_compressed_path(
+                os.path.join(self.dir, 'Manifest.gz'), 'rb') as f:
+            self.assertEqual(f.read(), self.MANIFEST.lstrip())
 
 
 class CompressedSubManifestTest(TempDirTestCase):
