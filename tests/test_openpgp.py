@@ -9,6 +9,7 @@ import shutil
 import tempfile
 import unittest
 
+import gemato.cli
 import gemato.compression
 import gemato.manifest
 import gemato.openpgp
@@ -210,6 +211,27 @@ class SignedManifestTest(unittest.TestCase):
         finally:
             shutil.rmtree(d)
 
+    def test_cli(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(MODIFIED_SIGNED_MANIFEST)
+
+            os.mkdir(os.path.join(d, 'eclass'))
+            with io.open(os.path.join(d, 'eclass/Manifest'), 'w'):
+                pass
+            with io.open(os.path.join(d, 'myebuild-0.ebuild'), 'wb') as f:
+                f.write(b'12345678901234567890123456789012')
+            with io.open(os.path.join(d, 'metadata.xml'), 'w'):
+                pass
+
+            self.assertEqual(
+                    gemato.cli.main(['gemato', 'verify',
+                        '--no-openpgp-verify', d]),
+                    0)
+        finally:
+            shutil.rmtree(d)
+
 
 class OpenPGPCorrectKeyTest(unittest.TestCase):
     """
@@ -290,6 +312,27 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
                     verify_openpgp=True,
                     openpgp_env=self.env)
             self.assertTrue(m.openpgp_signed)
+        finally:
+            shutil.rmtree(d)
+
+    def test_cli(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(SIGNED_MANIFEST)
+
+            os.mkdir(os.path.join(d, 'eclass'))
+            with io.open(os.path.join(d, 'eclass/Manifest'), 'w'):
+                pass
+            with io.open(os.path.join(d, 'myebuild-0.ebuild'), 'w'):
+                pass
+            with io.open(os.path.join(d, 'metadata.xml'), 'w'):
+                pass
+
+            self.assertEqual(
+                    gemato.cli.main(['gemato', 'verify',
+                        '--require-signed-manifest', d]),
+                    0)
         finally:
             shutil.rmtree(d)
 

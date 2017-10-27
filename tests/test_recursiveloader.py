@@ -9,6 +9,7 @@ import gzip
 import io
 import os
 
+import gemato.cli
 import gemato.exceptions
 import gemato.recursiveloader
 
@@ -231,6 +232,37 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         self.assertFalse(m.assert_directory_verifies(
                 'sub', fail_handler=lambda x: False))
+
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify',
+                os.path.join(self.dir, 'other')]),
+            0)
+
+    def test_cli_verifies_stray_file(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify',
+                os.path.join(self.dir, 'sub')]),
+            1)
+
+    def test_cli_verifies_stray_file_keep_going(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', '--keep-going',
+                os.path.join(self.dir, 'sub')]),
+            1)
+
+    def test_cli_verifies_stray_file_nonstrict(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', '--no-strict',
+                os.path.join(self.dir, 'sub')]),
+            1)
+
+    def test_cli_fails_without_signed_manifest(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify',
+                '--require-signed-manifest',
+                os.path.join(self.dir, 'other')]),
+            1)
 
 
 class MultipleManifestTest(TempDirTestCase):
@@ -509,6 +541,11 @@ DATA test 0 SHA1 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
                 ('SHA1', '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12', 'da39a3ee5e6b4b0d3255bfef95601890afd80709'),
             ])
 
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            1)
+
 
 class DuplicateIncompatibleDataMiscTypeFileEntryTest(TempDirTestCase):
     """
@@ -640,6 +677,11 @@ DATA test.ebuild 0 MD5 9e107d9d372bb6826bd81d3542a419d6
         self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
             m.assert_directory_verifies, '')
 
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            1)
+
 
 class ManifestIgnoreEntryTest(TempDirTestCase):
     """
@@ -667,6 +709,11 @@ IGNORE bar
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.assert_directory_verifies('')
+
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            0)
 
 
 class ManifestMiscEntryTest(TempDirTestCase):
@@ -704,6 +751,16 @@ MISC foo 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertTrue(m.assert_directory_verifies('',
                 fail_handler=lambda x: True))
 
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            1)
+
+    def test_cli_verifies_nonstrict(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', '--no-strict', self.dir]),
+            0)
+
 
 class ManifestOptionalEntryTest(TempDirTestCase):
     """
@@ -734,6 +791,16 @@ OPTIONAL foo
             os.path.join(self.dir, 'Manifest'))
         self.assertFalse(m.assert_directory_verifies('',
                 warn_handler=lambda x: False))
+
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            1)
+
+    def test_cli_verifies_nonstrict(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', '--no-strict', self.dir]),
+            0)
 
 
 class CrossDeviceManifestTest(TempDirTestCase):
@@ -769,6 +836,16 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 fail_handler=lambda x: True,
                 warn_handler=lambda x: True)
 
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            1)
+
+    def test_cli_verifies_nonstrict(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', '--no-strict', self.dir]),
+            1)
+
 
 class CrossDeviceEmptyManifestTest(TempDirTestCase):
     """
@@ -802,6 +879,16 @@ class CrossDeviceEmptyManifestTest(TempDirTestCase):
                 fail_handler=lambda x: True,
                 warn_handler=lambda x: True)
 
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            1)
+
+    def test_cli_verifies_nonstrict(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', '--no-strict', self.dir]),
+            1)
+
 
 class CrossDeviceIgnoreManifestTest(TempDirTestCase):
     """
@@ -828,6 +915,11 @@ IGNORE sub
             os.path.join(self.dir, 'Manifest'))
         m.assert_directory_verifies('')
 
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            0)
+
 
 class DotfileManifestTest(TempDirTestCase):
     """
@@ -845,6 +937,11 @@ class DotfileManifestTest(TempDirTestCase):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.assert_directory_verifies()
+
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            0)
 
 
 class DirectoryInPlaceOfFileManifestTest(TempDirTestCase):
@@ -864,6 +961,11 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestMismatch,
                 m.assert_directory_verifies)
+
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            1)
 
 
 class UnreadableDirectoryTest(TempDirTestCase):
@@ -918,6 +1020,11 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 self.manifest_gz)
         m.assert_directory_verifies('')
 
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            0)
+
 
 class CompressedSubManifestTest(TempDirTestCase):
     """
@@ -956,3 +1063,8 @@ MANIFEST sub/Manifest.gz 78 MD5 9c158f87b2445279d7c8aac439612fba
         m = gemato.recursiveloader.ManifestRecursiveLoader(
                 os.path.join(self.dir, 'Manifest'))
         m.assert_directory_verifies('')
+
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            0)
