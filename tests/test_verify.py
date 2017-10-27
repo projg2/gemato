@@ -3,6 +3,7 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import io
 import os
 import os.path
 import socket
@@ -533,7 +534,7 @@ class SymbolicLinkVerificationTest(NonEmptyFileVerificationTest):
         self.dir = tempfile.mkdtemp()
         self.real_path = os.path.join(self.dir, 'real')
         self.path = os.path.join(self.dir, 'symlink')
-        with open(self.real_path, 'wb') as f:
+        with io.open(self.real_path, 'wb') as f:
             f.write(TEST_STRING)
         os.symlink('real', self.path)
 
@@ -581,7 +582,7 @@ class ProcFileVerificationTest(unittest.TestCase):
     def setUp(self):
         self.path = '/proc/version'
         try:
-            with open(self.path, 'rb') as f:
+            with io.open(self.path, 'rb') as f:
                 data = f.read()
                 st = os.fstat(f.fileno())
         except:
@@ -705,7 +706,7 @@ class UnreadableFileVerificationTest(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp()
         self.path = os.path.join(self.dir, 'test')
-        with open(self.path, 'w'):
+        with io.open(self.path, 'w'):
             pass
         os.chmod(self.path, 0)
 
