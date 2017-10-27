@@ -40,42 +40,42 @@ def do_verify(args):
             kwargs['warn_handler'] = verify_warning
         if not args.openpgp_verify:
             init_kwargs['verify_openpgp'] = False
-        if args.openpgp_key is not None:
-            env = gemato.openpgp.OpenPGPEnvironment()
-            with io.open(args.openpgp_key, 'rb') as f:
-                env.import_key(f)
-            init_kwargs['openpgp_env'] = env
+        with gemato.openpgp.OpenPGPEnvironment() as env:
+            if args.openpgp_key is not None:
+                with io.open(args.openpgp_key, 'rb') as f:
+                    env.import_key(f)
+                init_kwargs['openpgp_env'] = env
 
-        start = timeit.default_timer()
-        try:
-            m = gemato.recursiveloader.ManifestRecursiveLoader(tlm, **init_kwargs)
-        except gemato.exceptions.OpenPGPNoImplementation as e:
-            logging.error(str(e))
-            return 1
-        except gemato.exceptions.OpenPGPVerificationFailure as e:
-            logging.error(str(e))
-            return 1
-        if args.require_signed_manifest and not m.openpgp_signed:
-            logging.error('Top-level Manifest {} is not OpenPGP signed'.format(tlm))
-            return 1
+            start = timeit.default_timer()
+            try:
+                m = gemato.recursiveloader.ManifestRecursiveLoader(tlm, **init_kwargs)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                logging.error(str(e))
+                return 1
+            except gemato.exceptions.OpenPGPVerificationFailure as e:
+                logging.error(str(e))
+                return 1
+            if args.require_signed_manifest and not m.openpgp_signed:
+                logging.error('Top-level Manifest {} is not OpenPGP signed'.format(tlm))
+                return 1
 
-        relpath = os.path.relpath(p, os.path.dirname(tlm))
-        if relpath == '.':
-            relpath = ''
-        try:
-            ret = m.assert_directory_verifies(relpath, **kwargs)
-        except gemato.exceptions.ManifestCrossDevice as e:
-            logging.error(str(e))
-            return 1
-        except gemato.exceptions.ManifestIncompatibleEntry as e:
-            logging.error(str(e))
-            return 1
-        except gemato.exceptions.ManifestMismatch as e:
-            logging.error(str(e))
-            return 1
+            relpath = os.path.relpath(p, os.path.dirname(tlm))
+            if relpath == '.':
+                relpath = ''
+            try:
+                ret = m.assert_directory_verifies(relpath, **kwargs)
+            except gemato.exceptions.ManifestCrossDevice as e:
+                logging.error(str(e))
+                return 1
+            except gemato.exceptions.ManifestIncompatibleEntry as e:
+                logging.error(str(e))
+                return 1
+            except gemato.exceptions.ManifestMismatch as e:
+                logging.error(str(e))
+                return 1
 
-        stop = timeit.default_timer()
-        logging.info('{} validated in {:.2f} seconds'.format(p, stop - start))
+            stop = timeit.default_timer()
+            logging.info('{} validated in {:.2f} seconds'.format(p, stop - start))
         return 0 if ret else 1
 
 
