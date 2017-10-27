@@ -387,11 +387,14 @@ class OpenPGPNoKeyTest(unittest.TestCase):
             with io.open(os.path.join(d, 'Manifest'), 'w') as f:
                 f.write(SIGNED_MANIFEST)
 
-            self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
-                    gemato.recursiveloader.ManifestRecursiveLoader,
-                    os.path.join(d, 'Manifest'),
-                    verify_openpgp=True,
-                    openpgp_env=self.env)
+            try:
+                self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                        gemato.recursiveloader.ManifestRecursiveLoader,
+                        os.path.join(d, 'Manifest'),
+                        verify_openpgp=True,
+                        openpgp_env=self.env)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
         finally:
             shutil.rmtree(d)
 
@@ -402,11 +405,14 @@ class OpenPGPNoKeyTest(unittest.TestCase):
                     os.path.join(d, 'Manifest.gz'), 'w') as cf:
                 cf.write(SIGNED_MANIFEST)
 
-            self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
-                    gemato.recursiveloader.ManifestRecursiveLoader,
-                    os.path.join(d, 'Manifest.gz'),
-                    verify_openpgp=True,
-                    openpgp_env=self.env)
+            try:
+                self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                        gemato.recursiveloader.ManifestRecursiveLoader,
+                        os.path.join(d, 'Manifest.gz'),
+                        verify_openpgp=True,
+                        openpgp_env=self.env)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
         finally:
             shutil.rmtree(d)
 
