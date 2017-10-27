@@ -73,7 +73,7 @@ def hash_file(f, hash_names):
 	hashes = {}
 	for h in hash_names:
 		hashes[h] = get_hash_by_name(h)
-	for block in iter(lambda: f.read(HASH_BUFFER_SIZE), b''):
+	for block in iter(lambda: f.read1(HASH_BUFFER_SIZE), b''):
 		for h in hashes.values():
 			h.update(block)
 	return dict((k, h.hexdigest()) for k, h in hashes.items())
