@@ -7,13 +7,17 @@ import io
 import logging
 import os
 import os.path
+import sys
 import tempfile
 import unittest
 
 
 class LoggingTestCase(unittest.TestCase):
     def setUp(self):
-        self.log = io.StringIO()
+        if sys.version_info < (3,):
+            self.log = io.BytesIO()
+        else:
+            self.log = io.StringIO()
         self.log_handler = logging.getLogger().addHandler(
                 logging.StreamHandler(self.log))
 
