@@ -680,3 +680,81 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
             self.assertTrue(m2.openpgp_signed)
         finally:
             shutil.rmtree(d)
+
+    def test_recursive_manifest_loader_save_manifest_force_sign(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(SIGNED_MANIFEST)
+
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(d, 'Manifest'),
+                    verify_openpgp=False,
+                    sign_openpgp=True,
+                    openpgp_env=self.env)
+            self.assertFalse(m.openpgp_signed)
+
+            self.env.import_key(io.BytesIO(PRIVATE_KEY))
+            m.save_manifest('Manifest')
+
+            m2 = gemato.manifest.ManifestFile()
+            with io.open(os.path.join(d, 'Manifest'), 'r') as f:
+                m2.load(f, openpgp_env=self.env)
+            self.assertTrue(m2.openpgp_signed)
+        finally:
+            shutil.rmtree(d)
+
+    def test_recursive_manifest_loader_save_manifest_compressed_force_sign(self):
+        d = tempfile.mkdtemp()
+        try:
+            with gemato.compression.open_potentially_compressed_path(
+                    os.path.join(d, 'Manifest.gz'), 'w') as cf:
+                cf.write(SIGNED_MANIFEST)
+
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(d, 'Manifest.gz'),
+                    verify_openpgp=False,
+                    sign_openpgp=True,
+                    openpgp_env=self.env)
+            self.assertFalse(m.openpgp_signed)
+
+            self.env.import_key(io.BytesIO(PRIVATE_KEY))
+            m.save_manifest('Manifest.gz')
+
+            m2 = gemato.manifest.ManifestFile()
+            with gemato.compression.open_potentially_compressed_path(
+                    os.path.join(d, 'Manifest.gz'), 'r') as cf:
+                m2.load(cf, openpgp_env=self.env)
+            self.assertTrue(m2.openpgp_signed)
+        finally:
+            shutil.rmtree(d)
+
+    def test_recursive_manifest_loader_save_submanifest_force_sign(self):
+        """
+        Test that sub-Manifests are not signed.
+        """
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(SIGNED_MANIFEST)
+            os.mkdir(os.path.join(d, 'eclass'))
+            with io.open(os.path.join(d, 'eclass/Manifest'), 'w'):
+                pass
+
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(d, 'Manifest'),
+                    verify_openpgp=False,
+                    sign_openpgp=True,
+                    openpgp_env=self.env)
+            self.assertFalse(m.openpgp_signed)
+
+            self.env.import_key(io.BytesIO(PRIVATE_KEY))
+            m.load_manifest('eclass/Manifest')
+            m.save_manifest('eclass/Manifest')
+
+            m2 = gemato.manifest.ManifestFile()
+            with io.open(os.path.join(d, 'eclass/Manifest'), 'r') as f:
+                m2.load(f, openpgp_env=self.env)
+            self.assertFalse(m2.openpgp_signed)
+        finally:
+            shutil.rmtree(d)

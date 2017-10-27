@@ -20,7 +20,8 @@ class ManifestRecursiveLoader(object):
     """
 
     def __init__(self, top_manifest_path,
-            verify_openpgp=True, openpgp_env=None):
+            verify_openpgp=True, openpgp_env=None,
+            sign_openpgp=None, openpgp_keyid=None):
         """
         Instantiate the loader for a Manifest tree starting at top-level
         Manifest @top_manifest_path.
@@ -29,11 +30,21 @@ class ManifestRecursiveLoader(object):
         to ManifestFile. If the top-level Manifest is OpenPGP-signed
         and the verification succeeds, openpgp_signed property
         is set to True.
+
+        @sign_openpgp is passed down to ManifestFile when writing
+        the top-level Manifest. If it is True, the top-level Manifest
+        will be signed. If it is False, it will not be signed.
+        If it is left as None, then it will be signed if it was
+        originally signed. @openpgp_keyid can be used to select the key.
+
+        Sub-Manifests are never signed.
         """
         self.root_directory = os.path.dirname(top_manifest_path)
         self.loaded_manifests = {}
         self.verify_openpgp = verify_openpgp
         self.openpgp_env = openpgp_env
+        self.sign_openpgp = sign_openpgp
+        self.openpgp_keyid = openpgp_keyid
         # TODO: allow catching OpenPGP exceptions somehow?
         m = self.load_manifest(os.path.basename(top_manifest_path))
         self.openpgp_signed = m.openpgp_signed
@@ -70,9 +81,19 @@ class ManifestRecursiveLoader(object):
         """
         m = self.loaded_manifests[relpath]
         path = os.path.join(self.root_directory, relpath)
+
+        # is it top-level Manifest?
+        if relpath in (gemato.compression
+                .get_potential_compressed_names('Manifest')):
+            sign = self.sign_openpgp
+        else:
+            sign = False
+
         with gemato.compression.open_potentially_compressed_path(
                 path, 'w', encoding='utf8') as f:
-            m.dump(f, openpgp_env=self.openpgp_env)
+            m.dump(f, sign_openpgp=sign,
+                    openpgp_env=self.openpgp_env,
+                    openpgp_keyid=self.openpgp_keyid)
 
     def _iter_manifests_for_path(self, path, recursive=False):
         """
