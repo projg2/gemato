@@ -49,6 +49,12 @@ class NonExistingFileVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(os.path.join(self.dir, 'test'), None),
                 (True, []))
 
+    def test_update(self):
+        e = gemato.manifest.ManifestEntryDATA('test', 0, {})
+        self.assertRaises(gemato.exceptions.ManifestInvalidPath,
+                gemato.verify.update_entry_for_path,
+                os.path.join(self.dir, 'test'), e)
+
 
 class DirectoryVerificationTest(unittest.TestCase):
     def setUp(self):
@@ -85,6 +91,12 @@ class DirectoryVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(self.dir, None),
                 (False, [('__exists__', False, True)]))
 
+    def test_update(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.dir), 0, {})
+        self.assertRaises(gemato.exceptions.ManifestInvalidPath,
+                gemato.verify.update_entry_for_path, self.dir, e)
+
 
 class CharacterDeviceVerificationTest(unittest.TestCase):
     def setUp(self):
@@ -117,6 +129,12 @@ class CharacterDeviceVerificationTest(unittest.TestCase):
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
+
+    def test_update(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        self.assertRaises(gemato.exceptions.ManifestInvalidPath,
+                gemato.verify.update_entry_for_path, self.path, e)
 
 
 class NamedPipeVerificationTest(unittest.TestCase):
@@ -156,6 +174,12 @@ class NamedPipeVerificationTest(unittest.TestCase):
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
+
+    def test_update(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        self.assertRaises(gemato.exceptions.ManifestInvalidPath,
+                gemato.verify.update_entry_for_path, self.path, e)
 
 
 class UNIXSocketVerificationTest(unittest.TestCase):
@@ -198,6 +222,12 @@ class UNIXSocketVerificationTest(unittest.TestCase):
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
+
+    def test_update(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        self.assertRaises(gemato.exceptions.ManifestInvalidPath,
+                gemato.verify.update_entry_for_path, self.path, e)
 
 
 class EmptyFileVerificationTest(unittest.TestCase):
@@ -306,6 +336,78 @@ class EmptyFileVerificationTest(unittest.TestCase):
                 gemato.verify.verify_path, self.path, e,
                 expected_dev=st.st_dev)
 
+    def test_update(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 0)
+        self.assertDictEqual(e.checksums, {})
+
+    def test_update_with_hashes(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        gemato.verify.update_entry_for_path(self.path, e, ['MD5', 'SHA1'])
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 0)
+        self.assertDictEqual(e.checksums, {
+                'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
+                'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+            })
+
+    def test_update_with_hashes_from_manifest(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {'MD5': '', 'SHA1': ''})
+        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 0)
+        self.assertDictEqual(e.checksums, {
+                'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
+                'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+            })
+
+    def test_update_cross_filesystem(self):
+        try:
+            st = os.stat('/proc')
+        except OSError:
+            raise unittest.SkipTest('Unable to stat /proc')
+
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        self.assertRaises(gemato.exceptions.ManifestCrossDevice,
+                gemato.verify.update_entry_for_path, self.path, e,
+                expected_dev=st.st_dev)
+
+    def test_update_MISC(self):
+        e = gemato.manifest.ManifestEntryMISC(
+                os.path.basename(self.path), 0, {})
+        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 0)
+        self.assertDictEqual(e.checksums, {})
+
+    def test_update_OPTIONAL(self):
+        e = gemato.manifest.ManifestEntryOPTIONAL(
+                os.path.basename(self.path))
+        self.assertRaises(AssertionError,
+                gemato.verify.update_entry_for_path, self.path, e)
+
+    def test_update_IGNORE(self):
+        e = gemato.manifest.ManifestEntryIGNORE(
+                os.path.basename(self.path))
+        self.assertRaises(AssertionError,
+                gemato.verify.update_entry_for_path, self.path, e)
+
+    def test_update_AUX(self):
+        e = gemato.manifest.ManifestEntryAUX(
+                os.path.basename(self.path), 0, {})
+        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertEqual(e.path,
+                os.path.join('files', os.path.basename(self.path)))
+        self.assertEqual(e.size, 0)
+        self.assertDictEqual(e.checksums, {})
+
+
 
 class NonEmptyFileVerificationTest(unittest.TestCase):
     def setUp(self):
@@ -389,6 +491,36 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
+
+    def test_update(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 43)
+        self.assertDictEqual(e.checksums, {})
+
+    def test_update_with_hashes(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        gemato.verify.update_entry_for_path(self.path, e, ['MD5', 'SHA1'])
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 43)
+        self.assertDictEqual(e.checksums, {
+                'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                'SHA1': '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12',
+            })
+
+    def test_update_with_hashes_from_manifest(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {'MD5': '', 'SHA1': ''})
+        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 43)
+        self.assertDictEqual(e.checksums, {
+                'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                'SHA1': '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12',
+            })
 
 
 class SymbolicLinkVerificationTest(NonEmptyFileVerificationTest):
@@ -538,6 +670,36 @@ class ProcFileVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
 
+    def test_update(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, self.size)
+        self.assertDictEqual(e.checksums, {})
+
+    def test_update_with_hashes(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        gemato.verify.update_entry_for_path(self.path, e, ['MD5', 'SHA1'])
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, self.size)
+        self.assertDictEqual(e.checksums, {
+                'MD5': self.md5,
+                'SHA1': self.sha1,
+            })
+
+    def test_update_with_hashes_from_manifest(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {'MD5': '', 'SHA1': ''})
+        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, self.size)
+        self.assertDictEqual(e.checksums, {
+                'MD5': self.md5,
+                'SHA1': self.sha1,
+            })
+
 
 class UnreadableFileVerificationTest(unittest.TestCase):
     def setUp(self):
@@ -561,6 +723,12 @@ class UnreadableFileVerificationTest(unittest.TestCase):
                 ('DATA', 'test', '0'))
         self.assertRaises(OSError, gemato.verify.verify_path,
                 os.path.join(self.dir, e.path), e)
+
+    def test_update(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {})
+        self.assertRaises(OSError,
+                gemato.verify.update_entry_for_path, self.path, e)
 
 
 class EntryCompatibilityVerificationTest(unittest.TestCase):

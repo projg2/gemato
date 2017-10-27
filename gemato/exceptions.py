@@ -88,3 +88,15 @@ class OpenPGPNoImplementation(Exception):
     def __init__(self):
         super(OpenPGPNoImplementation, self).__init__(
                 "No supported OpenPGP implementation found (install gnupg)")
+
+
+class ManifestInvalidPath(Exception):
+    """
+    An exception raised when an invalid path tries to be added to
+    Manifest.
+    """
+
+    def __init__(self, path, detail):
+        super(ManifestInvalidPath, self).__init__(
+                "Attempting to add invalid path {} to Manifest: {} must not be {}"
+                .format(path, detail[0], detail[1]))

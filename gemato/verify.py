@@ -198,6 +198,61 @@ def verify_path(path, e, expected_dev=None):
     return (True, [])
 
 
+def update_entry_for_path(path, e, hashes=None, expected_dev=None):
+    """
+    Update the data in entry @e to match the current state of file
+    at path @path. Uses hashes listed in @hashes (using Manifest names),
+    or the current set of hashes in @e if @hashes is None.
+
+    The file must exist and be a regular file, and the entry must be
+    of MISC, DATA, MANIFEST or a derived type. The path/filename
+    is not updated nor checked.
+
+    If @expected_dev is not None, verifies that the file resides
+    on specified device. If the device does not match, raises
+    ManifestCrossDevice exception. It can be used to verify that
+    the files do not cross filesystem boundaries.
+    """
+
+    assert isinstance(e, gemato.manifest.ManifestPathEntry)
+    assert not isinstance(e, gemato.manifest.ManifestEntryIGNORE)
+    assert not isinstance(e, gemato.manifest.ManifestEntryOPTIONAL)
+
+    if hashes is None:
+        hashes = list(e.checksums)
+
+    with contextlib.closing(get_file_metadata(path, hashes)) as g:
+        # 1. verify whether the file existed in the first place
+        exists = next(g)
+        if not exists:
+            raise gemato.exceptions.ManifestInvalidPath(path,
+                    ('__exists__', exists))
+
+        # 2. check for xdev condition
+        st_dev = next(g)
+        if expected_dev is not None and st_dev != expected_dev:
+            raise gemato.exceptions.ManifestCrossDevice(path)
+
+        # 3. verify whether the file is a regular file
+        ifmt, ftype = next(g)
+        if not stat.S_ISREG(ifmt):
+            raise gemato.exceptions.ManifestInvalidPath(path,
+                    ('__type__', ftype))
+
+        # 4. get the apparent file size
+        st_size = next(g)
+
+        # 5. get the checksums and real size
+        checksums = next(g)
+        size = checksums.pop('__size__')
+        if st_size != 0:
+            assert st_size == size, ('Apparent size (st_size = {}) and real size ({}) are different!'
+                    .format(st_size, size))
+
+        e.size = size
+        e.checksums = checksums
+
+
 def verify_entry_compatibility(e1, e2):
     """
     Verify that the two entries @e1 and @e2 are compatible.
