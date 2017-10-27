@@ -3,6 +3,7 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import contextlib
 import errno
 import fcntl
 import os
@@ -144,91 +145,52 @@ def verify_path(path, e, expected_dev=None):
         if isinstance(e, gemato.manifest.ManifestEntryIGNORE):
             return (True, [])
 
-    try:
-        # we want O_NONBLOCK to avoid blocking when opening pipes
-        fd = os.open(path, os.O_RDONLY|os.O_NONBLOCK)
-    except OSError as err:
-        if err.errno == errno.ENOENT:
-            exists = False
-            opened = False
-        elif err.errno == errno.ENXIO:
-            # unconnected device or socket
-            exists = True
-            opened = False
-        else:
-            raise
+    # OPTIONAL does not contain checksums, and expects not to exist
+    # same goes for None
+    if e is None or isinstance(e, gemato.manifest.ManifestEntryOPTIONAL):
+        expect_exist = False
+        checksums = ()
     else:
-        exists = True
-        opened = True
+        expect_exist = True
+        checksums = e.checksums
 
-    # 1. verify whether the file existed in the first place
-    expect_exist = (e is not None
-            and not isinstance(e, gemato.manifest.ManifestEntryOPTIONAL))
-    if exists != expect_exist:
-        if opened:
-            os.close(fd)
-        return (False, [('__exists__', expect_exist, exists)])
-    elif not exists:
-        return (True, [])
+    with contextlib.closing(get_file_metadata(path, checksums)) as g:
+        # 1. verify whether the file existed in the first place
+        exists = next(g)
+        if exists != expect_exist:
+            return (False, [('__exists__', expect_exist, exists)])
+        elif not exists:
+            return (True, [])
 
-    # 2. verify whether the file is a regular file
-    if opened:
-        st = os.fstat(fd)
-    else:
-        st = os.stat(path)
-    if expected_dev is not None and st.st_dev != expected_dev:
-        if opened:
-            os.close(fd)
-        raise gemato.exceptions.ManifestCrossDevice(path)
-    if not opened or not stat.S_ISREG(st.st_mode):
-        if opened:
-            os.close(fd)
-        if stat.S_ISDIR(st.st_mode):
-            ftype = 'directory'
-        elif stat.S_ISCHR(st.st_mode):
-            ftype = 'character device'
-        elif stat.S_ISBLK(st.st_mode):
-            ftype = 'block device'
-        elif stat.S_ISREG(st.st_mode):  # can only happen w/ ENXIO
-            ftype = 'unconnected regular file (?!)'
-        elif stat.S_ISFIFO(st.st_mode):
-            ftype = 'named pipe'
-        elif stat.S_ISSOCK(st.st_mode):
-            ftype = 'UNIX socket'
-        else:
-            ftype = 'unknown'
-        return (False, [('__type__', 'regular file', ftype)])
+        # 2. check for xdev condition
+        st_dev = next(g)
+        if expected_dev is not None and st_dev != expected_dev:
+            raise gemato.exceptions.ManifestCrossDevice(path)
 
-    # grab the fd
-    try:
-        f = os.fdopen(fd, 'rb')
-    except Exception:
-        os.close(fd)
-        raise
+        # 3. verify whether the file is a regular file
+        ifmt, ftype = next(g)
+        if not stat.S_ISREG(ifmt):
+            return (False, [('__type__', 'regular file', ftype)])
 
-    with f:
-        # open() might have left the file as O_NONBLOCK
-        # make sure to fix that
-        fcntl.fcntl(fd, fcntl.F_SETFL, 0)
+        # 4. verify the filesize, unless st_size == 0 (to account
+        #    for weird filesystems)
+        st_size = next(g)
+        if st_size != 0 and st_size != e.size:
+            return (False, [('__size__', e.size, st_size)])
 
-        # ignore st_size == 0 in case of weird filesystem
-        if st.st_size != 0 and st.st_size != e.size:
-            return (False, [('__size__', e.size, st.st_size)])
-
-        e_hashes = sorted(e.checksums)
-        hashes = list(gemato.manifest.manifest_hashes_to_hashlib(e_hashes))
-        hashes.append('__size__')
-        checksums = gemato.hash.hash_file(f, hashes)
-
+        # 5. verify the real size from checksum data
+        checksums = next(g)
         diff = []
-        size = checksums['__size__']
+        size = checksums.pop('__size__')
         if size != e.size:
             diff.append(('__size__', e.size, size))
-        for ek, k in zip(e_hashes, hashes):
-            exp = e.checksums[ek]
-            got = checksums[k]
+
+        # 6. verify the checksums
+        for h in sorted(e.checksums):
+            exp = e.checksums[h]
+            got = checksums[h]
             if got != exp:
-                diff.append((ek, exp, got))
+                diff.append((h, exp, got))
 
         if diff:
             return (False, diff)
