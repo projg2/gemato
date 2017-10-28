@@ -202,6 +202,25 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
         self.assertEqual(entries['sub/deeper/test'].path, 'test')
 
+    def test_get_deduplicated_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_deduplicated_file_entry_dict_for_update('')
+        self.assertSetEqual(m.updated_manifests, set())
+        self.assertSetEqual(frozenset(entries),
+            frozenset((
+                'other/Manifest',
+                'sub/Manifest',
+                'sub/nonstray',
+                'sub/deeper/Manifest',
+                'sub/deeper/test',
+            )))
+        self.assertEqual(entries['other/Manifest'].path, 'other/Manifest')
+        self.assertEqual(entries['sub/Manifest'].path, 'sub/Manifest')
+        self.assertEqual(entries['sub/nonstray'].path, 'nonstray')
+        self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
+        self.assertEqual(entries['sub/deeper/test'].path, 'test')
+
     def test_get_file_entry_dict_for_sub(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -218,10 +237,35 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
         self.assertEqual(entries['sub/deeper/test'].path, 'test')
 
+    def test_get_deduplicated_file_entry_dict_for_update_for_sub(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_deduplicated_file_entry_dict_for_update('sub')
+        self.assertSetEqual(m.updated_manifests, set())
+        self.assertSetEqual(frozenset(entries),
+            frozenset((
+                'sub/Manifest',
+                'sub/nonstray',
+                'sub/deeper/Manifest',
+                'sub/deeper/test',
+            )))
+        self.assertEqual(entries['sub/Manifest'].path, 'sub/Manifest')
+        self.assertEqual(entries['sub/nonstray'].path, 'nonstray')
+        self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
+        self.assertEqual(entries['sub/deeper/test'].path, 'test')
+
     def test_get_file_entry_dict_for_invalid(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertDictEqual(m.get_file_entry_dict('nonexist'), {})
+
+    def test_get_deduplicated_file_entry_dict_for_update_for_invalid(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertDictEqual(
+                m.get_deduplicated_file_entry_dict_for_update('nonexist'),
+                {})
+        self.assertSetEqual(m.updated_manifests, set())
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -673,6 +717,22 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertSetEqual(frozenset(entries), frozenset(('test',)))
         self.assertEqual(entries['test'].path, 'test')
 
+    def test_get_deduplicated_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_deduplicated_file_entry_dict_for_update('')
+        self.assertSetEqual(frozenset(entries), frozenset(('test',)))
+        self.assertEqual(entries['test'].path, 'test')
+        self.assertSetEqual(frozenset(entries['test'].checksums),
+                            frozenset(('MD5',)))
+
+        m.save_manifests()
+        m2 = gemato.manifest.ManifestFile()
+        with io.open(os.path.join(self.dir, 'Manifest'), 'r',
+                encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 1)
+
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -754,6 +814,23 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 frozenset(('sub/test', 'sub/Manifest')))
         self.assertEqual(entries['sub/test'].size, 0)
 
+    def test_get_deduplicated_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_deduplicated_file_entry_dict_for_update('')
+        self.assertSetEqual(frozenset(entries),
+                frozenset(('sub/test', 'sub/Manifest')))
+        self.assertEqual(entries['sub/test'].path, 'test')
+        self.assertSetEqual(frozenset(entries['sub/test'].checksums),
+                            frozenset(('MD5',)))
+
+        m.save_manifests()
+        m2 = gemato.manifest.ManifestFile()
+        with io.open(os.path.join(self.dir, 'Manifest'), 'r',
+                encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 1)
+
 
 class DuplicateCompatibleTypeFileEntryTest(TempDirTestCase):
     """
@@ -780,6 +857,20 @@ EBUILD test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         entries = m.get_file_entry_dict('')
         self.assertSetEqual(frozenset(entries), frozenset(('test.ebuild',)))
         self.assertEqual(entries['test.ebuild'].path, 'test.ebuild')
+
+    def test_get_deduplicated_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_deduplicated_file_entry_dict_for_update('')
+        self.assertSetEqual(frozenset(entries), frozenset(('test.ebuild',)))
+        self.assertEqual(entries['test.ebuild'].path, 'test.ebuild')
+
+        m.save_manifests()
+        m2 = gemato.manifest.ManifestFile()
+        with io.open(os.path.join(self.dir, 'Manifest'), 'r',
+                encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 1)
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -813,6 +904,20 @@ AUX test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         entries = m.get_file_entry_dict('')
         self.assertSetEqual(frozenset(entries), frozenset(('files/test.patch',)))
         self.assertEqual(entries['files/test.patch'].path, 'files/test.patch')
+
+    def test_get_deduplicated_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_deduplicated_file_entry_dict_for_update('')
+        self.assertSetEqual(frozenset(entries), frozenset(('files/test.patch',)))
+        self.assertEqual(entries['files/test.patch'].path, 'files/test.patch')
+
+        m.save_manifests()
+        m2 = gemato.manifest.ManifestFile()
+        with io.open(os.path.join(self.dir, 'Manifest'), 'r',
+                encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 1)
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -902,6 +1007,22 @@ DATA test 0 SHA1 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
         self.assertSetEqual(frozenset(entries['test'].checksums),
             frozenset(('MD5', 'SHA1')))
 
+    def test_get_deduplicated_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_deduplicated_file_entry_dict_for_update('')
+        self.assertSetEqual(frozenset(entries), frozenset(('test',)))
+        self.assertEqual(entries['test'].path, 'test')
+        self.assertSetEqual(frozenset(entries['test'].checksums),
+            frozenset(('MD5', 'SHA1')))
+
+        m.save_manifests()
+        m2 = gemato.manifest.ManifestFile()
+        with io.open(os.path.join(self.dir, 'Manifest'), 'r',
+                encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 1)
+
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -957,6 +1078,12 @@ MISC test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
 
+    def test_deduplicated_get_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
+                m.get_deduplicated_file_entry_dict_for_update, '')
+
 
 class DuplicateIncompatibleDataOptionalTypeFileEntryTest(TempDirTestCase):
     """
@@ -981,6 +1108,12 @@ OPTIONAL test.ebuild
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
+
+    def test_deduplicated_get_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
+                m.get_deduplicated_file_entry_dict_for_update, '')
 
 
 class DuplicateIncompatibleMiscOptionalTypeFileEntryTest(TempDirTestCase):
@@ -1007,6 +1140,12 @@ OPTIONAL test.ebuild
         self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
 
+    def test_deduplicated_get_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
+                m.get_deduplicated_file_entry_dict_for_update, '')
+
 
 class DuplicateDifferentSizeFileEntryTest(TempDirTestCase):
     """
@@ -1032,6 +1171,22 @@ DATA test.ebuild 32 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
 
+    def test_get_deduplicated_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_deduplicated_file_entry_dict_for_update('')
+        self.assertSetEqual(frozenset(entries),
+                            frozenset(('test.ebuild',)))
+        self.assertIsInstance(entries['test.ebuild'],
+                gemato.manifest.ManifestEntryDATA)
+
+        m.save_manifests()
+        m2 = gemato.manifest.ManifestFile()
+        with io.open(os.path.join(self.dir, 'Manifest'), 'r',
+                encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 1)
+
 
 class DuplicateDifferentHashFileEntryTest(TempDirTestCase):
     """
@@ -1056,6 +1211,24 @@ DATA test.ebuild 0 MD5 9e107d9d372bb6826bd81d3542a419d6
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
+
+    def test_get_deduplicated_file_entry_dict_for_update(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_deduplicated_file_entry_dict_for_update('')
+        self.assertSetEqual(frozenset(entries),
+                            frozenset(('test.ebuild',)))
+        self.assertIsInstance(entries['test.ebuild'],
+                gemato.manifest.ManifestEntryDATA)
+        self.assertSetEqual(frozenset(entries['test.ebuild'].checksums),
+                            frozenset(('MD5',)))
+
+        m.save_manifests()
+        m2 = gemato.manifest.ManifestFile()
+        with io.open(os.path.join(self.dir, 'Manifest'), 'r',
+                encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 1)
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(

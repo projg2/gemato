@@ -533,3 +533,57 @@ class ManifestRecursiveLoader(object):
                 self.updated_manifests.add(mpath)
                 had_entry = True
                 break
+
+    def get_deduplicated_file_entry_dict_for_update(self, path=''):
+        """
+        Find all file entries that apply to paths starting with @path.
+        Remove all duplicate entries and queue the relevant Manifests
+        for update. Return a dictionary mapping relative paths
+        to entries.
+
+        You need to invoke save_manifests() to store the Manifest
+        updates afterwards. However, note that the resulting tree
+        may no longer validate.
+
+        If the path is referenced by multiple entries of incompatible
+        semantics, raises an exception. If the entries have compatible
+        semantics, all but the first (deepest) are removed, even
+        if they have colliding sizes or hashes. If the duplicate
+        entries use different hash sets, the preserved entry is updated
+        to have the union of their hashes.
+        """
+
+        self.load_manifests_for_path(path, recursive=True)
+        out = {}
+        for mpath, relpath, m in self._iter_manifests_for_path(path,
+                                    recursive=True):
+            entries_to_remove = []
+            for e in m.entries:
+                if isinstance(e, gemato.manifest.ManifestEntryDIST):
+                    # distfiles are not local files, so skip them
+                    pass
+                elif isinstance(e, gemato.manifest.ManifestPathEntry):
+                    fullpath = os.path.join(relpath, e.path)
+                    if gemato.util.path_starts_with(fullpath, path):
+                        if fullpath in out:
+                            # compare the two entries
+                            ret, diff = gemato.verify.verify_entry_compatibility(
+                                    out[fullpath], e)
+                            # if semantically incompatible, throw
+                            if not ret and diff[0][0] == '__type__':
+                                raise (gemato.exceptions
+                                        .ManifestIncompatibleEntry(
+                                            out[fullpath], e, diff))
+                            # otherwise, make sure we have all checksums
+                            out[fullpath].checksums.update(e.checksums)
+                            # and drop the duplicate
+                            entries_to_remove.append(e)
+                        else:
+                            out[fullpath] = e
+
+            if entries_to_remove:
+                for e in entries_to_remove:
+                    m.entries.remove(e)
+                self.updated_manifests.add(mpath)
+
+        return out
