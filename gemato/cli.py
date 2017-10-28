@@ -6,6 +6,7 @@
 from __future__ import print_function
 
 import argparse
+import datetime
 import io
 import logging
 import os.path
@@ -79,6 +80,59 @@ def do_verify(args):
         return 0 if ret else 1
 
 
+def do_update(args):
+    for p in args.paths:
+        tlm = gemato.find_top_level.find_top_level_manifest(p)
+        if tlm is None:
+            logging.error('Top-level Manifest not found in {}'.format(p))
+            return 1
+
+        init_kwargs = {}
+        init_kwargs['hashes'] = args.hashes.split()
+        if args.openpgp_id is not None:
+            init_kwargs['openpgp_keyid'] = args.openpgp_id
+        if args.sign is not None:
+            init_kwargs['sign_openpgp'] = args.sign
+        with gemato.openpgp.OpenPGPEnvironment() as env:
+            if args.openpgp_key is not None:
+                with io.open(args.openpgp_key, 'rb') as f:
+                    env.import_key(f)
+                init_kwargs['openpgp_env'] = env
+
+            start = timeit.default_timer()
+            try:
+                m = gemato.recursiveloader.ManifestRecursiveLoader(tlm,
+                        **init_kwargs)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                logging.error(str(e))
+                return 1
+            except gemato.exceptions.OpenPGPVerificationFailure as e:
+                logging.error(str(e))
+                return 1
+
+            relpath = os.path.relpath(p, os.path.dirname(tlm))
+            if relpath == '.':
+                relpath = ''
+            try:
+                m.update_entries_for_directory(relpath)
+
+                ts = m.find_timestamp()
+                if ts is not None:
+                    ts.ts = datetime.datetime.utcnow()
+
+                m.save_manifests()
+            except gemato.exceptions.ManifestCrossDevice as e:
+                logging.error(str(e))
+                return 1
+            except gemato.exceptions.ManifestInvalidPath as e:
+                logging.error(str(e))
+                return 1
+
+            stop = timeit.default_timer()
+            logging.info('{} updated in {:.2f} seconds'.format(p, stop - start))
+        return 0
+
+
 def main(argv):
     argp = argparse.ArgumentParser(
             prog=argv[0],
@@ -102,6 +156,25 @@ def main(argv):
             dest='strict',
             help='Do not fail on non-strict Manifest issues (MISC/OPTIONAL entries)')
     verify.set_defaults(func=do_verify)
+
+    update = subp.add_parser('update',
+            help='Update the Manifest entries for one or more directory trees')
+    update.add_argument('paths', nargs='*', default=['.'],
+            help='Paths to update (defaults to "." if none specified)')
+    update.add_argument('-H', '--hashes', required=True,
+            help='Whitespace-separated list of hashes to use')
+    update.add_argument('-k', '--openpgp-id',
+            help='Use the specified OpenPGP key (by ID or user)')
+    update.add_argument('-K', '--openpgp-key',
+            help='Use only the OpenPGP key(s) from a specific file')
+    signgroup = update.add_mutually_exclusive_group()
+    signgroup.add_argument('-s', '--sign', action='store_true',
+            default=None,
+            help='Force signing the top-level Manifest')
+    signgroup.add_argument('-S', '--no-sign', action='store_false',
+            dest='sign',
+            help='Disable signing the top-level Manifest')
+    update.set_defaults(func=do_update)
 
     vals = argp.parse_args(argv[1:])
     return vals.func(vals)

@@ -501,6 +501,22 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             self.assertNotEqual(f.read(), self.FILES['Manifest'])
         m.assert_directory_verifies()
 
+    def test_cli_update(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
+                self.dir]),
+            0)
+        # relevant Manifests should have been updated
+        with io.open(os.path.join(self.dir, 'sub/Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['sub/Manifest'])
+        m = gemato.manifest.ManifestFile()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            m.load(f)
+        self.assertNotEqual(m.find_timestamp().ts,
+                datetime.datetime(2017, 1, 1, 1, 1, 1))
+
 
 class MultipleManifestTest(TempDirTestCase):
     DIRS = ['sub']
@@ -1552,6 +1568,12 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.update_entries_for_directory, '')
 
+    def test_cli_update(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
+                self.dir]),
+            1)
+
 
 class CrossDeviceEmptyManifestTest(TempDirTestCase):
     """
@@ -1601,6 +1623,12 @@ class CrossDeviceEmptyManifestTest(TempDirTestCase):
             hashes=['SHA256', 'SHA512'])
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.update_entries_for_directory, '')
+
+    def test_cli_update(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
+                self.dir]),
+            1)
 
 
 class CrossDeviceIgnoreManifestTest(TempDirTestCase):
@@ -1712,6 +1740,12 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             hashes=['SHA256', 'SHA512'])
         self.assertRaises(gemato.exceptions.ManifestInvalidPath,
                 m.update_entries_for_directory, '')
+
+    def test_cli_update(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
+                self.dir]),
+            1)
 
 
 class UnreadableDirectoryTest(TempDirTestCase):
