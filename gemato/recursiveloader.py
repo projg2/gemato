@@ -56,6 +56,7 @@ class ManifestRecursiveLoader(object):
         # TODO: allow catching OpenPGP exceptions somehow?
         m = self.load_manifest(os.path.basename(top_manifest_path))
         self.openpgp_signed = m.openpgp_signed
+        self.updated_manifests = set()
 
     def load_manifest(self, relpath, verify_entry=None):
         """
@@ -365,11 +366,64 @@ class ManifestRecursiveLoader(object):
 
         return ret
 
+    def save_manifests(self, hashes=None):
+        """
+        Save the Manifests modified since the last save_manifests()
+        call.
+
+        @hashes specifies the requested hash set. If specified,
+        it overrides the hash set used in Manifest. If None, the set
+        specified in ManifestLoader constructor is used. If that one
+        is None as well, the routine reuses the existing hash set
+        in the entry.
+        """
+
+        if hashes is None:
+            hashes = self.hashes
+
+        fixed_manifests = set()
+        for mpath, relpath, m in self._iter_manifests_for_path('',
+                                    recursive=True):
+            for e in m.entries:
+                if not isinstance(e, gemato.manifest
+                        .ManifestEntryMANIFEST):
+                    continue
+
+                fullpath = os.path.join(relpath, e.path)
+                if fullpath not in self.updated_manifests:
+                    continue
+
+                gemato.verify.update_entry_for_path(
+                    os.path.join(self.root_directory, fullpath),
+                    e,
+                    hashes=hashes,
+                    expected_dev=self.manifest_device)
+
+                # do not remove it from self.updated_manifests
+                # immediately as we may have to deal with multiple
+                # entries
+                fixed_manifests.add(fullpath)
+                self.updated_manifests.add(mpath)
+
+            # we've apparently modified this Manifest, so store it now
+            if mpath in self.updated_manifests:
+                self.save_manifest(mpath)
+
+        # now, discard all the Manifests whose entries we've updated
+        self.updated_manifests -= fixed_manifests
+        # ...and top-level Manifest which has no entries
+        self.updated_manifests -= set(gemato.compression
+                .get_potential_compressed_names('Manifest'))
+        # at this point, the list should be empty
+        assert not self.updated_manifests
+
     def update_entry_for_path(self, path, new_entry_type='DATA',
             hashes=None):
         """
-        Update the Manifest entries for @path and the appropriate
-        MANIFEST entries. @path must not be covered by IGNORE.
+        Update the Manifest entries for @path and queue the containing
+        Manifests for update. @path must not be covered by IGNORE.
+        You need to invoke save_manifests() to store the Manifest
+        updates afterwards.
 
         If the path exists and has a matching Manifest entry, the most
         specific existing entry will be updated. If the path has more
@@ -399,7 +453,6 @@ class ManifestRecursiveLoader(object):
         """
 
         had_entry = False
-        manifests_to_update = set()
         if hashes is None:
             hashes = self.hashes
 
@@ -424,15 +477,12 @@ class ManifestRecursiveLoader(object):
                     # we update either file at the specified path
                     # or any relevant Manifests
                     fullpath = os.path.join(relpath, e.path)
-                    if fullpath == path:
-                        if had_entry:
-                            # duplicate entry!
-                            entries_to_remove.append(e)
-                            continue
-                        # pass through
-                    elif fullpath in manifests_to_update:
-                        pass
-                    else:
+                    if fullpath != path:
+                        continue
+
+                    if had_entry:
+                        # duplicate entry!
+                        entries_to_remove.append(e)
                         continue
 
                     try:
@@ -451,61 +501,35 @@ class ManifestRecursiveLoader(object):
                         else:
                             raise err
                     else:
-                        manifests_to_update.add(mpath)
+                        self.updated_manifests.add(mpath)
                         had_entry = True
 
             if entries_to_remove:
                 for e in entries_to_remove:
                     m.entries.remove(e)
-                manifests_to_update.add(mpath)
-
-            # we've apparently added this Manifest, so store it now
-            if mpath in manifests_to_update:
-                self.save_manifest(mpath)
+                self.updated_manifests.add(mpath)
 
         if not had_entry:
             assert hashes is not None
             for mpath, relpath, m in self._iter_manifests_for_path(path):
                 # add to the first relevant Manifest
-                if not had_entry:
-                    assert new_entry_type not in (
-                            'DIST', 'IGNORE', 'OPTIONAL')
-                    newpath = os.path.relpath(path, relpath)
-                    if new_entry_type == 'AUX':
-                        # AUX has implicit files/ prefix
-                        assert gemato.util.path_inside_dir(newpath,
-                                'files')
-                        # drop files/ prefix
-                        newpath = os.path.relpath(newpath, 'files')
-                    e = gemato.manifest.new_manifest_entry(
-                            new_entry_type, newpath, 0, {})
-                    gemato.verify.update_entry_for_path(
-                        os.path.join(self.root_directory, path),
-                        e,
-                        hashes=hashes,
-                        expected_dev=self.manifest_device)
-                    m.entries.append(e)
-                    manifests_to_update.add(mpath)
-                    had_entry = True
-                else:
-                    for e in m.entries:
-                        if not isinstance(e, gemato.manifest.ManifestEntryMANIFEST):
-                            continue
-
-                        # we update either file at the specified path
-                        # or any relevant Manifests
-                        fullpath = os.path.join(relpath, e.path)
-                        if fullpath not in manifests_to_update:
-                            continue
-
-                        gemato.verify.update_entry_for_path(
-                            os.path.join(self.root_directory,
-                                fullpath),
-                            e,
-                            hashes=hashes,
-                            expected_dev=self.manifest_device)
-                        manifests_to_update.add(mpath)
-
-                # we've apparently added this Manifest, so store it now
-                if mpath in manifests_to_update:
-                    self.save_manifest(mpath)
+                assert new_entry_type not in (
+                        'DIST', 'IGNORE', 'OPTIONAL')
+                newpath = os.path.relpath(path, relpath)
+                if new_entry_type == 'AUX':
+                    # AUX has implicit files/ prefix
+                    assert gemato.util.path_inside_dir(newpath,
+                            'files')
+                    # drop files/ prefix
+                    newpath = os.path.relpath(newpath, 'files')
+                e = gemato.manifest.new_manifest_entry(
+                        new_entry_type, newpath, 0, {})
+                gemato.verify.update_entry_for_path(
+                    os.path.join(self.root_directory, path),
+                    e,
+                    hashes=hashes,
+                    expected_dev=self.manifest_device)
+                m.entries.append(e)
+                self.updated_manifests.add(mpath)
+                had_entry = True
+                break
