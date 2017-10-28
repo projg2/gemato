@@ -651,9 +651,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     openpgp_env=self.env)
             self.assertTrue(m.openpgp_signed)
 
-            self.env.import_key(io.BytesIO(PRIVATE_KEY))
             m.save_manifest('Manifest')
-
             m2 = gemato.manifest.ManifestFile()
             with io.open(os.path.join(d, 'Manifest'), 'r') as f:
                 m2.load(f, openpgp_env=self.env)
@@ -674,9 +672,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     openpgp_env=self.env)
             self.assertTrue(m.openpgp_signed)
 
-            self.env.import_key(io.BytesIO(PRIVATE_KEY))
             m.save_manifest('Manifest.gz')
-
             m2 = gemato.manifest.ManifestFile()
             with gemato.compression.open_potentially_compressed_path(
                     os.path.join(d, 'Manifest.gz'), 'r') as cf:
@@ -698,9 +694,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     openpgp_env=self.env)
             self.assertFalse(m.openpgp_signed)
 
-            self.env.import_key(io.BytesIO(PRIVATE_KEY))
             m.save_manifest('Manifest')
-
             m2 = gemato.manifest.ManifestFile()
             with io.open(os.path.join(d, 'Manifest'), 'r') as f:
                 m2.load(f, openpgp_env=self.env)
@@ -722,9 +716,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     openpgp_env=self.env)
             self.assertFalse(m.openpgp_signed)
 
-            self.env.import_key(io.BytesIO(PRIVATE_KEY))
             m.save_manifest('Manifest.gz')
-
             m2 = gemato.manifest.ManifestFile()
             with gemato.compression.open_potentially_compressed_path(
                     os.path.join(d, 'Manifest.gz'), 'r') as cf:
@@ -752,7 +744,6 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     openpgp_env=self.env)
             self.assertFalse(m.openpgp_signed)
 
-            self.env.import_key(io.BytesIO(PRIVATE_KEY))
             m.load_manifest('eclass/Manifest')
             m.save_manifest('eclass/Manifest')
 
