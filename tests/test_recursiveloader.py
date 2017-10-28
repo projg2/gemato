@@ -215,11 +215,16 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 'sub/deeper/Manifest',
                 'sub/deeper/test',
             )))
-        self.assertEqual(entries['other/Manifest'].path, 'other/Manifest')
-        self.assertEqual(entries['sub/Manifest'].path, 'sub/Manifest')
-        self.assertEqual(entries['sub/nonstray'].path, 'nonstray')
-        self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
-        self.assertEqual(entries['sub/deeper/test'].path, 'test')
+        self.assertEqual(entries['other/Manifest'][0], 'Manifest')
+        self.assertEqual(entries['sub/Manifest'][0], 'Manifest')
+        self.assertEqual(entries['sub/nonstray'][0], 'sub/Manifest')
+        self.assertEqual(entries['sub/deeper/Manifest'][0], 'sub/Manifest')
+        self.assertEqual(entries['sub/deeper/test'][0], 'sub/deeper/Manifest')
+        self.assertEqual(entries['other/Manifest'][1].path, 'other/Manifest')
+        self.assertEqual(entries['sub/Manifest'][1].path, 'sub/Manifest')
+        self.assertEqual(entries['sub/nonstray'][1].path, 'nonstray')
+        self.assertEqual(entries['sub/deeper/Manifest'][1].path, 'deeper/Manifest')
+        self.assertEqual(entries['sub/deeper/test'][1].path, 'test')
 
     def test_get_file_entry_dict_for_sub(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -249,10 +254,14 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 'sub/deeper/Manifest',
                 'sub/deeper/test',
             )))
-        self.assertEqual(entries['sub/Manifest'].path, 'sub/Manifest')
-        self.assertEqual(entries['sub/nonstray'].path, 'nonstray')
-        self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
-        self.assertEqual(entries['sub/deeper/test'].path, 'test')
+        self.assertEqual(entries['sub/Manifest'][0], 'Manifest')
+        self.assertEqual(entries['sub/nonstray'][0], 'sub/Manifest')
+        self.assertEqual(entries['sub/deeper/Manifest'][0], 'sub/Manifest')
+        self.assertEqual(entries['sub/deeper/test'][0], 'sub/deeper/Manifest')
+        self.assertEqual(entries['sub/Manifest'][1].path, 'sub/Manifest')
+        self.assertEqual(entries['sub/nonstray'][1].path, 'nonstray')
+        self.assertEqual(entries['sub/deeper/Manifest'][1].path, 'deeper/Manifest')
+        self.assertEqual(entries['sub/deeper/test'][1].path, 'test')
 
     def test_get_file_entry_dict_for_invalid(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -722,8 +731,9 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         entries = m.get_deduplicated_file_entry_dict_for_update('')
         self.assertSetEqual(frozenset(entries), frozenset(('test',)))
-        self.assertEqual(entries['test'].path, 'test')
-        self.assertSetEqual(frozenset(entries['test'].checksums),
+        self.assertEqual(entries['test'][0], 'Manifest')
+        self.assertEqual(entries['test'][1].path, 'test')
+        self.assertSetEqual(frozenset(entries['test'][1].checksums),
                             frozenset(('MD5',)))
 
         m.save_manifests()
@@ -820,8 +830,9 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         entries = m.get_deduplicated_file_entry_dict_for_update('')
         self.assertSetEqual(frozenset(entries),
                 frozenset(('sub/test', 'sub/Manifest')))
-        self.assertEqual(entries['sub/test'].path, 'test')
-        self.assertSetEqual(frozenset(entries['sub/test'].checksums),
+        self.assertEqual(entries['sub/test'][0], 'sub/Manifest')
+        self.assertEqual(entries['sub/test'][1].path, 'test')
+        self.assertSetEqual(frozenset(entries['sub/test'][1].checksums),
                             frozenset(('MD5',)))
 
         m.save_manifests()
@@ -863,7 +874,8 @@ EBUILD test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         entries = m.get_deduplicated_file_entry_dict_for_update('')
         self.assertSetEqual(frozenset(entries), frozenset(('test.ebuild',)))
-        self.assertEqual(entries['test.ebuild'].path, 'test.ebuild')
+        self.assertEqual(entries['test.ebuild'][0], 'Manifest')
+        self.assertEqual(entries['test.ebuild'][1].path, 'test.ebuild')
 
         m.save_manifests()
         m2 = gemato.manifest.ManifestFile()
@@ -910,7 +922,8 @@ AUX test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         entries = m.get_deduplicated_file_entry_dict_for_update('')
         self.assertSetEqual(frozenset(entries), frozenset(('files/test.patch',)))
-        self.assertEqual(entries['files/test.patch'].path, 'files/test.patch')
+        self.assertEqual(entries['files/test.patch'][0], 'Manifest')
+        self.assertEqual(entries['files/test.patch'][1].path, 'files/test.patch')
 
         m.save_manifests()
         m2 = gemato.manifest.ManifestFile()
@@ -1012,8 +1025,9 @@ DATA test 0 SHA1 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
             os.path.join(self.dir, 'Manifest'))
         entries = m.get_deduplicated_file_entry_dict_for_update('')
         self.assertSetEqual(frozenset(entries), frozenset(('test',)))
-        self.assertEqual(entries['test'].path, 'test')
-        self.assertSetEqual(frozenset(entries['test'].checksums),
+        self.assertEqual(entries['test'][0], 'Manifest')
+        self.assertEqual(entries['test'][1].path, 'test')
+        self.assertSetEqual(frozenset(entries['test'][1].checksums),
             frozenset(('MD5', 'SHA1')))
 
         m.save_manifests()
@@ -1177,7 +1191,8 @@ DATA test.ebuild 32 MD5 d41d8cd98f00b204e9800998ecf8427e
         entries = m.get_deduplicated_file_entry_dict_for_update('')
         self.assertSetEqual(frozenset(entries),
                             frozenset(('test.ebuild',)))
-        self.assertIsInstance(entries['test.ebuild'],
+        self.assertEqual(entries['test.ebuild'][0], 'Manifest')
+        self.assertIsInstance(entries['test.ebuild'][1],
                 gemato.manifest.ManifestEntryDATA)
 
         m.save_manifests()
@@ -1218,10 +1233,12 @@ DATA test.ebuild 0 MD5 9e107d9d372bb6826bd81d3542a419d6
         entries = m.get_deduplicated_file_entry_dict_for_update('')
         self.assertSetEqual(frozenset(entries),
                             frozenset(('test.ebuild',)))
-        self.assertIsInstance(entries['test.ebuild'],
+        self.assertEqual(entries['test.ebuild'][0], 'Manifest')
+        self.assertIsInstance(entries['test.ebuild'][1],
                 gemato.manifest.ManifestEntryDATA)
-        self.assertSetEqual(frozenset(entries['test.ebuild'].checksums),
-                            frozenset(('MD5',)))
+        self.assertSetEqual(
+                frozenset(entries['test.ebuild'][1].checksums),
+                frozenset(('MD5',)))
 
         m.save_manifests()
         m2 = gemato.manifest.ManifestFile()

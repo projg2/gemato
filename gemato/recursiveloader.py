@@ -539,7 +539,7 @@ class ManifestRecursiveLoader(object):
         Find all file entries that apply to paths starting with @path.
         Remove all duplicate entries and queue the relevant Manifests
         for update. Return a dictionary mapping relative paths
-        to entries.
+        to tuple of (manifest path, entry).
 
         You need to invoke save_manifests() to store the Manifest
         updates afterwards. However, note that the resulting tree
@@ -568,18 +568,18 @@ class ManifestRecursiveLoader(object):
                         if fullpath in out:
                             # compare the two entries
                             ret, diff = gemato.verify.verify_entry_compatibility(
-                                    out[fullpath], e)
+                                    out[fullpath][1], e)
                             # if semantically incompatible, throw
                             if not ret and diff[0][0] == '__type__':
                                 raise (gemato.exceptions
                                         .ManifestIncompatibleEntry(
-                                            out[fullpath], e, diff))
+                                            out[fullpath][1], e, diff))
                             # otherwise, make sure we have all checksums
-                            out[fullpath].checksums.update(e.checksums)
+                            out[fullpath][1].checksums.update(e.checksums)
                             # and drop the duplicate
                             entries_to_remove.append(e)
                         else:
-                            out[fullpath] = e
+                            out[fullpath] = (mpath, e)
 
             if entries_to_remove:
                 for e in entries_to_remove:
