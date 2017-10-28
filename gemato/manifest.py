@@ -275,6 +275,14 @@ MANIFEST_TAG_MAPPING = {
 }
 
 
+def new_manifest_entry(tag, *args):
+    """
+    Construct a Manifest entry for given @tag. @args are passed
+    to the constructor.
+    """
+    return MANIFEST_TAG_MAPPING[tag](*args)
+
+
 class ManifestState(object):
     """
     FSM constants for loading Manifest.

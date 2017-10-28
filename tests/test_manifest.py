@@ -371,3 +371,61 @@ class ManifestUtilityTest(unittest.TestCase):
         self.assertListEqual(list(
                 gemato.manifest.manifest_hashes_to_hashlib(['SHA3_256', 'SHA256'])),
             ['sha3_256', 'sha256'])
+
+
+class NewManifestEntryTest(unittest.TestCase):
+    """
+    Tests for new_manifest_entry().
+    """
+
+    def test_TIMESTAMP(self):
+        self.assertIsInstance(
+                gemato.manifest.new_manifest_entry('TIMESTAMP',
+                    datetime.datetime(2000, 1, 1, 0, 0, 0)),
+                gemato.manifest.ManifestEntryTIMESTAMP)
+
+    def test_MANIFEST(self):
+        self.assertIsInstance(
+                gemato.manifest.new_manifest_entry('MANIFEST',
+                    'test', 32, {}),
+                gemato.manifest.ManifestEntryMANIFEST)
+
+    def test_IGNORE(self):
+        self.assertIsInstance(
+                gemato.manifest.new_manifest_entry('IGNORE', 'test'),
+                gemato.manifest.ManifestEntryIGNORE)
+
+    def test_DATA(self):
+        self.assertIsInstance(
+                gemato.manifest.new_manifest_entry('DATA',
+                    'test', 32, {}),
+                gemato.manifest.ManifestEntryDATA)
+
+    def test_MISC(self):
+        self.assertIsInstance(
+                gemato.manifest.new_manifest_entry('MISC',
+                    'test', 32, {}),
+                gemato.manifest.ManifestEntryMISC)
+
+    def test_OPTIONAL(self):
+        self.assertIsInstance(
+                gemato.manifest.new_manifest_entry('OPTIONAL', 'test'),
+                gemato.manifest.ManifestEntryOPTIONAL)
+
+    def test_DIST(self):
+        self.assertIsInstance(
+                gemato.manifest.new_manifest_entry('DIST',
+                    'test', 32, {}),
+                gemato.manifest.ManifestEntryDIST)
+
+    def test_EBUILD(self):
+        self.assertIsInstance(
+                gemato.manifest.new_manifest_entry('EBUILD',
+                    'test', 32, {}),
+                gemato.manifest.ManifestEntryEBUILD)
+
+    def test_AUX(self):
+        self.assertIsInstance(
+                gemato.manifest.new_manifest_entry('AUX',
+                    'test', 32, {}),
+                gemato.manifest.ManifestEntryAUX)
