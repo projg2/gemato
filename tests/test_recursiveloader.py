@@ -373,6 +373,40 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertRaises(AssertionError,
                 m.update_entry_for_path, 'sub/stray')
 
+    def test_update_entry_for_path_hash_via_ctor(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entry_for_path('sub/stray')
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/stray').checksums),
+                ['SHA256', 'SHA512'])
+        # relevant Manifests should have been updated
+        with io.open(os.path.join(self.dir, 'sub/Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['sub/Manifest'])
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
+    def test_update_entry_for_path_hash_via_ctor_and_override(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entry_for_path('sub/stray', hashes=['MD5'])
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/stray').checksums),
+                ['MD5'])
+        # relevant Manifests should have been updated
+        with io.open(os.path.join(self.dir, 'sub/Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['sub/Manifest'])
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
 
 class MultipleManifestTest(TempDirTestCase):
     DIRS = ['sub']
@@ -449,6 +483,62 @@ TIMESTAMP 2017-01-01T01:01:01Z
         self.assertListEqual(
                 sorted(m.find_path_entry('sub/Manifest.a').checksums),
                 ['SHA256', 'SHA512'])
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/Manifest.b').checksums),
+                ['MD5'])
+        # relevant Manifests should have been updated
+        # but sub/Manifest.b should be left intact
+        with io.open(os.path.join(self.dir, 'sub/Manifest.a'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['sub/Manifest.a'])
+        with io.open(os.path.join(self.dir, 'sub/Manifest.b'),
+                     'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['sub/Manifest.b'])
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
+    def test_update_entry_for_path_hashes_via_ctor(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entry_for_path('sub/foo')
+        # check for checksums
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/foo').checksums),
+                ['SHA256', 'SHA512'])
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/Manifest.a').checksums),
+                ['SHA256', 'SHA512'])
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/Manifest.b').checksums),
+                ['MD5'])
+        # relevant Manifests should have been updated
+        # but sub/Manifest.b should be left intact
+        with io.open(os.path.join(self.dir, 'sub/Manifest.a'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['sub/Manifest.a'])
+        with io.open(os.path.join(self.dir, 'sub/Manifest.b'),
+                     'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['sub/Manifest.b'])
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
+    def test_update_entry_for_path_hashes_via_ctor_and_override(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entry_for_path('sub/foo', hashes=['SHA1'])
+        # check for checksums
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/foo').checksums),
+                ['SHA1'])
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/Manifest.a').checksums),
+                ['SHA1'])
         self.assertListEqual(
                 sorted(m.find_path_entry('sub/Manifest.b').checksums),
                 ['MD5'])

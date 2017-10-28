@@ -21,7 +21,8 @@ class ManifestRecursiveLoader(object):
 
     def __init__(self, top_manifest_path,
             verify_openpgp=True, openpgp_env=None,
-            sign_openpgp=None, openpgp_keyid=None):
+            sign_openpgp=None, openpgp_keyid=None,
+            hashes=None):
         """
         Instantiate the loader for a Manifest tree starting at top-level
         Manifest @top_manifest_path.
@@ -38,6 +39,11 @@ class ManifestRecursiveLoader(object):
         originally signed. @openpgp_keyid can be used to select the key.
 
         Sub-Manifests are never signed.
+
+        @hashes can be used to specify a default hash set
+        for the Manifest. If it is specified, they will be used for all
+        subsequent update*() calls that do not specify another set
+        of hashes explicitly.
         """
         self.root_directory = os.path.dirname(top_manifest_path)
         self.loaded_manifests = {}
@@ -45,6 +51,8 @@ class ManifestRecursiveLoader(object):
         self.openpgp_env = openpgp_env
         self.sign_openpgp = sign_openpgp
         self.openpgp_keyid = openpgp_keyid
+        self.hashes = hashes
+
         # TODO: allow catching OpenPGP exceptions somehow?
         m = self.load_manifest(os.path.basename(top_manifest_path))
         self.openpgp_signed = m.openpgp_signed
@@ -380,13 +388,20 @@ class ManifestRecursiveLoader(object):
         If the path does not exist, all Manifest entries for it will
         be removed except for OPTIONAL entries.
 
-        @hashes specifies the requested hash set. By default,
-        the existing hashes in the entry are updated. @hashes
-        must be specified when creating a new entry.
+        @hashes specifies the requested hash set. If specified,
+        it overrides the hash set used in Manifest. If None, the set
+        specified in ManifestLoader constructor is used. If that one
+        is None as well, the routine reuses the existing hash set
+        in the entry.
+
+        When creating a new entry, @hashes must be specified explicitly
+        either via the function or on construction.
         """
 
         had_entry = False
         manifests_to_update = set()
+        if hashes is None:
+            hashes = self.hashes
 
         self.load_manifests_for_path(path)
         for mpath, relpath, m in self._iter_manifests_for_path(path):
