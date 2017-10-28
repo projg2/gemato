@@ -340,7 +340,8 @@ class EmptyFileVerificationTest(unittest.TestCase):
     def test_update(self):
         e = gemato.manifest.ManifestEntryDATA(
                 os.path.basename(self.path), 0, {})
-        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertFalse(
+                gemato.verify.update_entry_for_path(self.path, e))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, 0)
         self.assertDictEqual(e.checksums, {})
@@ -348,7 +349,9 @@ class EmptyFileVerificationTest(unittest.TestCase):
     def test_update_with_hashes(self):
         e = gemato.manifest.ManifestEntryDATA(
                 os.path.basename(self.path), 0, {})
-        gemato.verify.update_entry_for_path(self.path, e, ['MD5', 'SHA1'])
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e,
+                    ['MD5', 'SHA1']))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, 0)
         self.assertDictEqual(e.checksums, {
@@ -359,7 +362,24 @@ class EmptyFileVerificationTest(unittest.TestCase):
     def test_update_with_hashes_from_manifest(self):
         e = gemato.manifest.ManifestEntryDATA(
                 os.path.basename(self.path), 0, {'MD5': '', 'SHA1': ''})
-        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e))
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 0)
+        self.assertDictEqual(e.checksums, {
+                'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
+                'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+            })
+
+    def test_update_with_hashes_unchanged(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {
+                    'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
+                    'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                })
+        self.assertFalse(
+                gemato.verify.update_entry_for_path(self.path, e,
+                    ['MD5', 'SHA1']))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, 0)
         self.assertDictEqual(e.checksums, {
@@ -382,7 +402,8 @@ class EmptyFileVerificationTest(unittest.TestCase):
     def test_update_MISC(self):
         e = gemato.manifest.ManifestEntryMISC(
                 os.path.basename(self.path), 0, {})
-        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertFalse(
+                gemato.verify.update_entry_for_path(self.path, e))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, 0)
         self.assertDictEqual(e.checksums, {})
@@ -402,7 +423,8 @@ class EmptyFileVerificationTest(unittest.TestCase):
     def test_update_AUX(self):
         e = gemato.manifest.ManifestEntryAUX(
                 os.path.basename(self.path), 0, {})
-        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertFalse(
+                gemato.verify.update_entry_for_path(self.path, e))
         self.assertEqual(e.path,
                 os.path.join('files', os.path.basename(self.path)))
         self.assertEqual(e.size, 0)
@@ -496,7 +518,8 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
     def test_update(self):
         e = gemato.manifest.ManifestEntryDATA(
                 os.path.basename(self.path), 0, {})
-        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, 43)
         self.assertDictEqual(e.checksums, {})
@@ -504,7 +527,9 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
     def test_update_with_hashes(self):
         e = gemato.manifest.ManifestEntryDATA(
                 os.path.basename(self.path), 0, {})
-        gemato.verify.update_entry_for_path(self.path, e, ['MD5', 'SHA1'])
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e,
+                    ['MD5', 'SHA1']))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, 43)
         self.assertDictEqual(e.checksums, {
@@ -515,7 +540,8 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
     def test_update_with_hashes_from_manifest(self):
         e = gemato.manifest.ManifestEntryDATA(
                 os.path.basename(self.path), 0, {'MD5': '', 'SHA1': ''})
-        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, 43)
         self.assertDictEqual(e.checksums, {
@@ -674,7 +700,8 @@ class ProcFileVerificationTest(unittest.TestCase):
     def test_update(self):
         e = gemato.manifest.ManifestEntryDATA(
                 os.path.basename(self.path), 0, {})
-        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, self.size)
         self.assertDictEqual(e.checksums, {})
@@ -682,7 +709,9 @@ class ProcFileVerificationTest(unittest.TestCase):
     def test_update_with_hashes(self):
         e = gemato.manifest.ManifestEntryDATA(
                 os.path.basename(self.path), 0, {})
-        gemato.verify.update_entry_for_path(self.path, e, ['MD5', 'SHA1'])
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e,
+                    ['MD5', 'SHA1']))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, self.size)
         self.assertDictEqual(e.checksums, {
@@ -693,7 +722,8 @@ class ProcFileVerificationTest(unittest.TestCase):
     def test_update_with_hashes_from_manifest(self):
         e = gemato.manifest.ManifestEntryDATA(
                 os.path.basename(self.path), 0, {'MD5': '', 'SHA1': ''})
-        gemato.verify.update_entry_for_path(self.path, e)
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, self.size)
         self.assertDictEqual(e.checksums, {

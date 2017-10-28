@@ -205,6 +205,9 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None):
     at path @path. Uses hashes listed in @hashes (using Manifest names),
     or the current set of hashes in @e if @hashes is None.
 
+    Returns True if anything changed, or False if the entry did
+    not change.
+
     The file must exist and be a regular file, and the entry must be
     of MISC, DATA, MANIFEST or a derived type. The path/filename
     is not updated nor checked.
@@ -250,8 +253,11 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None):
             assert st_size == size, ('Apparent size (st_size = {}) and real size ({}) are different!'
                     .format(st_size, size))
 
-        e.size = size
-        e.checksums = checksums
+        if e.size != size or e.checksums != checksums:
+            e.size = size
+            e.checksums = checksums
+            return True
+        return False
 
 
 def verify_entry_compatibility(e1, e2):
