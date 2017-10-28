@@ -587,3 +587,124 @@ class ManifestRecursiveLoader(object):
                 self.updated_manifests.add(mpath)
 
         return out
+
+    def update_entries_for_directory(self, path='', hashes=None):
+        """
+        Update the Manifest entries for the contents of directory
+        @path (top directory by default), recursively. Includes adding
+        new files and removing entries for those that no longer exist.
+        The behavior for various cases is the same
+        as for update_entry_for_path() except as noted below.
+
+        New entries are currently created with DATA type. This will
+        be extended in the future.
+
+        @hashes specifies the requested hash set. If specified,
+        it overrides the hash set used in Manifest. If None, the set
+        specified in ManifestLoader constructor is used. Either
+        of the two hash sets must be specified.
+
+        If the top-level Manifest has a TIMESTAMP entry, this entry
+        will be updated with the current time after successful update.
+        """
+
+        if hashes is None:
+            hashes = self.hashes
+        assert hashes is not None
+
+        entry_dict = self.get_deduplicated_file_entry_dict_for_update(
+                path)
+        it = os.walk(os.path.join(self.root_directory, path),
+                onerror=gemato.util.throw_exception,
+                followlinks=True)
+
+        for dirpath, dirnames, filenames in it:
+            relpath = os.path.relpath(dirpath, self.root_directory)
+            # strip dot to avoid matching problems
+            if relpath == '.':
+                relpath = ''
+
+            skip_dirs = []
+            for d in dirnames:
+                # skip dotfiles
+                if d.startswith('.'):
+                    skip_dirs.append(d)
+                    continue
+
+                dpath = os.path.join(relpath, d)
+                mpath, de = entry_dict.pop(dpath, (None, None))
+                if de is None:
+                    syspath = os.path.join(dirpath, d)
+                    st = os.stat(syspath)
+                    if st.st_dev != self.manifest_device:
+                        raise gemato.exceptions.ManifestCrossDevice(syspath)
+                    continue
+
+                if isinstance(de, gemato.manifest.ManifestEntryIGNORE):
+                    skip_dirs.append(d)
+                else:
+                    # trigger the exception indirectly
+                    gemato.verify.update_entry_for_path(
+                        os.path.join(dirpath, d),
+                        de,
+                        hashes=hashes,
+                        expected_dev=self.manifest_device)
+                    assert False, "exception should have been raised"
+
+            # skip scanning ignored directories
+            for d in skip_dirs:
+                dirnames.remove(d)
+
+            dir_manifest = None
+
+            for f in filenames:
+                # skip dotfiles
+                if f.startswith('.'):
+                    continue
+
+                fpath = os.path.join(relpath, f)
+                # skip top-level Manifest, we obviously can't have
+                # an entry for it
+                if fpath in (gemato.compression
+                        .get_potential_compressed_names('Manifest')):
+                    continue
+                mpath, fe = entry_dict.pop(fpath, (None, None))
+                if fe is not None:
+                    if isinstance(fe, gemato.manifest.ManifestEntryIGNORE):
+                        continue
+                    elif isinstance(fe, gemato.manifest.ManifestEntryOPTIONAL):
+                        continue
+                else:
+                    # find appropriate Manifest for this directory
+                    if dir_manifest is None:
+                        for mpath, relpath, m in (self
+                                ._iter_manifests_for_path(fpath)):
+                            dir_manifest = (mpath, relpath, m)
+                            break
+                    else:
+                        mpath, relpath, m = dir_manifest
+
+                    fe = gemato.manifest.ManifestEntryDATA(
+                        os.path.relpath(fpath, relpath),
+                        0, {})
+                    m.entries.append(fe)
+
+                # update the existing entry
+                changed = gemato.verify.update_entry_for_path(
+                    os.path.join(dirpath, f),
+                    fe,
+                    hashes=hashes,
+                    expected_dev=self.manifest_device)
+                if changed:
+                    self.updated_manifests.add(mpath)
+
+        # check for removed files
+        for relpath, me in entry_dict.items():
+            mpath, fe = me
+            if isinstance(fe, gemato.manifest.ManifestEntryIGNORE):
+                continue
+            elif isinstance(fe, gemato.manifest.ManifestEntryOPTIONAL):
+                continue
+
+            self.loaded_manifests[mpath].entries.remove(fe)
+            self.updated_manifests.add(mpath)

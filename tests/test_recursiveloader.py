@@ -485,6 +485,22 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                      'r', encoding='utf8') as f:
             self.assertEqual(f.read(), self.FILES['Manifest'])
 
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
+        self.assertIsInstance(m.find_path_entry('sub/stray'),
+                gemato.manifest.ManifestEntryDATA)
+        m.save_manifests()
+        # relevant Manifests should have been updated
+        with io.open(os.path.join(self.dir, 'sub/Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['sub/Manifest'])
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
 
 class MultipleManifestTest(TempDirTestCase):
     DIRS = ['sub']
@@ -661,6 +677,35 @@ TIMESTAMP 2017-01-01T01:01:01Z
         self.assertListEqual(
                 sorted(m.find_path_entry('sub/Manifest.b').checksums),
                 ['MD5'])
+        # relevant Manifests should have been updated
+        # but sub/Manifest.b should be left intact
+        with io.open(os.path.join(self.dir, 'sub/Manifest.a'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['sub/Manifest.a'])
+        with io.open(os.path.join(self.dir, 'sub/Manifest.b'),
+                     'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['sub/Manifest.b'])
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        # check for checksums
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/foo').checksums),
+                ['SHA256', 'SHA512'])
+        m.save_manifests()
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/Manifest.a').checksums),
+                ['SHA256', 'SHA512'])
+        self.assertListEqual(
+                sorted(m.find_path_entry('sub/Manifest.b').checksums),
+                ['SHA256', 'SHA512'])
         # relevant Manifests should have been updated
         # but sub/Manifest.b should be left intact
         with io.open(os.path.join(self.dir, 'sub/Manifest.a'),
@@ -963,6 +1008,18 @@ AUX test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertRaises(gemato.exceptions.ManifestInvalidPath,
                 m.update_entry_for_path, 'test.patch', hashes=['MD5'])
 
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertIsNone(m.find_path_entry('files/test.patch'))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
 
 class AUXTypeFileAdditionTest(TempDirTestCase):
     DIRS = ['files']
@@ -1061,6 +1118,22 @@ DATA test 0 SHA1 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
         self.assertIn(
                 tuple(m.find_path_entry('test').checksums),
                 (('MD5',), ('SHA1',)))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertEqual(m.find_path_entry('test').checksums,
+                {
+                    'SHA256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+                    'SHA512': 'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e',
+                })
         m.save_manifests()
         with io.open(os.path.join(self.dir, 'Manifest'),
                      'r', encoding='utf8') as f:
@@ -1348,6 +1421,18 @@ MISC foo 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             self.assertNotEqual(f.read(), self.FILES['Manifest'])
         m.assert_directory_verifies()
 
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertIsNone(m.find_path_entry('foo'))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
 
 class ManifestOptionalEntryTest(TempDirTestCase):
     """
@@ -1393,7 +1478,22 @@ OPTIONAL foo
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.update_entry_for_path('foo')
-        self.assertIsNotNone(m.find_path_entry('foo'))
+        self.assertIsInstance(m.find_path_entry('foo'),
+                gemato.manifest.ManifestEntryOPTIONAL)
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['Manifest'])
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
+                m.assert_directory_verifies, '')
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertIsInstance(m.find_path_entry('foo'),
+                gemato.manifest.ManifestEntryOPTIONAL)
         m.save_manifests()
         with io.open(os.path.join(self.dir, 'Manifest'),
                      'r', encoding='utf8') as f:
@@ -1445,6 +1545,13 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             gemato.cli.main(['gemato', 'verify', '--no-strict', self.dir]),
             1)
 
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        self.assertRaises(gemato.exceptions.ManifestCrossDevice,
+                m.update_entries_for_directory, '')
+
 
 class CrossDeviceEmptyManifestTest(TempDirTestCase):
     """
@@ -1488,6 +1595,13 @@ class CrossDeviceEmptyManifestTest(TempDirTestCase):
             gemato.cli.main(['gemato', 'verify', '--no-strict', self.dir]),
             1)
 
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        self.assertRaises(gemato.exceptions.ManifestCrossDevice,
+                m.update_entries_for_directory, '')
+
 
 class CrossDeviceIgnoreManifestTest(TempDirTestCase):
     """
@@ -1519,6 +1633,13 @@ IGNORE sub
             gemato.cli.main(['gemato', 'verify', self.dir]),
             0)
 
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertEqual(len(m.loaded_manifests['Manifest'].entries), 1)
+
 
 class DotfileManifestTest(TempDirTestCase):
     """
@@ -1541,6 +1662,19 @@ class DotfileManifestTest(TempDirTestCase):
         self.assertEqual(
             gemato.cli.main(['gemato', 'verify', self.dir]),
             0)
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertIsNone(m.find_path_entry('.bar/baz'))
+        self.assertIsNone(m.find_path_entry('.foo'))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
 
 
 class DirectoryInPlaceOfFileManifestTest(TempDirTestCase):
@@ -1572,6 +1706,13 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertRaises(gemato.exceptions.ManifestInvalidPath,
                 m.update_entry_for_path, 'test')
 
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        self.assertRaises(gemato.exceptions.ManifestInvalidPath,
+                m.update_entries_for_directory, '')
+
 
 class UnreadableDirectoryTest(TempDirTestCase):
     """
@@ -1591,6 +1732,12 @@ class UnreadableDirectoryTest(TempDirTestCase):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(OSError, m.assert_directory_verifies)
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        self.assertRaises(OSError, m.update_entries_for_directory, '')
 
 
 class CompressedTopManifestTest(TempDirTestCase):
@@ -1638,6 +1785,22 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 os.path.join(self.dir, 'Manifest.gz'), 'rb') as f:
             self.assertEqual(f.read(), self.MANIFEST.lstrip())
 
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest.gz'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertEqual(m.find_path_entry('test').checksums,
+                {
+                    'SHA256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+                    'SHA512': 'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e',
+                })
+        m.save_manifests()
+        with gemato.compression.open_potentially_compressed_path(
+                os.path.join(self.dir, 'Manifest.gz'), 'rb') as f:
+            self.assertNotEqual(f.read(), self.MANIFEST.lstrip())
+        m.assert_directory_verifies()
+
 
 class CompressedSubManifestTest(TempDirTestCase):
     """
@@ -1681,3 +1844,20 @@ MANIFEST sub/Manifest.gz 78 MD5 9c158f87b2445279d7c8aac439612fba
         self.assertEqual(
             gemato.cli.main(['gemato', 'verify', self.dir]),
             0)
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertEqual(m.find_path_entry('sub/test').checksums,
+                {
+                    'SHA256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+                    'SHA512': 'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e',
+                })
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'sub/Manifest.gz'),
+                'rb') as f:
+            self.assertNotEqual(f.read(),
+                    base64.b64decode(self.SUB_MANIFEST))
+        m.assert_directory_verifies()
