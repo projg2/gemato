@@ -356,3 +356,141 @@ class ManifestRecursiveLoader(object):
                             fail_handler, warn_handler)
 
         return ret
+
+    def update_entry_for_path(self, path, new_entry_type='DATA',
+            hashes=None):
+        """
+        Update the Manifest entries for @path and the appropriate
+        MANIFEST entries. @path must not be covered by IGNORE.
+
+        If the path exists and has a matching Manifest entry, the most
+        specific existing entry will be updated. If the path has more
+        entries, the remaining entries will be removed. This function
+        does not check if they were compatible.
+
+        The type of MANIFEST, DATA and MISC derived entries
+        is preserved. OPTIONAL entries are left as-is.
+
+        If the path exists and has no Manifest entry, a new entry
+        of type @new_entry_type will be created in the Manifest most
+        specific to the location. Note that AUX entries can only
+        be created if they're located in 'files/' directory relative
+        to an existing Manifest.
+
+        If the path does not exist, all Manifest entries for it will
+        be removed except for OPTIONAL entries.
+
+        @hashes specifies the requested hash set. By default,
+        the existing hashes in the entry are updated. @hashes
+        must be specified when creating a new entry.
+        """
+
+        had_entry = False
+        manifests_to_update = set()
+
+        self.load_manifests_for_path(path)
+        for mpath, relpath, m in self._iter_manifests_for_path(path):
+            entries_to_remove = []
+            for e in m.entries:
+                if isinstance(e, gemato.manifest.ManifestEntryIGNORE):
+                    # ignore matches recursively, so we process it separately
+                    # py<3.5 does not have os.path.commonpath()
+                    fullpath = os.path.join(relpath, e.path)
+                    assert not gemato.util.path_starts_with(path, fullpath)
+                elif isinstance(e, gemato.manifest.ManifestEntryDIST):
+                    # distfiles are not local files, so skip them
+                    pass
+                elif isinstance(e, gemato.manifest.ManifestEntryOPTIONAL):
+                    # leave OPTIONAL entries as-is
+                    fullpath = os.path.join(relpath, e.path)
+                    if fullpath == path:
+                        had_entry = True
+                elif isinstance(e, gemato.manifest.ManifestPathEntry):
+                    # we update either file at the specified path
+                    # or any relevant Manifests
+                    fullpath = os.path.join(relpath, e.path)
+                    if fullpath == path:
+                        if had_entry:
+                            # duplicate entry!
+                            entries_to_remove.append(e)
+                            continue
+                        # pass through
+                    elif fullpath in manifests_to_update:
+                        pass
+                    else:
+                        continue
+
+                    try:
+                        gemato.verify.update_entry_for_path(
+                            os.path.join(self.root_directory,
+                                fullpath),
+                            e,
+                            hashes=hashes,
+                            expected_dev=self.manifest_device)
+                    except gemato.exceptions.ManifestInvalidPath as err:
+                        if err.detail[0] == '__exists__':
+                            # file does not exist anymore, so remove
+                            # the entry
+                            entries_to_remove.append(e)
+                            had_entry = True
+                        else:
+                            raise err
+                    else:
+                        manifests_to_update.add(mpath)
+                        had_entry = True
+
+            if entries_to_remove:
+                for e in entries_to_remove:
+                    m.entries.remove(e)
+                manifests_to_update.add(mpath)
+
+            # we've apparently added this Manifest, so store it now
+            if mpath in manifests_to_update:
+                self.save_manifest(mpath)
+
+        if not had_entry:
+            assert hashes is not None
+            for mpath, relpath, m in self._iter_manifests_for_path(path):
+                # add to the first relevant Manifest
+                if not had_entry:
+                    assert new_entry_type not in (
+                            'DIST', 'IGNORE', 'OPTIONAL')
+                    newpath = os.path.relpath(path, relpath)
+                    if new_entry_type == 'AUX':
+                        # AUX has implicit files/ prefix
+                        assert gemato.util.path_inside_dir(newpath,
+                                'files')
+                        # drop files/ prefix
+                        newpath = os.path.relpath(newpath, 'files')
+                    e = gemato.manifest.new_manifest_entry(
+                            new_entry_type, newpath, 0, {})
+                    gemato.verify.update_entry_for_path(
+                        os.path.join(self.root_directory, path),
+                        e,
+                        hashes=hashes,
+                        expected_dev=self.manifest_device)
+                    m.entries.append(e)
+                    manifests_to_update.add(mpath)
+                    had_entry = True
+                else:
+                    for e in m.entries:
+                        if not isinstance(e, gemato.manifest.ManifestEntryMANIFEST):
+                            continue
+
+                        # we update either file at the specified path
+                        # or any relevant Manifests
+                        fullpath = os.path.join(relpath, e.path)
+                        if fullpath not in manifests_to_update:
+                            continue
+
+                        gemato.verify.update_entry_for_path(
+                            os.path.join(self.root_directory,
+                                fullpath),
+                            e,
+                            hashes=hashes,
+                            expected_dev=self.manifest_device)
+                        manifests_to_update.add(mpath)
+
+                # we've apparently added this Manifest, so store it now
+                if mpath in manifests_to_update:
+                    self.save_manifest(mpath)

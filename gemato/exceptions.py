@@ -107,6 +107,8 @@ class ManifestInvalidPath(Exception):
     """
 
     def __init__(self, path, detail):
+        self.path = path
+        self.detail = detail
         super(ManifestInvalidPath, self).__init__(
                 "Attempting to add invalid path {} to Manifest: {} must not be {}"
                 .format(path, detail[0], detail[1]))
