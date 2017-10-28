@@ -140,15 +140,15 @@ def verify_path(path, e, expected_dev=None):
     """
 
     if e is not None:
-        assert isinstance(e, gemato.manifest.ManifestPathEntry)
+        assert e.tag != 'TIMESTAMP'
 
         # IGNORE entries cause verification to always succeed
-        if isinstance(e, gemato.manifest.ManifestEntryIGNORE):
+        if e.tag == 'IGNORE':
             return (True, [])
 
     # OPTIONAL does not contain checksums, and expects not to exist
     # same goes for None
-    if e is None or isinstance(e, gemato.manifest.ManifestEntryOPTIONAL):
+    if e is None or e.tag == 'OPTIONAL':
         expect_exist = False
         checksums = ()
     else:
@@ -218,9 +218,7 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None):
     the files do not cross filesystem boundaries.
     """
 
-    assert isinstance(e, gemato.manifest.ManifestPathEntry)
-    assert not isinstance(e, gemato.manifest.ManifestEntryIGNORE)
-    assert not isinstance(e, gemato.manifest.ManifestEntryOPTIONAL)
+    assert e.tag not in ('IGNORE', 'OPTIONAL', 'TIMESTAMP')
 
     if hashes is None:
         hashes = list(e.checksums)
@@ -272,12 +270,10 @@ def verify_entry_compatibility(e1, e2):
     hashes that are present only in one of the entries.
     """
 
-    assert isinstance(e1, gemato.manifest.ManifestPathEntry)
-    assert isinstance(e2, gemato.manifest.ManifestPathEntry)
-
     # 1. compare types
     t1 = e1.tag
     t2 = e2.tag
+    assert 'TIMESTAMP' not in (t1, t2)
     if t1 != t2:
         # all those tags have compatible semantics
         COMPATIBLE_TAGS = ('MANIFEST', 'DATA', 'EBUILD', 'AUX')

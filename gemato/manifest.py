@@ -431,7 +431,7 @@ class ManifestFile(object):
         """
 
         for e in self.entries:
-            if isinstance(e, ManifestEntryTIMESTAMP):
+            if e.tag == 'TIMESTAMP':
                 return e
         return None
 
@@ -442,15 +442,16 @@ class ManifestFile(object):
         """
 
         for e in self.entries:
-            if isinstance(e, ManifestEntryIGNORE):
+            if e.tag == 'IGNORE':
                 # ignore matches recursively, so we process it separately
                 # py<3.5 does not have os.path.commonpath()
                 if gemato.util.path_starts_with(path, e.path):
                     return e
-            elif isinstance(e, ManifestEntryDIST):
+            elif e.tag in ('DIST', 'TIMESTAMP'):
                 # distfiles are not local files, so skip them
+                # timestamp is not a file ;-)
                 pass
-            elif isinstance(e, ManifestPathEntry):
+            else:
                 if e.path == path:
                     return e
         return None
@@ -462,9 +463,8 @@ class ManifestFile(object):
         """
 
         for e in self.entries:
-            if isinstance(e, ManifestEntryDIST):
-                if e.path == filename:
-                    return e
+            if e.tag == 'DIST' and e.path == filename:
+                return e
         return None
 
     def find_manifests_for_path(self, path):
@@ -475,7 +475,7 @@ class ManifestFile(object):
         """
 
         for e in self.entries:
-            if isinstance(e, ManifestEntryMANIFEST):
+            if e.tag == 'MANIFEST':
                 mdir = os.path.dirname(e.path)
                 if gemato.util.path_inside_dir(path, mdir):
                     yield e

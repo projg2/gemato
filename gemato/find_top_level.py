@@ -55,7 +55,7 @@ def find_top_level_manifest(path='.'):
                 if relpath == '.':
                     relpath = ''
                 fe = m.find_path_entry(relpath)
-                if isinstance(fe, gemato.manifest.ManifestEntryIGNORE):
+                if fe is not None and fe.tag == 'IGNORE':
                     return last_found
 
                 last_found = m_path

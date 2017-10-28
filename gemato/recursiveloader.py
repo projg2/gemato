@@ -135,7 +135,7 @@ class ManifestRecursiveLoader(object):
             for curmpath, relpath, m in self._iter_manifests_for_path(
                                             path, recursive):
                 for e in m.entries:
-                    if not isinstance(e, gemato.manifest.ManifestEntryMANIFEST):
+                    if e.tag != 'MANIFEST':
                         continue
                     mpath = os.path.join(relpath, e.path)
                     if curmpath == mpath or mpath in self.loaded_manifests:
@@ -159,7 +159,7 @@ class ManifestRecursiveLoader(object):
         self.load_manifests_for_path('')
         for mpath, p, m in self._iter_manifests_for_path(''):
             for e in m.entries:
-                if isinstance(e, gemato.manifest.ManifestEntryTIMESTAMP):
+                if e.tag == 'TIMESTAMP':
                     return e
         return None
 
@@ -172,16 +172,17 @@ class ManifestRecursiveLoader(object):
         self.load_manifests_for_path(path)
         for mpath, relpath, m in self._iter_manifests_for_path(path):
             for e in m.entries:
-                if isinstance(e, gemato.manifest.ManifestEntryIGNORE):
+                if e.tag == 'IGNORE':
                     # ignore matches recursively, so we process it separately
                     # py<3.5 does not have os.path.commonpath()
                     fullpath = os.path.join(relpath, e.path)
                     if gemato.util.path_starts_with(path, fullpath):
                         return e
-                elif isinstance(e, gemato.manifest.ManifestEntryDIST):
+                elif e.tag in ('DIST', 'TIMESTAMP'):
                     # distfiles are not local files, so skip them
+                    # timestamp is not a file ;-)
                     pass
-                elif isinstance(e, gemato.manifest.ManifestPathEntry):
+                else:
                     fullpath = os.path.join(relpath, e.path)
                     if fullpath == path:
                         return e
@@ -222,9 +223,8 @@ class ManifestRecursiveLoader(object):
         self.load_manifests_for_path(relpath+'/')
         for mpath, p, m in self._iter_manifests_for_path(relpath+'/'):
             for e in m.entries:
-                if isinstance(e, gemato.manifest.ManifestEntryDIST):
-                    if e.path == filename:
-                        return e
+                if e.tag == 'DIST' and e.path == filename:
+                    return e
         return None
 
     def get_file_entry_dict(self, path=''):
@@ -239,26 +239,27 @@ class ManifestRecursiveLoader(object):
         for mpath, relpath, m in self._iter_manifests_for_path(path,
                                     recursive=True):
             for e in m.entries:
-                if isinstance(e, gemato.manifest.ManifestEntryDIST):
+                if e.tag in ('DIST', 'TIMESTAMP'):
                     # distfiles are not local files, so skip them
-                    pass
-                elif isinstance(e, gemato.manifest.ManifestPathEntry):
-                    fullpath = os.path.join(relpath, e.path)
-                    if gemato.util.path_starts_with(fullpath, path):
-                        if fullpath in out:
-                            # compare the two entries
-                            ret, diff = gemato.verify.verify_entry_compatibility(
-                                    out[fullpath], e)
-                            if not ret:
-                                raise gemato.exceptions.ManifestIncompatibleEntry(out[fullpath], e, diff)
-                            # we need to construct a single entry with both checksums
-                            if diff:
-                                new_checksums = dict(e.checksums)
-                                for k, d1, d2 in diff:
-                                    if d2 is None:
-                                        new_checksums[k] = d1
-                                e = type(e)(e.path, e.size, new_checksums)
-                        out[fullpath] = e
+                    # timestamp is not a file ;-)
+                    continue
+
+                fullpath = os.path.join(relpath, e.path)
+                if gemato.util.path_starts_with(fullpath, path):
+                    if fullpath in out:
+                        # compare the two entries
+                        ret, diff = gemato.verify.verify_entry_compatibility(
+                                out[fullpath], e)
+                        if not ret:
+                            raise gemato.exceptions.ManifestIncompatibleEntry(out[fullpath], e, diff)
+                        # we need to construct a single entry with both checksums
+                        if diff:
+                            new_checksums = dict(e.checksums)
+                            for k, d1, d2 in diff:
+                                if d2 is None:
+                                    new_checksums[k] = d1
+                            e = type(e)(e.path, e.size, new_checksums)
+                    out[fullpath] = e
         return out
 
     def _verify_one_file(self, path, relpath, e, fail_handler, warn_handler):
@@ -266,8 +267,7 @@ class ManifestRecursiveLoader(object):
                 expected_dev=self.manifest_device)
 
         if not ret:
-            if (isinstance(e, gemato.manifest.ManifestEntryOPTIONAL)
-                    or isinstance(e, gemato.manifest.ManifestEntryMISC)):
+            if e is not None and e.tag in ('MISC', 'OPTIONAL'):
                 h = warn_handler
             else:
                 h = fail_handler
@@ -333,7 +333,7 @@ class ManifestRecursiveLoader(object):
                         raise gemato.exceptions.ManifestCrossDevice(syspath)
                     continue
 
-                if isinstance(de, gemato.manifest.ManifestEntryIGNORE):
+                if de.tag == 'IGNORE':
                     skip_dirs.append(d)
                 else:
                     ret &= self._verify_one_file(os.path.join(dirpath, d),
@@ -385,8 +385,7 @@ class ManifestRecursiveLoader(object):
         for mpath, relpath, m in self._iter_manifests_for_path('',
                                     recursive=True):
             for e in m.entries:
-                if not isinstance(e, gemato.manifest
-                        .ManifestEntryMANIFEST):
+                if e.tag != 'MANIFEST':
                     continue
 
                 fullpath = os.path.join(relpath, e.path)
@@ -460,20 +459,21 @@ class ManifestRecursiveLoader(object):
         for mpath, relpath, m in self._iter_manifests_for_path(path):
             entries_to_remove = []
             for e in m.entries:
-                if isinstance(e, gemato.manifest.ManifestEntryIGNORE):
+                if e.tag == 'IGNORE':
                     # ignore matches recursively, so we process it separately
                     # py<3.5 does not have os.path.commonpath()
                     fullpath = os.path.join(relpath, e.path)
                     assert not gemato.util.path_starts_with(path, fullpath)
-                elif isinstance(e, gemato.manifest.ManifestEntryDIST):
+                elif e.tag in ('DIST', 'TIMESTAMP'):
                     # distfiles are not local files, so skip them
+                    # timestamp is not a file ;-)
                     pass
-                elif isinstance(e, gemato.manifest.ManifestEntryOPTIONAL):
+                elif e.tag == 'OPTIONAL':
                     # leave OPTIONAL entries as-is
                     fullpath = os.path.join(relpath, e.path)
                     if fullpath == path:
                         had_entry = True
-                elif isinstance(e, gemato.manifest.ManifestPathEntry):
+                else:
                     # we update either file at the specified path
                     # or any relevant Manifests
                     fullpath = os.path.join(relpath, e.path)
@@ -559,27 +559,28 @@ class ManifestRecursiveLoader(object):
                                     recursive=True):
             entries_to_remove = []
             for e in m.entries:
-                if isinstance(e, gemato.manifest.ManifestEntryDIST):
+                if e.tag in ('DIST', 'TIMESTAMP'):
                     # distfiles are not local files, so skip them
-                    pass
-                elif isinstance(e, gemato.manifest.ManifestPathEntry):
-                    fullpath = os.path.join(relpath, e.path)
-                    if gemato.util.path_starts_with(fullpath, path):
-                        if fullpath in out:
-                            # compare the two entries
-                            ret, diff = gemato.verify.verify_entry_compatibility(
-                                    out[fullpath][1], e)
-                            # if semantically incompatible, throw
-                            if not ret and diff[0][0] == '__type__':
-                                raise (gemato.exceptions
-                                        .ManifestIncompatibleEntry(
-                                            out[fullpath][1], e, diff))
-                            # otherwise, make sure we have all checksums
-                            out[fullpath][1].checksums.update(e.checksums)
-                            # and drop the duplicate
-                            entries_to_remove.append(e)
-                        else:
-                            out[fullpath] = (mpath, e)
+                    # timestamp is not a file ;-)
+                    continue
+
+                fullpath = os.path.join(relpath, e.path)
+                if gemato.util.path_starts_with(fullpath, path):
+                    if fullpath in out:
+                        # compare the two entries
+                        ret, diff = gemato.verify.verify_entry_compatibility(
+                                out[fullpath][1], e)
+                        # if semantically incompatible, throw
+                        if not ret and diff[0][0] == '__type__':
+                            raise (gemato.exceptions
+                                    .ManifestIncompatibleEntry(
+                                        out[fullpath][1], e, diff))
+                        # otherwise, make sure we have all checksums
+                        out[fullpath][1].checksums.update(e.checksums)
+                        # and drop the duplicate
+                        entries_to_remove.append(e)
+                    else:
+                        out[fullpath] = (mpath, e)
 
             if entries_to_remove:
                 for e in entries_to_remove:
@@ -637,7 +638,7 @@ class ManifestRecursiveLoader(object):
                         raise gemato.exceptions.ManifestCrossDevice(syspath)
                     continue
 
-                if isinstance(de, gemato.manifest.ManifestEntryIGNORE):
+                if de.tag == 'IGNORE':
                     skip_dirs.append(d)
                 else:
                     # trigger the exception indirectly
@@ -667,9 +668,7 @@ class ManifestRecursiveLoader(object):
                     continue
                 mpath, fe = entry_dict.pop(fpath, (None, None))
                 if fe is not None:
-                    if isinstance(fe, gemato.manifest.ManifestEntryIGNORE):
-                        continue
-                    elif isinstance(fe, gemato.manifest.ManifestEntryOPTIONAL):
+                    if fe.tag in ('IGNORE', 'OPTIONAL'):
                         continue
                 else:
                     # find appropriate Manifest for this directory
@@ -698,9 +697,7 @@ class ManifestRecursiveLoader(object):
         # check for removed files
         for relpath, me in entry_dict.items():
             mpath, fe = me
-            if isinstance(fe, gemato.manifest.ManifestEntryIGNORE):
-                continue
-            elif isinstance(fe, gemato.manifest.ManifestEntryOPTIONAL):
+            if fe.tag in ('IGNORE', 'OPTIONAL'):
                 continue
 
             self.loaded_manifests[mpath].entries.remove(fe)
