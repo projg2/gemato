@@ -85,7 +85,8 @@ def main(argv):
             description='Gentoo Manifest Tool')
     subp = argp.add_subparsers()
 
-    verify = subp.add_parser('verify')
+    verify = subp.add_parser('verify',
+            help='Verify one or more directories against Manifests')
     verify.add_argument('paths', nargs='*', default=['.'],
             help='Paths to verify (defaults to "." if none specified)')
     verify.add_argument('-k', '--keep-going', action='store_true',
