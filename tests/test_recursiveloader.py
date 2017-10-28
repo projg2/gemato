@@ -79,10 +79,10 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.load_manifests_for_path('', recursive=True)
-        self.assertListEqual([d for d, k
+        self.assertListEqual([d for mpath, d, k
                                 in m._iter_manifests_for_path('sub/deeper')],
             ['sub/deeper', 'sub', ''])
-        self.assertListEqual([d for d, k
+        self.assertListEqual([d for mpath, d, k
                                 in m._iter_manifests_for_path('other')],
             ['other', ''])
 
@@ -90,7 +90,7 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.load_manifests_for_path('', recursive=True)
-        self.assertListEqual([d for d, k
+        self.assertListEqual([d for mpath, d, k
                                 in m._iter_manifests_for_path('sub',
                                     recursive=True)],
             ['sub/deeper', 'sub', ''])

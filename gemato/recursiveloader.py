@@ -99,7 +99,7 @@ class ManifestRecursiveLoader(object):
         """
         Iterate over loaded Manifests that can apply to path.
         If @recursive is True, returns also Manifests for subdirectories
-        of @path. Yields a tuple of (relative_path, manifest).
+        of @path. Yields a tuple of (manifest_path, dir_path, manifest).
 
         The function guarantees that the Manifests for subdirectories
         (more specific) will always be returned before the Manifests
@@ -110,9 +110,9 @@ class ManifestRecursiveLoader(object):
                            reverse=True):
             d = os.path.dirname(k)
             if gemato.util.path_starts_with(path, d):
-                yield (d, v)
+                yield (k, d, v)
             elif recursive and gemato.util.path_starts_with(d, path):
-                yield (d, v)
+                yield (k, d, v)
 
     def load_manifests_for_path(self, path, recursive=False):
         """
@@ -123,12 +123,13 @@ class ManifestRecursiveLoader(object):
         # TODO: figure out how to avoid confusing uses of 'recursive'
         while True:
             to_load = []
-            for relpath, m in self._iter_manifests_for_path(path, recursive):
+            for curmpath, relpath, m in self._iter_manifests_for_path(
+                                            path, recursive):
                 for e in m.entries:
                     if not isinstance(e, gemato.manifest.ManifestEntryMANIFEST):
                         continue
                     mpath = os.path.join(relpath, e.path)
-                    if mpath in self.loaded_manifests:
+                    if curmpath == mpath or mpath in self.loaded_manifests:
                         continue
                     mdir = os.path.dirname(mpath)
                     if gemato.util.path_starts_with(path, mdir):
@@ -147,7 +148,7 @@ class ManifestRecursiveLoader(object):
         """
 
         self.load_manifests_for_path('')
-        for p, m in self._iter_manifests_for_path(''):
+        for mpath, p, m in self._iter_manifests_for_path(''):
             for e in m.entries:
                 if isinstance(e, gemato.manifest.ManifestEntryTIMESTAMP):
                     return e
@@ -160,7 +161,7 @@ class ManifestRecursiveLoader(object):
         """
 
         self.load_manifests_for_path(path)
-        for relpath, m in self._iter_manifests_for_path(path):
+        for mpath, relpath, m in self._iter_manifests_for_path(path):
             for e in m.entries:
                 if isinstance(e, gemato.manifest.ManifestEntryIGNORE):
                     # ignore matches recursively, so we process it separately
@@ -210,7 +211,7 @@ class ManifestRecursiveLoader(object):
         """
 
         self.load_manifests_for_path(relpath+'/')
-        for p, m in self._iter_manifests_for_path(relpath+'/'):
+        for mpath, p, m in self._iter_manifests_for_path(relpath+'/'):
             for e in m.entries:
                 if isinstance(e, gemato.manifest.ManifestEntryDIST):
                     if e.path == filename:
@@ -226,7 +227,8 @@ class ManifestRecursiveLoader(object):
 
         self.load_manifests_for_path(path, recursive=True)
         out = {}
-        for relpath, m in self._iter_manifests_for_path(path, recursive=True):
+        for mpath, relpath, m in self._iter_manifests_for_path(path,
+                                    recursive=True):
             for e in m.entries:
                 if isinstance(e, gemato.manifest.ManifestEntryDIST):
                     # distfiles are not local files, so skip them
