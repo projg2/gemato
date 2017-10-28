@@ -603,9 +603,6 @@ class ManifestRecursiveLoader(object):
         it overrides the hash set used in Manifest. If None, the set
         specified in ManifestLoader constructor is used. Either
         of the two hash sets must be specified.
-
-        If the top-level Manifest has a TIMESTAMP entry, this entry
-        will be updated with the current time after successful update.
         """
 
         if hashes is None:
