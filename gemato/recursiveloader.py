@@ -19,6 +19,10 @@ class ManifestRecursiveLoader(object):
     and provides methods to access the entries in them.
     """
 
+    __slots__ = ['root_directory', 'loaded_manifests', 'verify_openpgp',
+            'openpgp_env', 'sign_openpgp', 'openpgp_keyid', 'hashes',
+            'openpgp_signed', 'updated_manifests', 'manifest_device']
+
     def __init__(self, top_manifest_path,
             verify_openpgp=True, openpgp_env=None,
             sign_openpgp=None, openpgp_keyid=None,
@@ -45,6 +49,7 @@ class ManifestRecursiveLoader(object):
         subsequent update*() calls that do not specify another set
         of hashes explicitly.
         """
+
         self.root_directory = os.path.dirname(top_manifest_path)
         self.loaded_manifests = {}
         self.verify_openpgp = verify_openpgp

@@ -17,6 +17,7 @@ class ManifestEntryTIMESTAMP(object):
     ISO-8601 timestamp.
     """
 
+    __slots__ = ['ts']
     tag = 'TIMESTAMP'
 
     def __init__(self, ts):
@@ -44,6 +45,8 @@ class ManifestPathEntry(object):
     """
     Base class for entries using a path.
     """
+
+    __slots__ = ['path']
 
     def __init__(self, path):
         assert path[0] != '/'
@@ -101,6 +104,8 @@ class ManifestFileEntry(ManifestPathEntry):
     """
     Base class for entries providing checksums for a path.
     """
+
+    __slots__ = ['checksums', 'size']
 
     def __init__(self, path, size, checksums):
         super(ManifestFileEntry, self).__init__(path)
@@ -241,6 +246,7 @@ class ManifestEntryAUX(ManifestFileEntry):
     Deprecated AUX file reference (DATA with 'files/' prepended).
     """
 
+    __slots__ = ['aux_path']
     tag = 'AUX'
 
     def __init__(self, aux_path, size, checksums):
@@ -300,6 +306,8 @@ class ManifestFile(object):
     A class encapsulating a single Manifest file. It supports reading
     from files and writing to them.
     """
+
+    __slots__ = ['entries', 'openpgp_signed']
 
     def __init__(self, f=None):
         """

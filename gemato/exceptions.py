@@ -21,6 +21,8 @@ class ManifestSyntaxError(Exception):
 
 
 class ManifestIncompatibleEntry(Exception):
+    __slots__ = ['e1', 'e2', 'diff']
+
     def __init__(self, e1, e2, diff):
         msg = "Incompatible Manifest entries for {}".format(e1.path)
         for k, d1, d2 in diff:
@@ -36,6 +38,8 @@ class ManifestMismatch(Exception):
     An exception raised for verification failure.
     """
 
+    __slots__ = ['path', 'entry', 'diff']
+
     def __init__(self, path, entry, diff):
         msg = "Manifest mismatch for {}".format(path)
         for k, exp, got in diff:
@@ -50,6 +54,8 @@ class ManifestCrossDevice(Exception):
     """
     An exception caused by attempting to cross filesystem boundaries.
     """
+
+    __slots__ = ['path']
 
     def __init__(self, path):
         self.path = path
@@ -105,6 +111,8 @@ class ManifestInvalidPath(Exception):
     An exception raised when an invalid path tries to be added to
     Manifest.
     """
+
+    __slots__ = ['path', 'detail']
 
     def __init__(self, path, detail):
         self.path = path

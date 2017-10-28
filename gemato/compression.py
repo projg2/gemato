@@ -70,6 +70,8 @@ class FileStack(object):
     all on exit.
     """
 
+    __slots__ = ['files']
+
     def __init__(self, files=[]):
         self.files = files
 

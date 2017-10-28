@@ -17,6 +17,8 @@ class SizeHash(object):
 	A cheap wrapper to count file size via hashlib-like interface.
 	"""
 
+	__slots__ = ['size']
+
 	def __init__(self):
 		self.size = 0
 

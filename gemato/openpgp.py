@@ -41,6 +41,8 @@ class OpenPGPEnvironment(object):
     or use as a context manager (via 'with').
     """
 
+    __slots__ = ['_home']
+
     def __init__(self):
         self._home = tempfile.mkdtemp()
 
