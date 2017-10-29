@@ -2129,3 +2129,102 @@ INVALID STUFF IN HERE
             gemato.cli.main(['gemato', 'verify',
                 self.dir]),
             0)
+
+
+class CreateNewManifestTest(TempDirTestCase):
+    DIRS = ['sub']
+    FILES = {
+        'test': u'',
+        'sub/test': u'',
+    }
+
+    def setUp(self):
+        super(CreateNewManifestTest, self).setUp()
+        self.path = os.path.join(self.dir, 'Manifest')
+
+    def tearDown(self):
+        try:
+            os.unlink(self.path)
+        except OSError:
+            pass
+        super(CreateNewManifestTest, self).tearDown()
+
+    def test_load_without_create(self):
+        self.assertRaises(IOError,
+                gemato.recursiveloader.ManifestRecursiveLoader,
+                self.path)
+
+    def test_create_without_save(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.path, allow_create=True)
+        del m
+        self.assertFalse(os.path.exists(self.path))
+
+    def test_create_empty(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.path, allow_create=True)
+        m.save_manifests()
+        self.assertTrue(os.path.exists(self.path))
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.path, allow_create=True, hashes=['MD5'])
+        m.update_entries_for_directory('')
+        m.save_manifests()
+        m.assert_directory_verifies('')
+
+        m2 = gemato.manifest.ManifestFile()
+        with io.open(self.path, 'r', encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 2)
+
+
+class CreateNewCompressedManifestTest(TempDirTestCase):
+    DIRS = ['sub']
+    FILES = {
+        'test': u'',
+        'sub/test': u'',
+    }
+
+    def setUp(self):
+        super(CreateNewCompressedManifestTest, self).setUp()
+        self.path = os.path.join(self.dir, 'Manifest.gz')
+
+    def tearDown(self):
+        try:
+            os.unlink(self.path)
+        except OSError:
+            pass
+        super(CreateNewCompressedManifestTest, self).tearDown()
+
+    def test_load_without_create(self):
+        self.assertRaises(IOError,
+                gemato.recursiveloader.ManifestRecursiveLoader,
+                self.path)
+
+    def test_create_without_save(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.path, allow_create=True)
+        del m
+        self.assertFalse(os.path.exists(self.path))
+
+    def test_create_empty(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.path, allow_create=True)
+        m.save_manifests()
+        with gemato.compression.open_potentially_compressed_path(
+                self.path, 'rb') as f:
+            self.assertEqual(f.read(), b'')
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.path, allow_create=True, hashes=['MD5'])
+        m.update_entries_for_directory('')
+        m.save_manifests()
+        m.assert_directory_verifies('')
+
+        m2 = gemato.manifest.ManifestFile()
+        with gemato.compression.open_potentially_compressed_path(
+                self.path, 'r', encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 2)

@@ -3,6 +3,7 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import errno
 import os.path
 
 import gemato.compression
@@ -26,7 +27,7 @@ class ManifestRecursiveLoader(object):
     def __init__(self, top_manifest_path,
             verify_openpgp=True, openpgp_env=None,
             sign_openpgp=None, openpgp_keyid=None,
-            hashes=None):
+            hashes=None, allow_create=False):
         """
         Instantiate the loader for a Manifest tree starting at top-level
         Manifest @top_manifest_path.
@@ -48,27 +49,38 @@ class ManifestRecursiveLoader(object):
         for the Manifest. If it is specified, they will be used for all
         subsequent update*() calls that do not specify another set
         of hashes explicitly.
+
+        If @allow_create is True and @top_manifest_path does not exist,
+        a new Manifest tree will be initialized. Otherwise, opening
+        a non-existing file will cause an exception.
         """
 
         self.root_directory = os.path.dirname(top_manifest_path)
-        self.loaded_manifests = {}
         self.verify_openpgp = verify_openpgp
         self.openpgp_env = openpgp_env
         self.sign_openpgp = sign_openpgp
         self.openpgp_keyid = openpgp_keyid
         self.hashes = hashes
 
-        # TODO: allow catching OpenPGP exceptions somehow?
-        m = self.load_manifest(os.path.basename(top_manifest_path))
-        self.openpgp_signed = m.openpgp_signed
+        self.loaded_manifests = {}
         self.updated_manifests = set()
 
-    def load_manifest(self, relpath, verify_entry=None):
+        # TODO: allow catching OpenPGP exceptions somehow?
+        m = self.load_manifest(os.path.basename(top_manifest_path),
+                allow_create=allow_create)
+        self.openpgp_signed = m.openpgp_signed
+
+    def load_manifest(self, relpath, verify_entry=None,
+            allow_create=False):
         """
         Load a single Manifest file whose relative path within Manifest
         tree is @relpath. If @verify_entry is not null, the Manifest
         file is verified against the entry. If the file is compressed,
         it is decompressed transparently.
+
+        If @allow_create is True and the Manifest does not exist,
+        a new Manifest will be added. Otherwise, opening a non-existing
+        file will cause an exception.
         """
         m = gemato.manifest.ManifestFile()
         path = os.path.join(self.root_directory, relpath)
@@ -77,11 +89,20 @@ class ManifestRecursiveLoader(object):
             if not ret:
                 raise gemato.exceptions.ManifestMismatch(
                         relpath, verify_entry, diff)
-        with gemato.compression.open_potentially_compressed_path(
-                path, 'r', encoding='utf8') as f:
-            m.load(f, self.verify_openpgp, self.openpgp_env)
-            st = os.fstat(f.fileno())
-            self.manifest_device = st.st_dev
+        try:
+            with gemato.compression.open_potentially_compressed_path(
+                    path, 'r', encoding='utf8') as f:
+                m.load(f, self.verify_openpgp, self.openpgp_env)
+                st = os.fstat(f.fileno())
+        except IOError as err:
+            if err.errno == errno.ENOENT and allow_create:
+                st = os.stat(os.path.dirname(path))
+                # trigger saving
+                self.updated_manifests.add(relpath)
+            else:
+                raise err
+
+        self.manifest_device = st.st_dev
         self.loaded_manifests[relpath] = m
         return m
 
