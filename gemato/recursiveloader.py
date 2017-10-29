@@ -135,7 +135,7 @@ class ManifestRecursiveLoader(object):
             m.dump(f, sign_openpgp=sign, sort=sort,
                     openpgp_env=self.openpgp_env,
                     openpgp_keyid=self.openpgp_keyid)
-            return f.tell()
+            return f.buffer.tell()
 
     def _iter_manifests(self):
         """

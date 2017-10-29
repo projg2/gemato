@@ -8,6 +8,7 @@ import datetime
 import gzip
 import io
 import os
+import unittest
 
 import gemato.cli
 import gemato.exceptions
@@ -2398,6 +2399,54 @@ class CreateNewManifestTest(TempDirTestCase):
             os.path.join(self.dir, 'Manifest.gz')))
         self.assertTrue(os.path.exists(
             os.path.join(self.dir, 'Manifest')))
+
+    def test_compress_manifests_low_watermark_bz2(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            allow_create=True,
+            hashes=['SHA256', 'SHA512'])
+        try:
+            m.save_manifests(force=True, compress_watermark=0,
+                    compress_format='bz2')
+        except gemato.exceptions.UnsupportedCompression:
+            raise unittest.SkipTest('bz2 compression unsupported')
+        else:
+            self.assertFalse(os.path.exists(
+                os.path.join(self.dir, 'Manifest')))
+            self.assertTrue(os.path.exists(
+                os.path.join(self.dir, 'Manifest.bz2')))
+
+    def test_compress_manifests_low_watermark_lzma(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            allow_create=True,
+            hashes=['SHA256', 'SHA512'])
+        try:
+            m.save_manifests(force=True, compress_watermark=0,
+                    compress_format='lzma')
+        except gemato.exceptions.UnsupportedCompression:
+            raise unittest.SkipTest('lzma compression unsupported')
+        else:
+            self.assertFalse(os.path.exists(
+                os.path.join(self.dir, 'Manifest')))
+            self.assertTrue(os.path.exists(
+                os.path.join(self.dir, 'Manifest.lzma')))
+
+    def test_compress_manifests_low_watermark_xz(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            allow_create=True,
+            hashes=['SHA256', 'SHA512'])
+        try:
+            m.save_manifests(force=True, compress_watermark=0,
+                    compress_format='xz')
+        except gemato.exceptions.UnsupportedCompression:
+            raise unittest.SkipTest('xz compression unsupported')
+        else:
+            self.assertFalse(os.path.exists(
+                os.path.join(self.dir, 'Manifest')))
+            self.assertTrue(os.path.exists(
+                os.path.join(self.dir, 'Manifest.xz')))
 
     def test_cli_compress_manifests_low_watermark(self):
         self.assertEqual(
