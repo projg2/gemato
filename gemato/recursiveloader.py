@@ -666,6 +666,27 @@ class ManifestRecursiveLoader(object):
             for d in skip_dirs:
                 dirnames.remove(d)
 
+            # check for unregistered Manifest
+            new_manifests = set()
+            for mname in (gemato.compression
+                    .get_potential_compressed_names('Manifest')):
+                if mname in filenames:
+                    fpath = os.path.join(relpath, mname)
+                    if fpath in self.loaded_manifests:
+                        continue
+
+                    # we've just found ourselves a new Manifest,
+                    # let's load it
+                    try:
+                        self.load_manifest(fpath)
+                    except gemato.exceptions.ManifestSyntaxError:
+                        # syntax error? probably not a Manifest then.
+                        pass
+                    else:
+                        new_manifests.add(mname)
+                        entry_dict.update(
+                                self.get_deduplicated_file_entry_dict_for_update(
+                                    relpath))
             dir_manifest = None
 
             for f in filenames:
@@ -684,18 +705,25 @@ class ManifestRecursiveLoader(object):
                     if fe.tag in ('IGNORE', 'OPTIONAL'):
                         continue
                 else:
-                    # find appropriate Manifest for this directory
-                    if dir_manifest is None:
+                    if f in new_manifests:
+                        cls = gemato.manifest.ManifestEntryMANIFEST
+                        # new Manifests go into the parent directory
                         for mpath, mrpath, m in (self
-                                ._iter_manifests_for_path(fpath)):
-                            dir_manifest = (mpath, mrpath, m)
+                                ._iter_manifests_for_path(
+                                    os.path.dirname(relpath))):
                             break
                     else:
-                        mpath, mrpath, m = dir_manifest
+                        cls = gemato.manifest.ManifestEntryDATA
+                        # find appropriate Manifest for this directory
+                        if dir_manifest is None:
+                            for mpath, mrpath, m in (self
+                                    ._iter_manifests_for_path(fpath)):
+                                dir_manifest = (mpath, mrpath, m)
+                                break
+                        else:
+                            mpath, mrpath, m = dir_manifest
 
-                    fe = gemato.manifest.ManifestEntryDATA(
-                        os.path.relpath(fpath, mrpath),
-                        0, {})
+                    fe = cls(os.path.relpath(fpath, mrpath), 0, {})
                     m.entries.append(fe)
 
                 # update the existing entry

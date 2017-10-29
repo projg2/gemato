@@ -1974,3 +1974,158 @@ class MultipleSubdirectoryFilesTest(TempDirTestCase):
                 'sub/file.c')
         m.save_manifests()
         m.assert_directory_verifies()
+
+
+class UnregisteredManifestTestCase(TempDirTestCase):
+    """
+    Test for finding a sub-Manifest that's not listed as MANIFEST.
+    """
+
+    DIRS = ['sub']
+    FILES = {
+        'Manifest': u'',
+        'sub/Manifest': u'''
+DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        'sub/test': u'',
+    }
+
+    def test_load_manifests(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertNotIn('sub/Manifest', m.loaded_manifests)
+        m.load_manifests_for_path('sub/test')
+        self.assertNotIn('sub/Manifest', m.loaded_manifests)
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
+        self.assertIn('sub/Manifest', m.loaded_manifests)
+        # entry for sub-Manifest should go into parent dir
+        # and for test into the sub-Manifest
+        self.assertEqual(m.find_path_entry('sub/Manifest').path,
+                'sub/Manifest')
+        self.assertEqual(m.find_path_entry('sub/test').path, 'test')
+        m.save_manifests()
+        m.assert_directory_verifies()
+
+    def test_cli_update(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
+                self.dir]),
+            0)
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify',
+                self.dir]),
+            0)
+
+
+class UnregisteredCompressedManifestTestCase(TempDirTestCase):
+    """
+    Test for finding a compressed sub-Manifest that's not listed
+    as MANIFEST.
+    """
+
+    SUB_MANIFEST = b'''
+DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+'''
+    DIRS = ['sub']
+    FILES = {
+        'Manifest': u'',
+        'sub/test': u'',
+    }
+
+    def setUp(self):
+        super(UnregisteredCompressedManifestTestCase, self).setUp()
+        self.manifest_gz = os.path.join(self.dir, 'sub/Manifest.gz')
+        with gemato.compression.open_potentially_compressed_path(
+                os.path.join(self.dir, 'sub/Manifest.gz'), 'wb') as f:
+            f.write(self.SUB_MANIFEST)
+
+    def tearDown(self):
+        os.unlink(self.manifest_gz)
+        super(UnregisteredCompressedManifestTestCase, self).tearDown()
+
+    def test_load_manifests(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertNotIn('sub/Manifest.gz', m.loaded_manifests)
+        m.load_manifests_for_path('sub/test')
+        self.assertNotIn('sub/Manifest.gz', m.loaded_manifests)
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
+        self.assertIn('sub/Manifest.gz', m.loaded_manifests)
+        # entry for sub-Manifest should go into parent dir
+        # and for test into the sub-Manifest
+        self.assertEqual(m.find_path_entry('sub/Manifest.gz').path,
+                'sub/Manifest.gz')
+        self.assertEqual(m.find_path_entry('sub/test').path, 'test')
+        m.save_manifests()
+        m.assert_directory_verifies()
+
+    def test_cli_update(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
+                self.dir]),
+            0)
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify',
+                self.dir]),
+            0)
+
+
+class InvalidManifestTestCase(TempDirTestCase):
+    """
+    Test for ignoring a stray "Manifest" file that's invalid.
+    """
+
+    DIRS = ['sub']
+    FILES = {
+        'Manifest': u'',
+        'sub/Manifest': u'''
+INVALID STUFF IN HERE
+''',
+        'sub/test': u'',
+    }
+
+    def test_load_manifests(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertNotIn('sub/Manifest', m.loaded_manifests)
+        m.load_manifests_for_path('sub/test')
+        self.assertNotIn('sub/Manifest', m.loaded_manifests)
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
+        self.assertNotIn('sub/Manifest', m.loaded_manifests)
+        # entry for sub-Manifest should go into parent dir
+        # and for test into the sub-Manifest
+        self.assertIsInstance(m.find_path_entry('sub/Manifest'),
+                gemato.manifest.ManifestEntryDATA)
+        self.assertEqual(m.find_path_entry('sub/test').path,
+                'sub/test')
+        m.save_manifests()
+        # ensure that the file was not modified
+        with io.open(os.path.join(self.dir, 'sub/Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['sub/Manifest'])
+        m.assert_directory_verifies()
+
+    def test_cli_update(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
+                self.dir]),
+            0)
+        with io.open(os.path.join(self.dir, 'sub/Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['sub/Manifest'])
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify',
+                self.dir]),
+            0)

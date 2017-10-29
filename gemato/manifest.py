@@ -386,7 +386,12 @@ class ManifestFile(object):
             if state == ManifestState.POST_SIGNED_DATA:
                 raise gemato.exceptions.ManifestUnsignedData()
             tag = sl[0]
-            self.entries.append(MANIFEST_TAG_MAPPING[tag].from_list(sl))
+            try:
+                self.entries.append(MANIFEST_TAG_MAPPING[tag]
+                        .from_list(sl))
+            except KeyError:
+                raise gemato.exceptions.ManifestSyntaxError(
+                        "Invalid Manifest line: {}".format(l))
 
         if state == ManifestState.SIGNED_PREAMBLE:
             raise gemato.exceptions.ManifestSyntaxError(
