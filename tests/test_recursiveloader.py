@@ -1895,3 +1895,55 @@ MANIFEST sub/Manifest.gz 78 MD5 9c158f87b2445279d7c8aac439612fba
             self.assertNotEqual(f.read(),
                     base64.b64decode(self.SUB_MANIFEST))
         m.assert_directory_verifies()
+
+
+class CompressedManifestOrderingTest(TempDirTestCase):
+    """
+    Compressed Manifest paths can be shorter than regular, resulting
+    in wrong sort order.
+    """
+
+    MANIFEST = b'''
+MANIFEST a/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+'''
+    DIRS = ['a']
+    FILES = {
+        'a/Manifest': u'',
+        'a/stray': u'',
+    }
+
+    def setUp(self):
+        super(CompressedManifestOrderingTest, self).setUp()
+        self.manifest_gz = os.path.join(self.dir, 'Manifest.gz')
+        with gzip.GzipFile(self.manifest_gz, 'wb') as f:
+            f.write(self.MANIFEST)
+
+    def tearDown(self):
+        os.unlink(self.manifest_gz)
+        super(CompressedManifestOrderingTest, self).tearDown()
+
+    def test__iter_manifests_for_path_order(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.manifest_gz)
+        m.load_manifests_for_path('', recursive=True)
+        self.assertListEqual([d for mpath, d, k
+                                in m._iter_manifests_for_path('a')],
+            ['a', ''])
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                self.manifest_gz)
+        m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
+        self.assertIsInstance(m.find_path_entry('a/stray'),
+                gemato.manifest.ManifestEntryDATA)
+        m.save_manifests()
+        m.assert_directory_verifies()
+
+    def test_cli_update(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
+                self.dir]),
+            0)
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            0)

@@ -109,6 +109,15 @@ class ManifestRecursiveLoader(object):
                     openpgp_env=self.openpgp_env,
                     openpgp_keyid=self.openpgp_keyid)
 
+    def _iter_manifests(self):
+        """
+        Iterate over all loaded Manifests, in any order. Yields a tuple
+        of (manifest_path, dir_path, manifest).
+        """
+        for k, v in self.loaded_manifests.items():
+            d = os.path.dirname(k)
+            yield (k, d, v)
+
     def _iter_manifests_for_path(self, path, recursive=False):
         """
         Iterate over loaded Manifests that can apply to path.
@@ -119,10 +128,9 @@ class ManifestRecursiveLoader(object):
         (more specific) will always be returned before the Manifests
         for parent directories. The order is otherwise undefined.
         """
-        for k, v in sorted(self.loaded_manifests.items(),
-                           key=lambda x: len(x[0]),
-                           reverse=True):
-            d = os.path.dirname(k)
+        for k, d, v in sorted(self._iter_manifests(),
+                              key=lambda kdv: len(kdv[1]),
+                              reverse=True):
             if gemato.util.path_starts_with(path, d):
                 yield (k, d, v)
             elif recursive and gemato.util.path_starts_with(d, path):
