@@ -374,6 +374,26 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 'r', encoding='utf8') as f:
             self.assertNotEqual(f.read(), self.FILES['sub/Manifest'])
 
+    def test_save_manifests_force_sort(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.save_manifests(force=True, sort=True)
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), u'''
+DIST topdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+MANIFEST other/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+MANIFEST sub/Manifest 145 MD5 75e2be2f56f58e486fd195ec4d96da4a
+TIMESTAMP 2017-01-01T01:01:01Z
+'''.lstrip())
+        with io.open(os.path.join(self.dir, 'sub/Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), u'''
+DIST subdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+MANIFEST deeper/Manifest 49 MD5 b86a7748346d54c6455886306f017e6c
+OPTIONAL nonstray
+'''.lstrip())
+
     def test_update_entry_for_path(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))

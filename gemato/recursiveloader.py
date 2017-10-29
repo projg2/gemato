@@ -106,13 +106,16 @@ class ManifestRecursiveLoader(object):
         self.loaded_manifests[relpath] = m
         return m
 
-    def save_manifest(self, relpath):
+    def save_manifest(self, relpath, sort=False):
         """
         Save a single Manifest file whose relative path within Manifest
         tree is @relpath. The Manifest must already be loaded.
         If the name indicates compression, it will be compressed
         transparently. If it was OpenPGP-signed, a new signature
         will be created.
+
+        If @sort is True, the Manifest entries will be sorted prior
+        to saving.
         """
         m = self.loaded_manifests[relpath]
         path = os.path.join(self.root_directory, relpath)
@@ -126,7 +129,7 @@ class ManifestRecursiveLoader(object):
 
         with gemato.compression.open_potentially_compressed_path(
                 path, 'w', encoding='utf8') as f:
-            m.dump(f, sign_openpgp=sign,
+            m.dump(f, sign_openpgp=sign, sort=sort,
                     openpgp_env=self.openpgp_env,
                     openpgp_keyid=self.openpgp_keyid)
 
@@ -400,7 +403,7 @@ class ManifestRecursiveLoader(object):
 
         return ret
 
-    def save_manifests(self, hashes=None, force=False):
+    def save_manifests(self, hashes=None, force=False, sort=False):
         """
         Save the Manifests modified since the last save_manifests()
         call.
@@ -413,6 +416,9 @@ class ManifestRecursiveLoader(object):
 
         If @force is True, all Manifests will be rewritten even
         if they were not modified.
+
+        If @sort is True, the Manifest entries will be sorted prior
+        to saving.
         """
 
         if hashes is None:
@@ -445,7 +451,7 @@ class ManifestRecursiveLoader(object):
 
             # we've apparently modified this Manifest, so store it now
             if force or mpath in self.updated_manifests:
-                self.save_manifest(mpath)
+                self.save_manifest(mpath, sort=sort)
 
         # now, discard all the Manifests whose entries we've updated
         self.updated_manifests -= fixed_manifests
