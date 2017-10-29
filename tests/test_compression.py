@@ -658,3 +658,20 @@ class OtherUtilityTests(unittest.TestCase):
                 'test.lzma',
                 'test.xz',
             ]))
+
+    def test_get_compressed_suffix_from_filename(self):
+        self.assertEqual(
+                gemato.compression.get_compressed_suffix_from_filename(
+                    'test.gz'), 'gz')
+        self.assertEqual(
+                gemato.compression.get_compressed_suffix_from_filename(
+                    'test.bz2'), 'bz2')
+        self.assertEqual(
+                gemato.compression.get_compressed_suffix_from_filename(
+                    'test.lzma'), 'lzma')
+        self.assertEqual(
+                gemato.compression.get_compressed_suffix_from_filename(
+                    'test.xz'), 'xz')
+        self.assertIsNone(
+                gemato.compression.get_compressed_suffix_from_filename(
+                    'test'))

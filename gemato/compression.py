@@ -99,8 +99,8 @@ def open_potentially_compressed_path(path, mode, **kwargs):
     Returns an object that must be used via the context manager API.
     """
 
-    base, ext = os.path.splitext(path)
-    if ext not in ('.gz', '.bz2', '.lzma', '.xz'):
+    compression = get_compressed_suffix_from_filename(path)
+    if compression is None:
         return io.open(path, mode, **kwargs)
 
     bmode = mode
@@ -110,7 +110,8 @@ def open_potentially_compressed_path(path, mode, **kwargs):
     f = io.open(path, bmode)
     fs = FileStack([f])
     try:
-        cf = open_compressed_file(ext[1:], f, bmode if kwargs else mode)
+        cf = open_compressed_file(compression, f,
+                bmode if kwargs else mode)
         fs.files.append(cf)
 
         # add a TextIOWrapper on top whenever we do not want
@@ -132,3 +133,16 @@ def get_potential_compressed_names(path):
     """
 
     return [path + x for x in ('', '.gz', '.bz2', '.lzma', '.xz')]
+
+
+def get_compressed_suffix_from_filename(path):
+    """
+    Get the appropriate suffix (suitable for open_compressed_file())
+    for a potentially compressed filename @path. If the path
+    does not seem to be compressed, returns None.
+    """
+
+    base, ext = os.path.splitext(path)
+    if ext in ('.gz', '.bz2', '.lzma', '.xz'):
+        return ext[1:]
+    return None
