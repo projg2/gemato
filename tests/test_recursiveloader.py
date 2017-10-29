@@ -2178,6 +2178,22 @@ class CreateNewManifestTest(TempDirTestCase):
             m2.load(f)
         self.assertEqual(len(m2.entries), 2)
 
+    def test_cli(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'create', '--hashes=SHA256 SHA512',
+                self.path]),
+            0)
+
+        m2 = gemato.manifest.ManifestFile()
+        with io.open(self.path, 'r', encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 2)
+
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify',
+                self.dir]),
+            0)
+
 
 class CreateNewCompressedManifestTest(TempDirTestCase):
     DIRS = ['sub']
@@ -2228,3 +2244,20 @@ class CreateNewCompressedManifestTest(TempDirTestCase):
                 self.path, 'r', encoding='utf8') as f:
             m2.load(f)
         self.assertEqual(len(m2.entries), 2)
+
+    def test_cli(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'create', '--hashes=SHA256 SHA512',
+                self.path]),
+            0)
+
+        m2 = gemato.manifest.ManifestFile()
+        with gemato.compression.open_potentially_compressed_path(
+                self.path, 'r', encoding='utf8') as f:
+            m2.load(f)
+        self.assertEqual(len(m2.entries), 2)
+
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify',
+                self.dir]),
+            0)
