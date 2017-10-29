@@ -400,7 +400,7 @@ class ManifestRecursiveLoader(object):
 
         return ret
 
-    def save_manifests(self, hashes=None):
+    def save_manifests(self, hashes=None, force=False):
         """
         Save the Manifests modified since the last save_manifests()
         call.
@@ -410,10 +410,15 @@ class ManifestRecursiveLoader(object):
         specified in ManifestLoader constructor is used. If that one
         is None as well, the routine reuses the existing hash set
         in the entry.
+
+        If @force is True, all Manifests will be rewritten even
+        if they were not modified.
         """
 
         if hashes is None:
             hashes = self.hashes
+        if force:
+            self.load_manifests_for_path('', recursive=True)
 
         fixed_manifests = set()
         for mpath, relpath, m in self._iter_manifests_for_path('',
@@ -423,7 +428,7 @@ class ManifestRecursiveLoader(object):
                     continue
 
                 fullpath = os.path.join(relpath, e.path)
-                if fullpath not in self.updated_manifests:
+                if not force and fullpath not in self.updated_manifests:
                     continue
 
                 gemato.verify.update_entry_for_path(
@@ -439,7 +444,7 @@ class ManifestRecursiveLoader(object):
                 self.updated_manifests.add(mpath)
 
             # we've apparently modified this Manifest, so store it now
-            if mpath in self.updated_manifests:
+            if force or mpath in self.updated_manifests:
                 self.save_manifest(mpath)
 
         # now, discard all the Manifests whose entries we've updated

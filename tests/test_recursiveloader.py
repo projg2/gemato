@@ -348,6 +348,32 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 'r', encoding='utf8') as f:
             self.assertEqual(f.read(), self.FILES['Manifest'].lstrip())
 
+    def test_save_manifests_unmodified(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['Manifest'])
+        with io.open(os.path.join(self.dir, 'sub/Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['sub/Manifest'])
+        with io.open(os.path.join(self.dir, 'other/Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['other/Manifest'])
+
+    def test_save_manifests_force(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.save_manifests(force=True)
+        # Manifest checksums change
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        with io.open(os.path.join(self.dir, 'sub/Manifest'),
+                'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['sub/Manifest'])
+
     def test_update_entry_for_path(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
