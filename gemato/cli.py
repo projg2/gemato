@@ -122,7 +122,7 @@ def do_update(args):
                 if ts is not None:
                     ts.ts = datetime.datetime.utcnow()
 
-                m.save_manifests()
+                m.save_manifests(sort=True)
             except gemato.exceptions.ManifestCrossDevice as e:
                 logging.error(str(e))
                 return 1
@@ -168,7 +168,7 @@ def do_create(args):
                 if ts is not None:
                     ts.ts = datetime.datetime.utcnow()
 
-                m.save_manifests()
+                m.save_manifests(sort=True)
             except gemato.exceptions.ManifestCrossDevice as e:
                 logging.error(str(e))
                 return 1
