@@ -1947,3 +1947,30 @@ MANIFEST a/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertEqual(
             gemato.cli.main(['gemato', 'verify', self.dir]),
             0)
+
+
+class MultipleSubdirectoryFilesTest(TempDirTestCase):
+    """
+    Regression test for adding a directory with multiple stray files.
+    """
+
+    DIRS = ['sub']
+    FILES = {
+        'Manifest': u'',
+        'sub/file.a': u'',
+        'sub/file.b': u'',
+        'sub/file.c': u'',
+    }
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
+        self.assertEqual(m.find_path_entry('sub/file.a').path,
+                'sub/file.a')
+        self.assertEqual(m.find_path_entry('sub/file.b').path,
+                'sub/file.b')
+        self.assertEqual(m.find_path_entry('sub/file.c').path,
+                'sub/file.c')
+        m.save_manifests()
+        m.assert_directory_verifies()

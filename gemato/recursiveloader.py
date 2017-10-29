@@ -686,15 +686,15 @@ class ManifestRecursiveLoader(object):
                 else:
                     # find appropriate Manifest for this directory
                     if dir_manifest is None:
-                        for mpath, relpath, m in (self
+                        for mpath, mrpath, m in (self
                                 ._iter_manifests_for_path(fpath)):
-                            dir_manifest = (mpath, relpath, m)
+                            dir_manifest = (mpath, mrpath, m)
                             break
                     else:
-                        mpath, relpath, m = dir_manifest
+                        mpath, mrpath, m = dir_manifest
 
                     fe = gemato.manifest.ManifestEntryDATA(
-                        os.path.relpath(fpath, relpath),
+                        os.path.relpath(fpath, mrpath),
                         0, {})
                     m.entries.append(fe)
 
