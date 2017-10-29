@@ -491,6 +491,8 @@ class ManifestRecursiveLoader(object):
 
         # now, discard all the Manifests whose entries we've updated
         self.updated_manifests -= fixed_manifests
+        # ...and those which we renamed
+        self.updated_manifests -= set(renamed_manifests.keys())
         # ...and top-level Manifest which has no entries
         self.updated_manifests -= set(gemato.compression
                 .get_potential_compressed_names('Manifest'))
