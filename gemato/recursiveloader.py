@@ -116,6 +116,9 @@ class ManifestRecursiveLoader(object):
 
         If @sort is True, the Manifest entries will be sorted prior
         to saving.
+
+        Returns the uncompressed size of the Manifest (number
+        of characters written).
         """
         m = self.loaded_manifests[relpath]
         path = os.path.join(self.root_directory, relpath)
@@ -132,6 +135,7 @@ class ManifestRecursiveLoader(object):
             m.dump(f, sign_openpgp=sign, sort=sort,
                     openpgp_env=self.openpgp_env,
                     openpgp_keyid=self.openpgp_keyid)
+            return f.tell()
 
     def _iter_manifests(self):
         """
@@ -403,7 +407,8 @@ class ManifestRecursiveLoader(object):
 
         return ret
 
-    def save_manifests(self, hashes=None, force=False, sort=False):
+    def save_manifests(self, hashes=None, force=False, sort=False,
+            compress_watermark=None, compress_format='gz'):
         """
         Save the Manifests modified since the last save_manifests()
         call.
@@ -419,6 +424,14 @@ class ManifestRecursiveLoader(object):
 
         If @sort is True, the Manifest entries will be sorted prior
         to saving.
+
+        If @compress_watermark is not None, then the uncompressed
+        Manifest files whose size is larger than or equal to the value
+        will be compressed using @compress_format. The Manifest files
+        whose size is smaller will be uncompressed. To compress all
+        Manifest files, pass a size of 0.
+        
+        If @compress_watermark is None, the compression is left as-is.
         """
 
         if hashes is None:
@@ -427,12 +440,15 @@ class ManifestRecursiveLoader(object):
             self.load_manifests_for_path('', recursive=True)
 
         fixed_manifests = set()
+        renamed_manifests = {}
         for mpath, relpath, m in self._iter_manifests_for_path('',
                                     recursive=True):
             for e in m.entries:
                 if e.tag != 'MANIFEST':
                     continue
 
+                if e.path in renamed_manifests:
+                    e.path = renamed_manifests[e.path]
                 fullpath = os.path.join(relpath, e.path)
                 if not force and fullpath not in self.updated_manifests:
                     continue
@@ -451,7 +467,27 @@ class ManifestRecursiveLoader(object):
 
             # we've apparently modified this Manifest, so store it now
             if force or mpath in self.updated_manifests:
-                self.save_manifest(mpath, sort=sort)
+                unc_size = self.save_manifest(mpath, sort=sort)
+                # let's see if we want to recompress it
+                if compress_watermark is not None:
+                    compr = (gemato.compression
+                            .get_compressed_suffix_from_filename(mpath))
+                    is_compr = compr is not None
+                    is_large = unc_size >= compress_watermark
+                    if is_compr != is_large:
+                        if is_large:
+                            # compress it!
+                            new_mpath = mpath + '.' + compress_format
+                        else:
+                            new_mpath = mpath[:-len(compr)-1]
+
+                        # do the rename!
+                        self.loaded_manifests[new_mpath] = m
+                        self.save_manifest(new_mpath)
+                        del self.loaded_manifests[mpath]
+                        os.unlink(os.path.join(self.root_directory,
+                            mpath))
+                        renamed_manifests[mpath] = new_mpath
 
         # now, discard all the Manifests whose entries we've updated
         self.updated_manifests -= fixed_manifests

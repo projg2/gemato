@@ -855,6 +855,30 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         m.assert_directory_verifies('')
 
+    def test_compress_manifests_low_watermark(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=0)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+
+    def test_compress_manifests_high_watermark(self):
+        """
+        Try compression with watermark high enough to keep this one
+        uncompressed.
+        """
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=4096)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+
 
 class DuplicateManifestFileEntryTest(TempDirTestCase):
     """
@@ -1869,6 +1893,28 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             self.assertNotEqual(f.read(), self.MANIFEST.lstrip())
         m.assert_directory_verifies()
 
+    def test_decompress_manifests_low_watermark(self):
+        """
+        Try decompression with watermark low enough to keep this one
+        compressed.
+        """
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest.gz'),
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=0)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+
+    def test_decompress_manifests_high_watermark(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest.gz'),
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=4096)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+
 
 class CompressedSubManifestTest(TempDirTestCase):
     """
@@ -1925,6 +1971,44 @@ MANIFEST sub/Manifest.gz 78 MD5 9c158f87b2445279d7c8aac439612fba
             self.assertNotEqual(f.read(),
                     base64.b64decode(self.SUB_MANIFEST))
         m.assert_directory_verifies()
+
+    def test_recompress_manifests_low_watermark(self):
+        """
+        Try decompression with watermark low enough to keep all
+        compressed.
+        """
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=0)
+        self.assertEqual(m.find_path_entry('sub/Manifest.gz').path,
+                'sub/Manifest.gz')
+        self.assertIsNone(m.find_path_entry('sub/Manifest'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'sub/Manifest.gz')))
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'sub/Manifest')))
+
+    def test_recompress_manifests_high_watermark(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=4096)
+        self.assertEqual(m.find_path_entry('sub/Manifest').path,
+                'sub/Manifest')
+        self.assertIsNone(m.find_path_entry('sub/Manifest.gz'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'sub/Manifest')))
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'sub/Manifest.gz')))
 
 
 class CompressedManifestOrderingTest(TempDirTestCase):
@@ -2209,6 +2293,32 @@ class CreateNewManifestTest(TempDirTestCase):
                 self.dir]),
             0)
 
+    def test_compress_manifests_low_watermark(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            allow_create=True,
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=0)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+
+    def test_compress_manifests_high_watermark(self):
+        """
+        Try compression with watermark high enough to keep this one
+        uncompressed.
+        """
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            allow_create=True,
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=4096)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+
 
 class CreateNewCompressedManifestTest(TempDirTestCase):
     DIRS = ['sub']
@@ -2269,3 +2379,25 @@ class CreateNewCompressedManifestTest(TempDirTestCase):
             gemato.cli.main(['gemato', 'verify',
                 self.dir]),
             0)
+
+    def test_decompress_manifests_low_watermark(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest.gz'),
+            allow_create=True,
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=0)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+
+    def test_decompress_manifests_high_watermark(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest.gz'),
+            allow_create=True,
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=4096)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
