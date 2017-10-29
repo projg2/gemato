@@ -27,6 +27,8 @@ def verify_failure(e):
 
 
 def do_verify(args):
+    ret = True
+
     for p in args.paths:
         tlm = gemato.find_top_level.find_top_level_manifest(p)
         if tlm is None:
@@ -64,7 +66,7 @@ def do_verify(args):
             if relpath == '.':
                 relpath = ''
             try:
-                ret = m.assert_directory_verifies(relpath, **kwargs)
+                ret &= m.assert_directory_verifies(relpath, **kwargs)
             except gemato.exceptions.ManifestCrossDevice as e:
                 logging.error(str(e))
                 return 1
@@ -77,7 +79,7 @@ def do_verify(args):
 
             stop = timeit.default_timer()
             logging.info('{} validated in {:.2f} seconds'.format(p, stop - start))
-        return 0 if ret else 1
+    return 0 if ret else 1
 
 
 def do_update(args):
@@ -130,7 +132,7 @@ def do_update(args):
 
             stop = timeit.default_timer()
             logging.info('{} updated in {:.2f} seconds'.format(p, stop - start))
-        return 0
+    return 0
 
 
 def main(argv):
