@@ -19,6 +19,7 @@ DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4
 MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 OPTIONAL ChangeLog
 DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DATA foo.txt 0
 '''
 
 TEST_DEPRECATED_MANIFEST = u'''
@@ -114,6 +115,22 @@ class ManifestTest(unittest.TestCase):
         m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
         self.assertIsNone(m.find_timestamp())
         self.assertIsNone(m.find_path_entry('eclass/Manifest'))
+
+    def test_sorted(self):
+        m = gemato.manifest.ManifestFile()
+        m.load(io.StringIO(TEST_MANIFEST))
+        with io.StringIO() as f:
+            m.dump(f, sort=True)
+            self.assertEqual(f.getvalue(), u'''
+DATA foo.txt 0
+DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+IGNORE local
+MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+OPTIONAL ChangeLog
+TIMESTAMP 2017-10-22T18:06:41Z
+'''.lstrip())
 
 
 class ManifestEntryTest(unittest.TestCase):

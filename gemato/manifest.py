@@ -40,6 +40,13 @@ class ManifestEntryTIMESTAMP(object):
     def to_list(self):
         return (self.tag, self.ts.strftime('%Y-%m-%dT%H:%M:%SZ'))
 
+    def __eq__(self, other):
+        return self.tag == other.tag and self.ts == other.ts
+
+    def __lt__(self, other):
+        return (self.tag < other.tag
+                or (self.tag == other.tag and self.ts < other.ts))
+
 
 class ManifestPathEntry(object):
     """
@@ -61,6 +68,13 @@ class ManifestPathEntry(object):
             raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: expected relative path, got: {}'.format(l[0], l[1:]))
         return l[1]
+
+    def __eq__(self, other):
+        return self.tag == other.tag and self.path == other.path
+
+    def __lt__(self, other):
+        return (self.tag < other.tag
+                or (self.tag == other.tag and self.path < other.path))
 
 
 class ManifestEntryIGNORE(ManifestPathEntry):
@@ -147,6 +161,13 @@ class ManifestFileEntry(ManifestPathEntry):
         for k, v in sorted(self.checksums.items()):
             ret += [k, v]
         return ret
+
+    def __eq__(self, other):
+        return (super(ManifestFileEntry, self).__eq__(other)
+                and self.size == other.size
+                and self.checksums == other.checksums)
+
+    # for the purpose of __lt__, the path is good enough for sorting
 
 
 class ManifestEntryMANIFEST(ManifestFileEntry):
@@ -409,7 +430,7 @@ class ManifestFile(object):
             self.openpgp_signed = True
 
     def dump(self, f, sign_openpgp=None, openpgp_keyid=None,
-            openpgp_env=None):
+            openpgp_env=None, sort=False):
         """
         Dump data into file @f. The file should be open for writing
         in text mode, and truncated to zero length.
@@ -421,10 +442,15 @@ class ManifestFile(object):
 
         @openpgp_keyid and @openpgp_env specify the key
         and the environment to use for signing.
+
+        If @sort is True, the entries are sorted prior to dumping.
         """
 
         if sign_openpgp is None:
             sign_openpgp = self.openpgp_signed
+
+        if sort:
+            self.entries = sorted(self.entries)
 
         if sign_openpgp:
             with io.StringIO() as data:
