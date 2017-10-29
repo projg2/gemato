@@ -1579,10 +1579,6 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         super(CrossDeviceManifestTest, self).setUp()
         os.symlink('/proc', os.path.join(self.dir, 'sub'))
 
-    def tearDown(self):
-        os.unlink(os.path.join(self.dir, 'sub'))
-        super(CrossDeviceManifestTest, self).tearDown()
-
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -1634,10 +1630,6 @@ class CrossDeviceEmptyManifestTest(TempDirTestCase):
     def setUp(self):
         super(CrossDeviceEmptyManifestTest, self).setUp()
         os.symlink('/proc', os.path.join(self.dir, 'sub'))
-
-    def tearDown(self):
-        os.unlink(os.path.join(self.dir, 'sub'))
-        super(CrossDeviceEmptyManifestTest, self).tearDown()
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -1692,10 +1684,6 @@ IGNORE sub
     def setUp(self):
         super(CrossDeviceIgnoreManifestTest, self).setUp()
         os.symlink('/proc', os.path.join(self.dir, 'sub'))
-
-    def tearDown(self):
-        os.unlink(os.path.join(self.dir, 'sub'))
-        super(CrossDeviceIgnoreManifestTest, self).tearDown()
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -1808,6 +1796,10 @@ class UnreadableDirectoryTest(TempDirTestCase):
         super(UnreadableDirectoryTest, self).setUp()
         os.chmod(os.path.join(self.dir, 'test'), 0)
 
+    def tearDown(self):
+        os.chmod(os.path.join(self.dir, 'test'), 0o555)
+        super(UnreadableDirectoryTest, self).tearDown()
+
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -1837,10 +1829,6 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.manifest_gz = os.path.join(self.dir, 'Manifest.gz')
         with gzip.GzipFile(self.manifest_gz, 'wb') as f:
             f.write(self.MANIFEST)
-
-    def tearDown(self):
-        os.unlink(self.manifest_gz)
-        super(CompressedTopManifestTest, self).tearDown()
 
     def test_find_path_entry(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -1906,10 +1894,6 @@ MANIFEST sub/Manifest.gz 78 MD5 9c158f87b2445279d7c8aac439612fba
         with io.open(self.manifest_gz, 'wb') as f:
             f.write(base64.b64decode(self.SUB_MANIFEST))
 
-    def tearDown(self):
-        os.unlink(self.manifest_gz)
-        super(CompressedSubManifestTest, self).tearDown()
-
     def test_find_path_entry(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
                 os.path.join(self.dir, 'Manifest'))
@@ -1963,10 +1947,6 @@ MANIFEST a/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.manifest_gz = os.path.join(self.dir, 'Manifest.gz')
         with gzip.GzipFile(self.manifest_gz, 'wb') as f:
             f.write(self.MANIFEST)
-
-    def tearDown(self):
-        os.unlink(self.manifest_gz)
-        super(CompressedManifestOrderingTest, self).tearDown()
 
     def test__iter_manifests_for_path_order(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -2089,10 +2069,6 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 os.path.join(self.dir, 'sub/Manifest.gz'), 'wb') as f:
             f.write(self.SUB_MANIFEST)
 
-    def tearDown(self):
-        os.unlink(self.manifest_gz)
-        super(UnregisteredCompressedManifestTestCase, self).tearDown()
-
     def test_load_manifests(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -2188,13 +2164,6 @@ class CreateNewManifestTest(TempDirTestCase):
         super(CreateNewManifestTest, self).setUp()
         self.path = os.path.join(self.dir, 'Manifest')
 
-    def tearDown(self):
-        try:
-            os.unlink(self.path)
-        except OSError:
-            pass
-        super(CreateNewManifestTest, self).tearDown()
-
     def test_load_without_create(self):
         self.assertRaises(IOError,
                 gemato.recursiveloader.ManifestRecursiveLoader,
@@ -2251,13 +2220,6 @@ class CreateNewCompressedManifestTest(TempDirTestCase):
     def setUp(self):
         super(CreateNewCompressedManifestTest, self).setUp()
         self.path = os.path.join(self.dir, 'Manifest.gz')
-
-    def tearDown(self):
-        try:
-            os.unlink(self.path)
-        except OSError:
-            pass
-        super(CreateNewCompressedManifestTest, self).tearDown()
 
     def test_load_without_create(self):
         self.assertRaises(IOError,

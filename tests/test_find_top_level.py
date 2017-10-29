@@ -164,10 +164,6 @@ class TestCrossDevice(TempDirTestCase):
         super(TestCrossDevice, self).setUp()
         os.symlink('/proc', os.path.join(self.dir, 'test'))
 
-    def tearDown(self):
-        os.unlink(os.path.join(self.dir, 'test'))
-        super(TestCrossDevice, self).tearDown()
-
     def test_find_top_level_manifest(self):
         self.assertIsNone(
                 gemato.find_top_level.find_top_level_manifest(
@@ -187,10 +183,6 @@ class TestCrossDeviceManifest(TempDirTestCase):
             raise unittest.SkipTest('/proc/version does not exist')
         super(TestCrossDeviceManifest, self).setUp()
         os.symlink('/proc/version', os.path.join(self.dir, 'Manifest'))
-
-    def tearDown(self):
-        os.unlink(os.path.join(self.dir, 'Manifest'))
-        super(TestCrossDeviceManifest, self).tearDown()
 
     def test_find_top_level_manifest(self):
         self.assertIsNone(
@@ -214,11 +206,6 @@ class TestCompressedManifest(TempDirTestCase):
             pass
         with gzip.GzipFile(os.path.join(self.dir, 'subc/sub/Manifest.gz'), 'wb'):
             pass
-
-    def tearDown(self):
-        os.unlink(os.path.join(self.dir, 'subc/sub/Manifest.gz'))
-        os.unlink(os.path.join(self.dir, 'Manifest.gz'))
-        super(TestCompressedManifest, self).tearDown()
 
     def test_find_top_level_manifest(self):
         self.assertEqual(
@@ -265,11 +252,6 @@ class TestCompressedManifestWithIgnore(TempDirTestCase):
             f.write(b'IGNORE subc\n')
         with gzip.GzipFile(os.path.join(self.dir, 'subc/sub/Manifest.gz'), 'wb'):
             pass
-
-    def tearDown(self):
-        os.unlink(os.path.join(self.dir, 'subc/sub/Manifest.gz'))
-        os.unlink(os.path.join(self.dir, 'Manifest.gz'))
-        super(TestCompressedManifestWithIgnore, self).tearDown()
 
     def test_find_top_level_manifest(self):
         self.assertEqual(

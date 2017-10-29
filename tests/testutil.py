@@ -7,6 +7,7 @@ import io
 import logging
 import os
 import os.path
+import shutil
 import sys
 import tempfile
 import unittest
@@ -40,9 +41,5 @@ class TempDirTestCase(LoggingTestCase):
                 f.write(v)
 
     def tearDown(self):
-        for k in self.FILES:
-            os.unlink(os.path.join(self.dir, k))
-        for k in reversed(self.DIRS):
-            os.rmdir(os.path.join(self.dir, k))
-        os.rmdir(self.dir)
+        shutil.rmtree(self.dir)
         super(TempDirTestCase, self).tearDown()
