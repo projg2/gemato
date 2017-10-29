@@ -879,6 +879,30 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertTrue(os.path.exists(
             os.path.join(self.dir, 'Manifest')))
 
+    def test_cli_compress_manifests_low_watermark(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'update',
+                    '--hashes=SHA256 SHA512',
+                    '--compress-watermark=0',
+                    self.dir]),
+                0)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+
+    def test_cli_compress_manifests_high_watermark(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'update',
+                    '--hashes=SHA256 SHA512',
+                    '--compress-watermark=4096',
+                    self.dir]),
+                0)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+
 
 class DuplicateManifestFileEntryTest(TempDirTestCase):
     """
@@ -1915,6 +1939,30 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertTrue(os.path.exists(
             os.path.join(self.dir, 'Manifest')))
 
+    def test_cli_decompress_manifests_low_watermark(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'update',
+                    '--hashes=SHA256 SHA512',
+                    '--compress-watermark=0',
+                    self.dir]),
+                0)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+
+    def test_cli_decompress_manifests_high_watermark(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'update',
+                    '--hashes=SHA256 SHA512',
+                    '--compress-watermark=4096',
+                    self.dir]),
+                0)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+
 
 class CompressedSubManifestTest(TempDirTestCase):
     """
@@ -2001,6 +2049,38 @@ MANIFEST sub/Manifest.gz 78 MD5 9c158f87b2445279d7c8aac439612fba
         self.assertEqual(m.find_path_entry('sub/Manifest').path,
                 'sub/Manifest')
         self.assertIsNone(m.find_path_entry('sub/Manifest.gz'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'sub/Manifest')))
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'sub/Manifest.gz')))
+
+    def test_cli_recompress_manifests_low_watermark(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'update',
+                    '--hashes=SHA256 SHA512',
+                    '--compress-watermark=0',
+                    self.dir]),
+                0)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'sub/Manifest.gz')))
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'sub/Manifest')))
+
+    def test_cli_recompress_manifests_high_watermark(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'update',
+                    '--hashes=SHA256 SHA512',
+                    '--compress-watermark=4096',
+                    self.dir]),
+                0)
         self.assertTrue(os.path.exists(
             os.path.join(self.dir, 'Manifest')))
         self.assertTrue(os.path.exists(
@@ -2314,6 +2394,30 @@ class CreateNewManifestTest(TempDirTestCase):
             allow_create=True,
             hashes=['SHA256', 'SHA512'])
         m.save_manifests(force=True, compress_watermark=4096)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+
+    def test_cli_compress_manifests_low_watermark(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'create',
+                    '--hashes=SHA256 SHA512',
+                    '--compress-watermark=0',
+                    os.path.join(self.dir, 'Manifest')]),
+                0)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+
+    def test_cli_compress_manifests_high_watermark(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'create',
+                    '--hashes=SHA256 SHA512',
+                    '--compress-watermark=4096',
+                    os.path.join(self.dir, 'Manifest')]),
+                0)
         self.assertFalse(os.path.exists(
             os.path.join(self.dir, 'Manifest.gz')))
         self.assertTrue(os.path.exists(

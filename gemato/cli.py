@@ -26,7 +26,7 @@ def verify_failure(e):
     return False
 
 
-def do_verify(args):
+def do_verify(args, argp):
     ret = True
 
     for p in args.paths:
@@ -82,7 +82,7 @@ def do_verify(args):
     return 0 if ret else 1
 
 
-def do_update(args):
+def do_update(args, argp):
     for p in args.paths:
         tlm = gemato.find_top_level.find_top_level_manifest(p)
         if tlm is None:
@@ -91,6 +91,16 @@ def do_update(args):
 
         init_kwargs = {}
         init_kwargs['hashes'] = args.hashes.split()
+        save_kwargs = {}
+        save_kwargs['sort'] = True
+        if args.compress_watermark is not None:
+            if args.compress_watermark < 0:
+                argp.error('--compress-watermark must not be negative!')
+            save_kwargs['compress_watermark'] = args.compress_watermark
+        if args.compress_format is not None:
+            save_kwargs['compress_format'] = args.compress_format
+        if args.force_rewrite:
+            save_kwargs['force'] = True
         if args.openpgp_id is not None:
             init_kwargs['openpgp_keyid'] = args.openpgp_id
         if args.sign is not None:
@@ -122,7 +132,7 @@ def do_update(args):
                 if ts is not None:
                     ts.ts = datetime.datetime.utcnow()
 
-                m.save_manifests(sort=True)
+                m.save_manifests(**save_kwargs)
             except gemato.exceptions.ManifestCrossDevice as e:
                 logging.error(str(e))
                 return 1
@@ -135,11 +145,21 @@ def do_update(args):
     return 0
 
 
-def do_create(args):
+def do_create(args, argp):
     for p in args.paths:
         init_kwargs = {}
         init_kwargs['allow_create'] = True
         init_kwargs['hashes'] = args.hashes.split()
+        save_kwargs = {}
+        save_kwargs['sort'] = True
+        if args.compress_watermark is not None:
+            if args.compress_watermark < 0:
+                argp.error('--compress-watermark must not be negative!')
+            save_kwargs['compress_watermark'] = args.compress_watermark
+        if args.compress_format is not None:
+            save_kwargs['compress_format'] = args.compress_format
+        if args.force_rewrite:
+            save_kwargs['force'] = True
         if args.openpgp_id is not None:
             init_kwargs['openpgp_keyid'] = args.openpgp_id
         if args.sign is not None:
@@ -168,7 +188,7 @@ def do_create(args):
                 if ts is not None:
                     ts.ts = datetime.datetime.utcnow()
 
-                m.save_manifests(sort=True)
+                m.save_manifests(**save_kwargs)
             except gemato.exceptions.ManifestCrossDevice as e:
                 logging.error(str(e))
                 return 1
@@ -209,6 +229,12 @@ def main(argv):
             help='Update the Manifest entries for one or more directory trees')
     update.add_argument('paths', nargs='*', default=['.'],
             help='Paths to update (defaults to "." if none specified)')
+    update.add_argument('-c', '--compress-watermark', type=int,
+            help='Minimum Manifest size for files to be compressed')
+    update.add_argument('-C', '--compress-format',
+            help='Format for compressed files (e.g. "gz", "bz2"...)')
+    update.add_argument('-f', '--force-rewrite', action='store_true',
+            help='Force rewriting all the Manifests, even if they did not change')
     update.add_argument('-H', '--hashes', required=True,
             help='Whitespace-separated list of hashes to use')
     update.add_argument('-k', '--openpgp-id',
@@ -228,6 +254,12 @@ def main(argv):
             help='Create a Manifest tree starting at the specified file')
     create.add_argument('paths', nargs='*', default=['Manifest'],
             help='Paths to create (defaults to "Manifest" if none specified)')
+    create.add_argument('-c', '--compress-watermark', type=int,
+            help='Minimum Manifest size for files to be compressed')
+    create.add_argument('-C', '--compress-format',
+            help='Format for compressed files (e.g. "gz", "bz2"...)')
+    create.add_argument('-f', '--force-rewrite', action='store_true',
+            help='Force rewriting all the Manifests, even if they did not change')
     create.add_argument('-H', '--hashes', required=True,
             help='Whitespace-separated list of hashes to use')
     create.add_argument('-k', '--openpgp-id',
@@ -244,4 +276,4 @@ def main(argv):
     create.set_defaults(func=do_create)
 
     vals = argp.parse_args(argv[1:])
-    return vals.func(vals)
+    return vals.func(vals, argp)
