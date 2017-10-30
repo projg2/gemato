@@ -173,7 +173,7 @@ def do_create(args, argp):
             start = timeit.default_timer()
             try:
                 m = gemato.recursiveloader.ManifestRecursiveLoader(
-                        p, **init_kwargs)
+                        os.path.join(p, 'Manifest'), **init_kwargs)
             except gemato.exceptions.OpenPGPNoImplementation as e:
                 logging.error(str(e))
                 return 1

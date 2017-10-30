@@ -2361,7 +2361,7 @@ class CreateNewManifestTest(TempDirTestCase):
     def test_cli(self):
         self.assertEqual(
             gemato.cli.main(['gemato', 'create', '--hashes=SHA256 SHA512',
-                self.path]),
+                self.dir]),
             0)
 
         m2 = gemato.manifest.ManifestFile()
@@ -2453,7 +2453,7 @@ class CreateNewManifestTest(TempDirTestCase):
                 gemato.cli.main(['gemato', 'create',
                     '--hashes=SHA256 SHA512',
                     '--compress-watermark=0',
-                    os.path.join(self.dir, 'Manifest')]),
+                    self.dir]),
                 0)
         self.assertFalse(os.path.exists(
             os.path.join(self.dir, 'Manifest')))
@@ -2465,7 +2465,7 @@ class CreateNewManifestTest(TempDirTestCase):
                 gemato.cli.main(['gemato', 'create',
                     '--hashes=SHA256 SHA512',
                     '--compress-watermark=4096',
-                    os.path.join(self.dir, 'Manifest')]),
+                    self.dir]),
                 0)
         self.assertFalse(os.path.exists(
             os.path.join(self.dir, 'Manifest.gz')))
@@ -2519,7 +2519,8 @@ class CreateNewCompressedManifestTest(TempDirTestCase):
     def test_cli(self):
         self.assertEqual(
             gemato.cli.main(['gemato', 'create', '--hashes=SHA256 SHA512',
-                self.path]),
+                '--compress-watermark=0', '--compress-format=gz',
+                self.dir]),
             0)
 
         m2 = gemato.manifest.ManifestFile()
