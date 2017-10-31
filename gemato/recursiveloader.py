@@ -347,6 +347,9 @@ class ManifestRecursiveLoader(object):
         returned explicit False; True otherwise.
         """
 
+        manifest_filenames = (gemato.compression
+                .get_potential_compressed_names('Manifest'))
+
         entry_dict = self.get_file_entry_dict(path)
         it = os.walk(os.path.join(self.root_directory, path),
                 onerror=gemato.util.throw_exception,
@@ -396,8 +399,7 @@ class ManifestRecursiveLoader(object):
                 fpath = os.path.join(relpath, f)
                 # skip top-level Manifest, we obviously can't have
                 # an entry for it
-                if fpath in (gemato.compression
-                        .get_potential_compressed_names('Manifest')):
+                if fpath in manifest_filenames:
                     continue
                 fe = entry_dict.pop(fpath, None)
                 ret &= self._verify_one_file(os.path.join(dirpath, f),
@@ -697,8 +699,12 @@ class ManifestRecursiveLoader(object):
             hashes = self.hashes
         assert hashes is not None
 
+        manifest_filenames = (gemato.compression
+                .get_potential_compressed_names('Manifest'))
+
         entry_dict = self.get_deduplicated_file_entry_dict_for_update(
                 path)
+        dir_manifest_stack = []
         it = os.walk(os.path.join(self.root_directory, path),
                 onerror=gemato.util.throw_exception,
                 followlinks=True)
@@ -742,8 +748,7 @@ class ManifestRecursiveLoader(object):
 
             # check for unregistered Manifest
             new_manifests = set()
-            for mname in (gemato.compression
-                    .get_potential_compressed_names('Manifest')):
+            for mname in manifest_filenames:
                 if mname in filenames:
                     fpath = os.path.join(relpath, mname)
                     if fpath in self.loaded_manifests:
@@ -769,16 +774,15 @@ class ManifestRecursiveLoader(object):
                     continue
 
                 fpath = os.path.join(relpath, f)
-                # skip top-level Manifest, we obviously can't have
-                # an entry for it
-                if fpath in (gemato.compression
-                        .get_potential_compressed_names('Manifest')):
-                    continue
                 mpath, fe = entry_dict.pop(fpath, (None, None))
                 if fe is not None:
                     if fe.tag in ('IGNORE', 'OPTIONAL'):
                         continue
                 else:
+                    # skip top-level Manifest, we obviously can't have
+                    # an entry for it
+                    if fpath in manifest_filenames:
+                        continue
                     if f in new_manifests:
                         cls = gemato.manifest.ManifestEntryMANIFEST
                         # new Manifests go into the parent directory
