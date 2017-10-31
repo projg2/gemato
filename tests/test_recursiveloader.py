@@ -2619,10 +2619,28 @@ MANIFEST z/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m.save_manifests()
         m.assert_directory_verifies()
 
+    def test_load_unregistered_manifests(self):
+        # remove the top Manifest
+        os.unlink(os.path.join(self.dir, 'Manifest'))
+
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            allow_create=True)
+        # we allow extra entries for files that referenced within
+        # newly added Manifest
+        self.assertListEqual(sorted(m.load_unregistered_manifests('')),
+                ['a/Manifest', 'a/x/Manifest', 'a/z/Manifest',
+                    'b/Manifest'])
+        self.assertIn('a/Manifest', m.loaded_manifests)
+        self.assertNotIn('a/Manifest', m.updated_manifests)
+        self.assertIsNone(m.find_path_entry('a/Manifest'))
+        self.assertIn('b/Manifest', m.loaded_manifests)
+        self.assertNotIn('b/Manifest', m.updated_manifests)
+        self.assertIsNone(m.find_path_entry('b/Manifest'))
+
     def test_update_entries_for_directory_without_manifests(self):
-        for dirpath, dirs, files in os.walk(self.dir):
-            if 'Manifest' in files:
-                os.unlink(os.path.join(dirpath, 'Manifest'))
+        # remove the top Manifest
+        os.unlink(os.path.join(self.dir, 'Manifest'))
 
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'),
@@ -2659,6 +2677,15 @@ DATA c 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         'a/c': u'',
         'b/test': u'',
     }
+
+    def test_load_unregistered_manifests(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertListEqual(sorted(m.load_unregistered_manifests('')),
+                ['a/Manifest'])
+        self.assertIn('a/Manifest', m.loaded_manifests)
+        self.assertNotIn('a/Manifest', m.updated_manifests)
+        self.assertIsNone(m.find_path_entry('a/Manifest'))
 
     def test_update_entries_for_directory(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(

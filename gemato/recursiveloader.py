@@ -688,6 +688,78 @@ class ManifestRecursiveLoader(object):
 
         return out
 
+    def load_unregistered_manifests(self, path=''):
+        """
+        Scan the directory @path (relative to top directory)
+        for unregistered (not listed in MANIFEST entries) Manifest
+        files and load them if they are valid.
+
+        Returns a list of files found. The respective MANIFEST entries
+        need to be added to other Manifests manually to ensure
+        integrity. Note that the list may contain files that are
+        referenced within added Manifests, so the list should
+        be verified with regards to existing entries.
+        """
+
+        manifest_filenames = (gemato.compression
+                .get_potential_compressed_names('Manifest'))
+
+        entry_dict = self.get_file_entry_dict(path,
+                only_types=['IGNORE'])
+        new_manifests = []
+        it = os.walk(os.path.join(self.root_directory, path),
+                onerror=gemato.util.throw_exception,
+                followlinks=True)
+
+        for dirpath, dirnames, filenames in it:
+            relpath = os.path.relpath(dirpath, self.root_directory)
+            # strip dot to avoid matching problems
+            if relpath == '.':
+                relpath = ''
+
+            skip_dirs = []
+            for d in dirnames:
+                # skip dotfiles
+                if d.startswith('.'):
+                    skip_dirs.append(d)
+                    continue
+
+                dpath = os.path.join(relpath, d)
+                de = entry_dict.pop(dpath, None)
+                if de is None:
+                    syspath = os.path.join(dirpath, d)
+                    st = os.stat(syspath)
+                    if st.st_dev != self.manifest_device:
+                        raise gemato.exceptions.ManifestCrossDevice(syspath)
+                    continue
+
+                assert de.tag == 'IGNORE'
+                skip_dirs.append(d)
+
+            # skip scanning ignored directories
+            for d in skip_dirs:
+                dirnames.remove(d)
+
+            # check for unregistered Manifest
+            for mname in manifest_filenames:
+                if mname in filenames:
+                    fpath = os.path.join(relpath, mname)
+                    if fpath in self.loaded_manifests:
+                        continue
+
+                    # we've just found ourselves a new Manifest,
+                    # let's try to load it
+                    try:
+                        self.load_manifest(fpath)
+                    except gemato.exceptions.ManifestSyntaxError:
+                        # syntax error? probably not a Manifest then.
+                        pass
+                    else:
+                        new_manifests.append(fpath)
+
+        return new_manifests
+
+
     def update_entries_for_directory(self, path='', hashes=None):
         """
         Update the Manifest entries for the contents of directory
@@ -712,6 +784,7 @@ class ManifestRecursiveLoader(object):
         manifest_filenames = (gemato.compression
                 .get_potential_compressed_names('Manifest'))
 
+        new_manifests = self.load_unregistered_manifests(path)
         entry_dict = self.get_deduplicated_file_entry_dict_for_update(
                 path)
         manifest_stack = []
@@ -766,29 +839,7 @@ class ManifestRecursiveLoader(object):
             for d in skip_dirs:
                 dirnames.remove(d)
 
-            # check for unregistered Manifest
-            new_manifests = set()
-            for mname in manifest_filenames:
-                if mname in filenames:
-                    fpath = os.path.join(relpath, mname)
-                    if fpath in self.loaded_manifests:
-                        continue
-
-                    # we've just found ourselves a new Manifest,
-                    # let's load it
-                    try:
-                        self.load_manifest(fpath)
-                    except gemato.exceptions.ManifestSyntaxError:
-                        # syntax error? probably not a Manifest then.
-                        pass
-                    else:
-                        new_manifests.add(mname)
-                        entry_dict.update(
-                                self.get_deduplicated_file_entry_dict_for_update(
-                                    relpath))
-
             new_entries = []
-
             for f in filenames:
                 # skip dotfiles
                 if f.startswith('.'):
@@ -806,7 +857,7 @@ class ManifestRecursiveLoader(object):
                     # an entry for it
                     if fpath in manifest_filenames:
                         continue
-                    if f in new_manifests:
+                    if fpath in new_manifests:
                         cls = gemato.manifest.ManifestEntryMANIFEST
                         manifest_stack.append(fpath)
                     else:
