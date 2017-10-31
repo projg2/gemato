@@ -825,7 +825,7 @@ class ManifestRecursiveLoader(object):
                         mm = m
                         mmdirpath = mdirpath
                         i = -1
-                        while gemato.util.path_starts_with(fe.path, mmpath):
+                        while mmdirpath == os.path.dirname(fe.path):
                             i -= 1
                             mmpath = manifest_stack[i]
                             mm = self.loaded_manifests[mmpath]

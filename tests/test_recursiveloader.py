@@ -2597,3 +2597,54 @@ MANIFEST z/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
         m.save_manifests()
         m.assert_directory_verifies()
+
+
+class AddingToMultipleManifestsTest(TempDirTestCase):
+    """
+    Check that we are handling a directory containing multiple Manifests
+    correctly, and that we can cleanly add an additional 'Manifest' file
+    in it.
+    """
+
+    DIRS = ['a', 'b']
+    FILES = {
+        'Manifest': u'''
+MANIFEST a/Manifest.a 47 MD5 89b9c1e9e5a063ee60b91b632c84c7c8
+MANIFEST a/Manifest.b 47 MD5 1b1504046a2023ed75a2a89aed7c52f4
+''',
+        'a/Manifest.a': u'''
+DATA a 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        'a/Manifest.b': u'''
+DATA b 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        'a/Manifest': u'''
+DATA c 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        'a/a': u'',
+        'a/b': u'',
+        'a/c': u'',
+        'b/test': u'',
+    }
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
+        m.save_manifests()
+        self.assertListEqual(sorted(m.loaded_manifests),
+                ['Manifest', 'a/Manifest', 'a/Manifest.a',
+                    'a/Manifest.b'])
+        self.assertListEqual(sorted(
+            e.path for e in m.loaded_manifests['Manifest'].entries),
+            ['a/Manifest', 'a/Manifest.a', 'a/Manifest.b', 'b/test'])
+        self.assertListEqual(sorted(
+            e.path for e in m.loaded_manifests['a/Manifest.a'].entries),
+            ['a'])
+        self.assertListEqual(sorted(
+            e.path for e in m.loaded_manifests['a/Manifest.b'].entries),
+            ['b'])
+        self.assertListEqual(sorted(
+            e.path for e in m.loaded_manifests['a/Manifest'].entries),
+            ['c'])
+        m.assert_directory_verifies()
