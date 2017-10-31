@@ -2555,3 +2555,45 @@ class CreateNewCompressedManifestTest(TempDirTestCase):
             os.path.join(self.dir, 'Manifest.gz')))
         self.assertTrue(os.path.exists(
             os.path.join(self.dir, 'Manifest')))
+
+
+class MultipleDeepNestedManifestTest(TempDirTestCase):
+    DIRS = ['a', 'a/x', 'a/y', 'a/z', 'b']
+    FILES = {
+        'Manifest': u'''
+MANIFEST a/Manifest 119 MD5 6956767cfbb3276adbdce86cca559719
+MANIFEST b/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        'test': u'',
+        'a/Manifest': u'''
+MANIFEST x/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+MANIFEST z/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        'a/test': u'',
+        'a/x/Manifest': u'',
+        'a/x/test': u'',
+        'a/y/test': u'',
+        'a/z/Manifest': u'',
+        'a/z/test': u'',
+        'b/Manifest': u'',
+        'b/test': u'',
+    }
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
+        m.save_manifests()
+        m.assert_directory_verifies()
+
+    def test_update_entries_for_directory_without_manifests(self):
+        for dirpath, dirs, files in os.walk(self.dir):
+            if 'Manifest' in files:
+                os.unlink(os.path.join(dirpath, 'Manifest'))
+
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            allow_create=True)
+        m.update_entries_for_directory('', hashes=['SHA256', 'SHA512'])
+        m.save_manifests()
+        m.assert_directory_verifies()

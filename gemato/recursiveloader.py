@@ -704,7 +704,12 @@ class ManifestRecursiveLoader(object):
 
         entry_dict = self.get_deduplicated_file_entry_dict_for_update(
                 path)
-        dir_manifest_stack = []
+        manifest_stack = []
+        for mpath, mrpath, m in (self
+                ._iter_manifests_for_path(path)):
+            manifest_stack.append(mpath)
+            break
+
         it = os.walk(os.path.join(self.root_directory, path),
                 onerror=gemato.util.throw_exception,
                 followlinks=True)
@@ -714,6 +719,11 @@ class ManifestRecursiveLoader(object):
             # strip dot to avoid matching problems
             if relpath == '.':
                 relpath = ''
+
+            # drop Manifest paths until we get to a common directory
+            while not gemato.util.path_starts_with(relpath,
+                    os.path.dirname(manifest_stack[-1])):
+                manifest_stack.pop()
 
             skip_dirs = []
             for d in dirnames:
@@ -766,7 +776,8 @@ class ManifestRecursiveLoader(object):
                         entry_dict.update(
                                 self.get_deduplicated_file_entry_dict_for_update(
                                     relpath))
-            dir_manifest = None
+
+            new_entries = []
 
             for f in filenames:
                 # skip dotfiles
@@ -778,6 +789,8 @@ class ManifestRecursiveLoader(object):
                 if fe is not None:
                     if fe.tag in ('IGNORE', 'OPTIONAL'):
                         continue
+                    if fe.tag == 'MANIFEST':
+                        manifest_stack.append(fpath)
                 else:
                     # skip top-level Manifest, we obviously can't have
                     # an entry for it
@@ -785,33 +798,46 @@ class ManifestRecursiveLoader(object):
                         continue
                     if f in new_manifests:
                         cls = gemato.manifest.ManifestEntryMANIFEST
-                        # new Manifests go into the parent directory
-                        for mpath, mrpath, m in (self
-                                ._iter_manifests_for_path(
-                                    os.path.dirname(relpath))):
-                            break
+                        manifest_stack.append(fpath)
                     else:
                         cls = gemato.manifest.ManifestEntryDATA
-                        # find appropriate Manifest for this directory
-                        if dir_manifest is None:
-                            for mpath, mrpath, m in (self
-                                    ._iter_manifests_for_path(fpath)):
-                                dir_manifest = (mpath, mrpath, m)
-                                break
-                        else:
-                            mpath, mrpath, m = dir_manifest
 
-                    fe = cls(os.path.relpath(fpath, mrpath), 0, {})
-                    m.entries.append(fe)
+                    # note: .path needs to be corrected below
+                    fe = cls(fpath, 0, {})
+                    new_entries.append(fe)
 
-                # update the existing entry
                 changed = gemato.verify.update_entry_for_path(
                     os.path.join(dirpath, f),
                     fe,
                     hashes=hashes,
                     expected_dev=self.manifest_device)
-                if changed:
+                if changed and mpath is not None:
                     self.updated_manifests.add(mpath)
+
+            if new_entries:
+                mpath = manifest_stack[-1]
+                m = self.loaded_manifests[mpath]
+                mdirpath = os.path.dirname(mpath)
+                for fe in new_entries:
+                    if fe.tag == 'MANIFEST':
+                        # Manifest needs to go level up
+                        mmpath = mpath
+                        mm = m
+                        mmdirpath = mdirpath
+                        i = -1
+                        while gemato.util.path_starts_with(fe.path, mmpath):
+                            i -= 1
+                            mmpath = manifest_stack[i]
+                            mm = self.loaded_manifests[mmpath]
+                            mmdirpath = os.path.dirname(mmpath)
+
+                        fe.path = os.path.relpath(fe.path, mmdirpath)
+                        mm.entries.append(fe)
+                        self.updated_manifests.add(mmpath)
+                    else:
+                        fe.path = os.path.relpath(fe.path, mdirpath)
+                        m.entries.append(fe)
+                self.updated_manifests.add(mpath)
 
         # check for removed files
         for relpath, me in entry_dict.items():
