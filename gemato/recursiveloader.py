@@ -272,11 +272,15 @@ class ManifestRecursiveLoader(object):
                     return e
         return None
 
-    def get_file_entry_dict(self, path=''):
+    def get_file_entry_dict(self, path='', only_types=None):
         """
         Find all file entries that apply to paths starting with @path.
         Return a dictionary mapping relative paths to entries. Raises
         an exception if multiple entries for file collide.
+
+        If @only_types are specified as a list, only files of specified
+        types will be collected. If it is not specified, then all types
+        for local files will be processed.
         """
 
         self.load_manifests_for_path(path, recursive=True)
@@ -284,7 +288,13 @@ class ManifestRecursiveLoader(object):
         for mpath, relpath, m in self._iter_manifests_for_path(path,
                                     recursive=True):
             for e in m.entries:
-                if e.tag in ('DIST', 'TIMESTAMP'):
+                if only_types is not None:
+                    if e.tag not in only_types:
+                        continue
+                    # DIST entries always specify plain filename
+                    if e.tag == 'DIST':
+                        relpath = ''
+                elif e.tag in ('DIST', 'TIMESTAMP'):
                     # distfiles are not local files, so skip them
                     # timestamp is not a file ;-)
                     continue

@@ -203,6 +203,32 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
         self.assertEqual(entries['sub/deeper/test'].path, 'test')
 
+    def test_get_file_entry_dict_only_types(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_file_entry_dict('', only_types=['MANIFEST'])
+        self.assertSetEqual(frozenset(entries),
+            frozenset((
+                'other/Manifest',
+                'sub/Manifest',
+                'sub/deeper/Manifest',
+            )))
+        self.assertEqual(entries['other/Manifest'].path, 'other/Manifest')
+        self.assertEqual(entries['sub/Manifest'].path, 'sub/Manifest')
+        self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
+
+    def test_get_file_entry_dict_only_types_DIST(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_file_entry_dict('', only_types=['DIST'])
+        self.assertSetEqual(frozenset(entries),
+            frozenset((
+                'subdistfile-1.txt',
+                'topdistfile-1.txt',
+            )))
+        self.assertEqual(entries['subdistfile-1.txt'].path, 'subdistfile-1.txt')
+        self.assertEqual(entries['topdistfile-1.txt'].path, 'topdistfile-1.txt')
+
     def test_get_deduplicated_file_entry_dict_for_update(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -1275,6 +1301,13 @@ MISC test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
                 m.get_file_entry_dict, '')
+
+    def test_get_file_entry_dict_only_types(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        entries = m.get_file_entry_dict('', only_types=['DATA'])
+        self.assertListEqual(sorted(entries), ['test.ebuild'])
+        self.assertEqual(entries['test.ebuild'].tag, 'DATA')
 
     def test_deduplicated_get_file_entry_dict_for_update(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
