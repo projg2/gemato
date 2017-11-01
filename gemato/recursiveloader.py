@@ -519,7 +519,9 @@ class ManifestRecursiveLoader(object):
         self.updated_manifests -= set(gemato.compression
                 .get_potential_compressed_names('Manifest'))
         # at this point, the list should be empty
-        assert not self.updated_manifests
+        assert not self.updated_manifests, (
+                "Unlinked but updated Manifests: {}".format(
+                    self.updated_manifests))
 
     def update_entry_for_path(self, path, new_entry_type='DATA',
             hashes=None):
@@ -931,3 +933,14 @@ class ManifestRecursiveLoader(object):
 
             self.loaded_manifests[mpath].entries.remove(fe)
             self.updated_manifests.add(mpath)
+
+    def create_manifest(self, path):
+        """
+        Create a new empty sub-Manifest instance at relative path @path.
+        The file will not be written until save_manifests(). No MANIFEST
+        entry for the file will be created.
+
+        Returns the new ManifestFile instance.
+        """
+
+        return self.load_manifest(path, allow_create=True)

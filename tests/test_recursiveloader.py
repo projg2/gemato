@@ -2649,6 +2649,19 @@ MANIFEST z/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m.save_manifests()
         m.assert_directory_verifies()
 
+    def test_create_manifest(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertIsNotNone(m.create_manifest('a/y/Manifest'))
+        self.assertFalse(os.path.exists(os.path.join(
+            self.dir, 'a/y/Manifest')))
+        m.loaded_manifests['Manifest'].entries.append(
+                gemato.manifest.ManifestEntryMANIFEST(
+                    'a/y/Manifest', 0, {}))
+        m.save_manifests()
+        self.assertTrue(os.path.exists(os.path.join(
+            self.dir, 'a/y/Manifest')))
+
 
 class AddingToMultipleManifestsTest(TempDirTestCase):
     """
