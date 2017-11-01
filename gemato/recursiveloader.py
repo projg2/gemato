@@ -9,6 +9,7 @@ import os.path
 import gemato.compression
 import gemato.exceptions
 import gemato.manifest
+import gemato.profile
 import gemato.util
 import gemato.verify
 
@@ -22,12 +23,14 @@ class ManifestRecursiveLoader(object):
 
     __slots__ = ['root_directory', 'loaded_manifests', 'verify_openpgp',
             'openpgp_env', 'sign_openpgp', 'openpgp_keyid', 'hashes',
-            'openpgp_signed', 'updated_manifests', 'manifest_device']
+            'openpgp_signed', 'updated_manifests', 'manifest_device',
+            'profile']
 
     def __init__(self, top_manifest_path,
             verify_openpgp=True, openpgp_env=None,
             sign_openpgp=None, openpgp_keyid=None,
-            hashes=None, allow_create=False):
+            hashes=None, allow_create=False,
+            profile=gemato.profile.DefaultProfile()):
         """
         Instantiate the loader for a Manifest tree starting at top-level
         Manifest @top_manifest_path.
@@ -53,6 +56,8 @@ class ManifestRecursiveLoader(object):
         If @allow_create is True and @top_manifest_path does not exist,
         a new Manifest tree will be initialized. Otherwise, opening
         a non-existing file will cause an exception.
+
+        @profile can be used to provide the profile for the repository.
         """
 
         self.root_directory = os.path.dirname(top_manifest_path)
@@ -61,6 +66,7 @@ class ManifestRecursiveLoader(object):
         self.sign_openpgp = sign_openpgp
         self.openpgp_keyid = openpgp_keyid
         self.hashes = hashes
+        self.profile = profile
 
         self.loaded_manifests = {}
         self.updated_manifests = set()
@@ -859,14 +865,16 @@ class ManifestRecursiveLoader(object):
                     if fpath in manifest_filenames:
                         continue
                     if fpath in new_manifests:
-                        cls = gemato.manifest.ManifestEntryMANIFEST
+                        ftype = 'MANIFEST'
                         manifest_stack.append((fpath, relpath,
                             self.loaded_manifests[fpath]))
                     else:
-                        cls = gemato.manifest.ManifestEntryDATA
+                        ftype = self.profile.get_entry_type_for_path(
+                                fpath)
 
                     # note: .path needs to be corrected below
-                    fe = cls(fpath, 0, {})
+                    fe = gemato.manifest.new_manifest_entry(ftype,
+                            fpath, 0, {})
                     new_entries.append(fe)
 
                 changed = gemato.verify.update_entry_for_path(
@@ -894,7 +902,19 @@ class ManifestRecursiveLoader(object):
                         mm.entries.append(fe)
                         self.updated_manifests.add(mmpath)
                     else:
-                        fe.path = os.path.relpath(fe.path, mdirpath)
+                        if ftype == 'AUX':
+                            # AUX has implicit files/ prefix in .path
+                            # but for now, we've shoved our path
+                            # into .aux_path
+                            fe.path = os.path.relpath(fe.aux_path,
+                                    mdirpath)
+                            assert gemato.util.path_inside_dir(
+                                    fe.path, 'files')
+                            # drop files/ prefix for the entry
+                            fe.aux_path = os.path.relpath(fe.path,
+                                    'files')
+                        else:
+                            fe.path = os.path.relpath(fe.path, mdirpath)
                         m.entries.append(fe)
                 self.updated_manifests.add(mpath)
 
