@@ -21,12 +21,42 @@ class DefaultProfile(object):
         """
         return 'DATA'
 
+    def want_manifest_in_directory(self, relpath, dirnames, filenames):
+        return False
+
 
 class EbuildRepositoryProfile(DefaultProfile):
     """
     A profile suited for a modern ebuild repository.
     """
-    pass
+
+    def want_manifest_in_directory(self, relpath, dirnames, filenames):
+        # a quick way to catch most of packages and ::gentoo categories
+        if 'metadata.xml' in filenames:
+            return True
+        spl = relpath.split(os.path.sep)
+        # top level directories...
+        if len(spl) == 1:
+            # with any subdirectories (categories, metadata, profiles)
+            if len(dirnames) > 0:
+                return True
+            # plus some unconditional standard directories
+            if relpath in ('eclass', 'licenses', 'metadata',
+                    'profiles'):
+                return True
+        elif len(spl) == 2:
+            # 'slow' way of detecting package directories
+            if any(f.endswith('.ebuild') for f in filenames):
+                return True
+            # some standard directories worth separate Manifests
+            if spl[0] == 'metadata' and spl[1] in ('glsa', 'md5-cache',
+                    'news'):
+                return True
+        elif len(spl) == 3:
+            # metadata cache -> per-directory Manifests
+            if spl[0:2] == ['metadata', 'md5-cache']:
+                return True
+        return False
 
 
 class BackwardsCompatEbuildRepositoryProfile(EbuildRepositoryProfile):

@@ -6,6 +6,7 @@
 import os.path
 
 import gemato.profile
+import gemato.recursiveloader
 
 from tests.testutil import TempDirTestCase
 
@@ -37,6 +38,18 @@ class EbuildRepositoryTests(TempDirTestCase):
         'profiles/arch/foo',
         'profiles/desc',
         'profiles/updates',
+    ]
+    EXPECTED_MANIFESTS = [
+        'dev-foo/Manifest',
+        'dev-foo/bar/Manifest',
+        'eclass/Manifest',
+        'licenses/Manifest',
+        'metadata/Manifest',
+        'metadata/glsa/Manifest',
+        'metadata/md5-cache/Manifest',
+        'metadata/md5-cache/dev-foo/Manifest',
+        'metadata/news/Manifest',
+        'profiles/Manifest',
     ]
     EXPECTED_TYPES = {
         'header.txt': 'DATA',
@@ -102,6 +115,9 @@ class EbuildRepositoryTests(TempDirTestCase):
                     m.find_path_entry(f).tag,
                     expt,
                     "type mismatch for {}".format(f))
+        for f in self.EXPECTED_MANIFESTS:
+            self.assertEqual(m.find_path_entry(f).tag, 'MANIFEST',
+                    "type mismatch for {}".format(f))
         return m
 
 class BackwardsCompatEbuildRepositoryTests(EbuildRepositoryTests):
@@ -114,9 +130,6 @@ class BackwardsCompatEbuildRepositoryTests(EbuildRepositoryTests):
             'dev-foo/bar/metadata.xml': 'MISC',
             'dev-foo/bar/files/test.patch': 'AUX',
         })
-        # TODO: this is only temporary until we have API to create
-        # the Manifest at this level automatically
-        self.FILES['dev-foo/bar/Manifest'] = u''
         super(BackwardsCompatEbuildRepositoryTests, self).__init__(
                 *args, **kwargs)
 

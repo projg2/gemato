@@ -816,6 +816,9 @@ class ManifestRecursiveLoader(object):
                     manifest_stack[-1][1]):
                 manifest_stack.pop()
 
+            want_manifest = self.profile.want_manifest_in_directory(
+                    relpath, dirnames, filenames)
+
             skip_dirs = []
             for d in dirnames:
                 # skip dotfiles
@@ -883,6 +886,8 @@ class ManifestRecursiveLoader(object):
                     fe = gemato.manifest.new_manifest_entry(ftype,
                             fpath, 0, {})
                     new_entries.append(fe)
+                    if relpath in self.updated_manifests:
+                        continue
 
                 changed = gemato.verify.update_entry_for_path(
                     os.path.join(dirpath, f),
@@ -891,6 +896,15 @@ class ManifestRecursiveLoader(object):
                     expected_dev=self.manifest_device)
                 if changed and mpath is not None:
                     self.updated_manifests.add(mpath)
+
+            # do we have Manifest in this directory?
+            if want_manifest and manifest_stack[-1][1] != relpath:
+                mpath = os.path.join(relpath, 'Manifest')
+                m = self.create_manifest(mpath)
+                manifest_stack.append((mpath, relpath, m))
+                fe = gemato.manifest.ManifestEntryMANIFEST(
+                        mpath, 0, {})
+                new_entries.append(fe)
 
             if new_entries:
                 mpath, mdirpath, m = manifest_stack[-1]
