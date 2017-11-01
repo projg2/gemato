@@ -13,6 +13,7 @@ import os.path
 import timeit
 
 import gemato.find_top_level
+import gemato.profile
 import gemato.recursiveloader
 
 
@@ -103,6 +104,9 @@ def do_update(args, argp):
             save_kwargs['force'] = True
         if args.openpgp_id is not None:
             init_kwargs['openpgp_keyid'] = args.openpgp_id
+        if args.profile is not None:
+            init_kwargs['profile'] = gemato.profile.get_profile_by_name(
+                    args.profile)
         if args.sign is not None:
             init_kwargs['sign_openpgp'] = args.sign
         with gemato.openpgp.OpenPGPEnvironment() as env:
@@ -162,6 +166,9 @@ def do_create(args, argp):
             save_kwargs['force'] = True
         if args.openpgp_id is not None:
             init_kwargs['openpgp_keyid'] = args.openpgp_id
+        if args.profile is not None:
+            init_kwargs['profile'] = gemato.profile.get_profile_by_name(
+                    args.profile)
         if args.sign is not None:
             init_kwargs['sign_openpgp'] = args.sign
         with gemato.openpgp.OpenPGPEnvironment() as env:
@@ -241,6 +248,8 @@ def main(argv):
             help='Use the specified OpenPGP key (by ID or user)')
     update.add_argument('-K', '--openpgp-key',
             help='Use only the OpenPGP key(s) from a specific file')
+    update.add_argument('-p', '--profile',
+            help='Use the specified profile ("default", "ebuild", "old-ebuild"...)')
     signgroup = update.add_mutually_exclusive_group()
     signgroup.add_argument('-s', '--sign', action='store_true',
             default=None,
@@ -266,6 +275,8 @@ def main(argv):
             help='Use the specified OpenPGP key (by ID or user)')
     create.add_argument('-K', '--openpgp-key',
             help='Use only the OpenPGP key(s) from a specific file')
+    create.add_argument('-p', '--profile',
+            help='Use the specified profile ("default", "ebuild", "old-ebuild"...)')
     signgroup = create.add_mutually_exclusive_group()
     signgroup.add_argument('-s', '--sign', action='store_true',
             default=None,

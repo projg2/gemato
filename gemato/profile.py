@@ -77,3 +77,14 @@ class BackwardsCompatEbuildRepositoryProfile(EbuildRepositoryProfile):
 
         return (super(BackwardsCompatEbuildRepositoryProfile, self)
                 .get_entry_type_for_path(path))
+
+
+PROFILE_MAPPING = {
+    'default': DefaultProfile,
+    'ebuild': EbuildRepositoryProfile,
+    'old-ebuild': BackwardsCompatEbuildRepositoryProfile,
+}
+
+
+def get_profile_by_name(name):
+    return PROFILE_MAPPING[name]()
