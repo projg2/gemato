@@ -790,7 +790,7 @@ class ManifestRecursiveLoader(object):
         manifest_stack = []
         for mpath, mrpath, m in (self
                 ._iter_manifests_for_path(path)):
-            manifest_stack.append(mpath)
+            manifest_stack.append((mpath, mrpath, m))
             break
 
         it = os.walk(os.path.join(self.root_directory, path),
@@ -805,7 +805,7 @@ class ManifestRecursiveLoader(object):
 
             # drop Manifest paths until we get to a common directory
             while not gemato.util.path_starts_with(relpath,
-                    os.path.dirname(manifest_stack[-1])):
+                    manifest_stack[-1][1]):
                 manifest_stack.pop()
 
             skip_dirs = []
@@ -851,7 +851,8 @@ class ManifestRecursiveLoader(object):
                     if fe.tag in ('IGNORE', 'OPTIONAL'):
                         continue
                     if fe.tag == 'MANIFEST':
-                        manifest_stack.append(fpath)
+                        manifest_stack.append((fpath, relpath,
+                            self.loaded_manifests[fpath]))
                 else:
                     # skip top-level Manifest, we obviously can't have
                     # an entry for it
@@ -859,7 +860,8 @@ class ManifestRecursiveLoader(object):
                         continue
                     if fpath in new_manifests:
                         cls = gemato.manifest.ManifestEntryMANIFEST
-                        manifest_stack.append(fpath)
+                        manifest_stack.append((fpath, relpath,
+                            self.loaded_manifests[fpath]))
                     else:
                         cls = gemato.manifest.ManifestEntryDATA
 
@@ -876,9 +878,7 @@ class ManifestRecursiveLoader(object):
                     self.updated_manifests.add(mpath)
 
             if new_entries:
-                mpath = manifest_stack[-1]
-                m = self.loaded_manifests[mpath]
-                mdirpath = os.path.dirname(mpath)
+                mpath, mdirpath, m = manifest_stack[-1]
                 for fe in new_entries:
                     if fe.tag == 'MANIFEST':
                         # Manifest needs to go level up
@@ -888,9 +888,7 @@ class ManifestRecursiveLoader(object):
                         i = -1
                         while mmdirpath == os.path.dirname(fe.path):
                             i -= 1
-                            mmpath = manifest_stack[i]
-                            mm = self.loaded_manifests[mmpath]
-                            mmdirpath = os.path.dirname(mmpath)
+                            mmpath, mmdirpath, mm = manifest_stack[i]
 
                         fe.path = os.path.relpath(fe.path, mmdirpath)
                         mm.entries.append(fe)
