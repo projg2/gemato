@@ -859,6 +859,11 @@ class ManifestRecursiveLoader(object):
                     if fe.tag == 'MANIFEST':
                         manifest_stack.append((fpath, relpath,
                             self.loaded_manifests[fpath]))
+                        # do not update the Manifest entry if
+                        # the relevant Manifest is going to be updated
+                        # anyway
+                        if relpath in self.updated_manifests:
+                            continue
                 else:
                     # skip top-level Manifest, we obviously can't have
                     # an entry for it
