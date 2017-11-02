@@ -42,6 +42,19 @@ class DefaultProfile(object):
         """
         return False
 
+    def want_compressed_manifest(self, relpath, manifest, unc_size,
+            compress_watermark):
+        """
+        Determine whether the specified Manifest (at @relpath) can
+        be compressed. @manifest is the Manifest instance. @unc_size
+        specified the uncompressed data size, and @compress_watermark
+        is the watermark value at the time of invocation.
+
+        Should return True to compress Manifest, False to uncompress it
+        or None to leave as-is.
+        """
+        return unc_size >= compress_watermark
+
 
 class EbuildRepositoryProfile(DefaultProfile):
     """

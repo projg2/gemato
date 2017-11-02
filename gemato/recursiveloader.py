@@ -542,9 +542,10 @@ class ManifestRecursiveLoader(object):
                     compr = (gemato.compression
                             .get_compressed_suffix_from_filename(mpath))
                     is_compr = compr is not None
-                    is_large = unc_size >= compress_watermark
-                    if is_compr != is_large:
-                        if is_large:
+                    want_compr = self.profile.want_compressed_manifest(
+                            mpath, m, unc_size, compress_watermark)
+                    if want_compr is not None and is_compr != want_compr:
+                        if want_compr:
                             # compress it!
                             new_mpath = mpath + '.' + compress_format
                         else:
