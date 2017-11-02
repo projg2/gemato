@@ -92,6 +92,7 @@ def do_update(args, argp):
 
         init_kwargs = {}
         save_kwargs = {}
+        update_kwargs = {}
         if args.hashes is not None:
             init_kwargs['hashes'] = args.hashes.split()
         if args.compress_watermark is not None:
@@ -135,10 +136,17 @@ def do_update(args, argp):
                 relpath = ''
             if args.timestamp and relpath != '':
                 argp.error('Timestamp can only be updated if doing full-tree update')
+            if args.incremental:
+                if relpath != '':
+                    argp.error('Incremental works only for full-tree update')
+                last_ts = m.find_timestamp()
+                if last_ts is None:
+                    argp.error('Incremental specified but no timestamp in Manifest')
+                update_kwargs['last_mtime'] = last_ts.ts.timestamp()
 
             try:
                 start_ts = datetime.datetime.utcnow()
-                m.update_entries_for_directory(relpath)
+                m.update_entries_for_directory(relpath, **update_kwargs)
 
                 # write TIMESTAMP if requested, or if already there
                 if relpath != '':
@@ -264,6 +272,8 @@ def main(argv):
             help='Force rewriting all the Manifests, even if they did not change')
     update.add_argument('-H', '--hashes',
             help='Whitespace-separated list of hashes to use')
+    update.add_argument('-i', '--incremental', action='store_true',
+            help='Perform incremental update by comparing mtimes against TIMESTAMP')
     update.add_argument('-k', '--openpgp-id',
             help='Use the specified OpenPGP key (by ID or user)')
     update.add_argument('-K', '--openpgp-key',
