@@ -121,6 +121,17 @@ class BackwardsCompatEbuildRepositoryProfile(EbuildRepositoryProfile):
         return (super(BackwardsCompatEbuildRepositoryProfile, self)
                 .get_entry_type_for_path(path))
 
+    def want_compressed_manifest(self, relpath, manifest, unc_size,
+            compress_watermark):
+        for e in manifest.entries:
+            # disable compression in package directories
+            if e.tag == 'EBUILD':
+                return False
+
+        return (super(BackwardsCompatEbuildRepositoryProfile, self)
+                .want_compressed_manifest(relpath, manifest, unc_size,
+                    compress_watermark))
+
 
 PROFILE_MAPPING = {
     'default': DefaultProfile,

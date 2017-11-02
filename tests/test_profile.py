@@ -153,3 +153,28 @@ class BackwardsCompatEbuildRepositoryTests(EbuildRepositoryTests):
         self.assertEqual(
                 m.find_path_entry('dev-foo/bar/files/test.patch').aux_path,
                 'test.patch')
+
+    def test_compression(self):
+        """
+        Test that package directory Manifests are not compressed.
+        """
+
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                os.path.join(self.dir, 'Manifest'),
+                hashes=['SHA256', 'SHA512'],
+                compress_watermark=0,
+                allow_create=True,
+                profile=self.PROFILE())
+        m.update_entries_for_directory('')
+        m.save_manifests()
+
+        for mpath in self.EXPECTED_MANIFESTS:
+            # package manifest should be left uncompressed
+            if mpath == 'dev-foo/bar/Manifest':
+                self.assertTrue(os.path.exists(os.path.join(
+                    self.dir, mpath)))
+            else:
+                self.assertTrue(os.path.exists(os.path.join(
+                    self.dir, mpath + '.gz')))
+                self.assertFalse(os.path.exists(os.path.join(
+                    self.dir, mpath)))
