@@ -93,7 +93,6 @@ def do_update(args, argp):
         init_kwargs = {}
         save_kwargs = {}
         init_kwargs['hashes'] = args.hashes.split()
-        init_kwargs['sort'] = True
         if args.compress_watermark is not None:
             if args.compress_watermark < 0:
                 argp.error('--compress-watermark must not be negative!')
@@ -155,7 +154,6 @@ def do_create(args, argp):
         save_kwargs = {}
         init_kwargs['allow_create'] = True
         init_kwargs['hashes'] = args.hashes.split()
-        init_kwargs['sort'] = True
         if args.compress_watermark is not None:
             if args.compress_watermark < 0:
                 argp.error('--compress-watermark must not be negative!')
