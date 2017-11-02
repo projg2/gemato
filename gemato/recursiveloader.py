@@ -98,6 +98,8 @@ class ManifestRecursiveLoader(object):
         self.compress_watermark = compress_watermark
         self.compress_format = compress_format
 
+        self.profile.set_loader_options(self)
+
         if self.verify_openpgp is None:
             self.verify_openpgp = True
         if self.sort is None:

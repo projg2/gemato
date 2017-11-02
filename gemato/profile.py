@@ -13,6 +13,14 @@ class DefaultProfile(object):
     correct behavior for a given use case.
     """
 
+    def set_loader_options(self, loader):
+        """
+        Alter loader @loader with profile-specific options. This
+        is called after applying the user-specified options, so it
+        should check them for None if overwriting is not desired.
+        """
+        pass
+
     def get_entry_type_for_path(self, path):
         """
         Get Manifest entry type appropriate for the specified path.
@@ -67,6 +75,18 @@ class EbuildRepositoryProfile(DefaultProfile):
             if spl[0:2] == ['metadata', 'md5-cache']:
                 return True
         return False
+
+    def set_loader_options(self, loader):
+        if loader.hashes is None:
+            # layout.conf as of 2017-11-02
+            loader.hashes = ['SHA256', 'SHA512', 'WHIRLPOOL']
+        if loader.sort is None:
+            loader.sort = True
+        if loader.compress_watermark is None:
+            # GLEP 61 suggested value
+            loader.compress_watermark = 32768
+        if loader.compress_format is None:
+            loader.compress_format = 'gz'
 
 
 class BackwardsCompatEbuildRepositoryProfile(EbuildRepositoryProfile):

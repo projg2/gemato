@@ -120,6 +120,17 @@ class EbuildRepositoryTests(TempDirTestCase):
                     "type mismatch for {}".format(f))
         return m
 
+    def test_set_loader_options(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                os.path.join(self.dir, 'Manifest'),
+                profile=self.PROFILE(),
+                allow_create=True)
+        self.assertIsNotNone(m.hashes)
+        self.assertTrue(m.sort)
+        self.assertIsNotNone(m.compress_watermark)
+        self.assertIsNotNone(m.compress_format)
+
+
 class BackwardsCompatEbuildRepositoryTests(EbuildRepositoryTests):
     PROFILE = gemato.profile.BackwardsCompatEbuildRepositoryProfile
 
