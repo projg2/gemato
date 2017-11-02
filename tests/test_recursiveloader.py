@@ -959,6 +959,18 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertEqual(m.find_timestamp().ts,
                 datetime.datetime(2010, 7, 7, 7, 7, 7))
 
+    def test_cli_update_with_timestamp(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'update',
+                    '--hashes=SHA256 SHA512',
+                    '--timestamp',
+                    self.dir]),
+                0)
+
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertIsNotNone(m.find_timestamp())
+
 
 class DuplicateManifestFileEntryTest(TempDirTestCase):
     """

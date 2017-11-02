@@ -133,12 +133,23 @@ def do_update(args, argp):
             relpath = os.path.relpath(p, os.path.dirname(tlm))
             if relpath == '.':
                 relpath = ''
+            if args.timestamp and relpath != '':
+                argp.error('Timestamp can only be updated if doing full-tree update')
+
             try:
+                start_ts = datetime.datetime.utcnow()
                 m.update_entries_for_directory(relpath)
 
-                ts = m.find_timestamp()
-                if ts is not None:
-                    ts.ts = datetime.datetime.utcnow()
+                # write TIMESTAMP if requested, or if already there
+                if relpath != '':
+                    # skip timestamp if not doing full update
+                    pass
+                elif args.timestamp:
+                    m.set_timestamp(start_ts)
+                else:
+                    ts = m.find_timestamp()
+                    if ts is not None:
+                        ts.ts = start_ts
 
                 m.save_manifests(**save_kwargs)
             except gemato.exceptions.ManifestCrossDevice as e:
@@ -197,11 +208,12 @@ def do_create(args, argp):
                 argp.error('--hashes must be specified if not implied by --profile')
 
             try:
+                start_ts = datetime.datetime.utcnow()
                 m.update_entries_for_directory()
 
-                ts = m.find_timestamp()
-                if ts is not None:
-                    ts.ts = datetime.datetime.utcnow()
+                # write TIMESTAMP if requested, or if already there
+                if args.timestamp:
+                    m.set_timestamp(start_ts)
 
                 m.save_manifests(**save_kwargs)
             except gemato.exceptions.ManifestCrossDevice as e:
@@ -265,6 +277,8 @@ def main(argv):
     signgroup.add_argument('-S', '--no-sign', action='store_false',
             dest='sign',
             help='Disable signing the top-level Manifest')
+    update.add_argument('-t', '--timestamp', action='store_true',
+            help='Include TIMESTAMP entry in Manifest')
     update.set_defaults(func=do_update)
 
     create = subp.add_parser('create',
@@ -292,6 +306,8 @@ def main(argv):
     signgroup.add_argument('-S', '--no-sign', action='store_false',
             dest='sign',
             help='Disable signing the top-level Manifest')
+    create.add_argument('-t', '--timestamp', action='store_true',
+            help='Include TIMESTAMP entry in Manifest')
     create.set_defaults(func=do_create)
 
     vals = argp.parse_args(argv[1:])
