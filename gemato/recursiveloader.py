@@ -41,10 +41,10 @@ class ManifestRecursiveLoader(object):
     ]
 
     def __init__(self, top_manifest_path,
-            verify_openpgp=True, openpgp_env=None,
+            verify_openpgp=None, openpgp_env=None,
             sign_openpgp=None, openpgp_keyid=None,
-            hashes=None, allow_create=False, sort=False,
-            compress_watermark=None, compress_format='gz',
+            hashes=None, allow_create=False, sort=None,
+            compress_watermark=None, compress_format=None,
             profile=gemato.profile.DefaultProfile()):
         """
         Instantiate the loader for a Manifest tree starting at top-level
@@ -53,7 +53,7 @@ class ManifestRecursiveLoader(object):
         @verify_openpgp and @openpgp_env are passed down
         to ManifestFile. If the top-level Manifest is OpenPGP-signed
         and the verification succeeds, openpgp_signed property
-        is set to True.
+        is set to True. @verify_openpgp is True by default.
 
         @sign_openpgp is passed down to ManifestFile when writing
         the top-level Manifest. If it is True, the top-level Manifest
@@ -97,6 +97,13 @@ class ManifestRecursiveLoader(object):
         self.sort = sort
         self.compress_watermark = compress_watermark
         self.compress_format = compress_format
+
+        if self.verify_openpgp is None:
+            self.verify_openpgp = True
+        if self.sort is None:
+            self.sort = False
+        if self.compress_format is None:
+            self.compress_format = 'gz'
 
         self.loaded_manifests = {}
         self.updated_manifests = set()
