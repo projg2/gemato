@@ -362,9 +362,11 @@ class ManifestRecursiveLoader(object):
                     out[fullpath] = e
         return out
 
-    def _verify_one_file(self, path, relpath, e, fail_handler, warn_handler):
+    def _verify_one_file(self, path, relpath, e, fail_handler,
+            warn_handler, last_mtime):
         ret, diff = gemato.verify.verify_path(path, e,
-                expected_dev=self.manifest_device)
+                expected_dev=self.manifest_device,
+                last_mtime=last_mtime)
 
         if not ret:
             if e is not None and e.tag in ('MISC', 'OPTIONAL'):
@@ -380,7 +382,7 @@ class ManifestRecursiveLoader(object):
 
     def assert_directory_verifies(self, path='',
             fail_handler=gemato.util.throw_exception,
-            warn_handler=None):
+            warn_handler=None, last_mtime=None):
         """
         Verify the complete directory tree starting at @path (relative
         to top Manifest directory). Includes testing for stray files.
@@ -400,6 +402,11 @@ class ManifestRecursiveLoader(object):
         If none of the handlers raise exceptions, the function returns
         boolean. It returns False if at least one of the handler calls
         returned explicit False; True otherwise.
+
+        If @last_mtime is not None, then only files whose mtime is newer
+        than that value (in st_mtime format) will be checked. Use this
+        option *only* if mtimes can not be manipulated (i.e. do not use
+        it with 'rsync --times')!
         """
 
         manifest_filenames = (gemato.compression
@@ -440,7 +447,7 @@ class ManifestRecursiveLoader(object):
                     skip_dirs.append(d)
                 else:
                     ret &= self._verify_one_file(os.path.join(dirpath, d),
-                            dpath, de, fail_handler, warn_handler)
+                            dpath, de, fail_handler, warn_handler, last_mtime)
 
             # skip scanning ignored directories
             for d in skip_dirs:
@@ -458,13 +465,13 @@ class ManifestRecursiveLoader(object):
                     continue
                 fe = entry_dict.pop(fpath, None)
                 ret &= self._verify_one_file(os.path.join(dirpath, f),
-                        fpath, fe, fail_handler, warn_handler)
+                        fpath, fe, fail_handler, warn_handler, last_mtime)
 
         # check for missing files
         for relpath, e in entry_dict.items():
             syspath = os.path.join(self.root_directory, relpath)
             ret &= self._verify_one_file(syspath, relpath, e,
-                            fail_handler, warn_handler)
+                            fail_handler, warn_handler, last_mtime)
 
         return ret
 

@@ -2731,3 +2731,28 @@ DATA c 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             e.path for e in m.loaded_manifests['a/Manifest'].entries),
             ['c'])
         m.assert_directory_verifies()
+
+
+class ManifestMTimeTests(TempDirTestCase):
+    """
+    Tests for mtime-limited verification/update.
+    """
+
+    FILES = {
+        'Manifest': u'''
+DATA test 11 MD5 5f8db599de986fab7a21625b7916589c
+''',
+        'test': u'test string',
+    }
+
+    def test_assert_directory_verifies_old_mtime(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
+                m.assert_directory_verifies, '', last_mtime=0)
+
+    def test_assert_directory_verifies_new_mtime(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        st = os.stat(os.path.join(self.dir, 'test'))
+        m.assert_directory_verifies('', last_mtime=st.st_mtime)
