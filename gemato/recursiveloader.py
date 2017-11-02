@@ -35,6 +35,7 @@ class ManifestRecursiveLoader(object):
         'compress_format',
         'profile',
         # internal variables
+        'top_level_manifest_filename',
         'loaded_manifests',
         'updated_manifests',
         'manifest_device'
@@ -107,11 +108,13 @@ class ManifestRecursiveLoader(object):
         if self.compress_format is None:
             self.compress_format = 'gz'
 
+        self.top_level_manifest_filename = os.path.basename(
+                top_manifest_path)
         self.loaded_manifests = {}
         self.updated_manifests = set()
 
         # TODO: allow catching OpenPGP exceptions somehow?
-        m = self.load_manifest(os.path.basename(top_manifest_path),
+        m = self.load_manifest(self.top_level_manifest_filename,
                 allow_create=allow_create)
         self.openpgp_signed = m.openpgp_signed
 
@@ -169,8 +172,7 @@ class ManifestRecursiveLoader(object):
         path = os.path.join(self.root_directory, relpath)
 
         # is it top-level Manifest?
-        if relpath in (gemato.compression
-                .get_potential_compressed_names('Manifest')):
+        if relpath == self.top_level_manifest_filename:
             sign = self.sign_openpgp
         else:
             sign = False
@@ -409,9 +411,6 @@ class ManifestRecursiveLoader(object):
         it with 'rsync --times')!
         """
 
-        manifest_filenames = (gemato.compression
-                .get_potential_compressed_names('Manifest'))
-
         entry_dict = self.get_file_entry_dict(path)
         it = os.walk(os.path.join(self.root_directory, path),
                 onerror=gemato.util.throw_exception,
@@ -461,7 +460,7 @@ class ManifestRecursiveLoader(object):
                 fpath = os.path.join(relpath, f)
                 # skip top-level Manifest, we obviously can't have
                 # an entry for it
-                if fpath in manifest_filenames:
+                if fpath == self.top_level_manifest_filename:
                     continue
                 fe = entry_dict.pop(fpath, None)
                 ret &= self._verify_one_file(os.path.join(dirpath, f),
@@ -568,13 +567,15 @@ class ManifestRecursiveLoader(object):
                             mpath))
                         renamed_manifests[mpath] = new_mpath
 
+                        if mpath == self.top_level_manifest_filename:
+                            self.top_level_manifest_filename = new_mpath
+
         # now, discard all the Manifests whose entries we've updated
         self.updated_manifests -= fixed_manifests
         # ...and those which we renamed
         self.updated_manifests -= set(renamed_manifests.keys())
         # ...and top-level Manifest which has no entries
-        self.updated_manifests -= set(gemato.compression
-                .get_potential_compressed_names('Manifest'))
+        self.updated_manifests.discard(self.top_level_manifest_filename)
         # at this point, the list should be empty
         assert not self.updated_manifests, (
                 "Unlinked but updated Manifests: {}".format(
