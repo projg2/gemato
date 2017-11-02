@@ -26,7 +26,8 @@ def get_file_metadata(path, hashes):
        exists.
     4. st_size, if the file exists and is a regular file. Note that
        it may be 0 on some filesystems, so treat the value with caution.
-    5. A dict of @hashes and their values, if the file exists and is
+    5. st_mtime, if the file exists and is a regular file.
+    6. A dict of @hashes and their values, if the file exists and is
        a regular file. Special __size__ member is added unconditionally.
 
     Note that the generator acquires resources, and does not release
@@ -91,6 +92,9 @@ def get_file_metadata(path, hashes):
 
         # 4. st_size
         yield st.st_size
+
+        # 5. st_mtime
+        yield st.st_mtime
 
         f = io.open(fd, 'rb')
     except:
@@ -179,14 +183,17 @@ def verify_path(path, e, expected_dev=None):
         if st_size != 0 and st_size != e.size:
             return (False, [('__size__', e.size, st_size)])
 
-        # 5. verify the real size from checksum data
+        # 5. skip st_mtime for now
+        st_mtime = next(g)
+
+        # 6. verify the real size from checksum data
         checksums = next(g)
         diff = []
         size = checksums.pop('__size__')
         if size != e.size:
             diff.append(('__size__', e.size, size))
 
-        # 6. verify the checksums
+        # 7. verify the checksums
         for h in sorted(e.checksums):
             exp = e.checksums[h]
             got = checksums[h]
@@ -244,7 +251,10 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None):
         # 4. get the apparent file size
         st_size = next(g)
 
-        # 5. get the checksums and real size
+        # 5. skip st_mtime for now
+        st_mtime = next(g)
+
+        # 6. get the checksums and real size
         checksums = next(g)
         size = checksums.pop('__size__')
         if st_size != 0:

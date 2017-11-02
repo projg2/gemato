@@ -244,7 +244,7 @@ class EmptyFileVerificationTest(unittest.TestCase):
         self.assertEqual(list(gemato.verify.get_file_metadata(
             self.path, hashes=['MD5', 'SHA1'])),
             [True, st.st_dev, (stat.S_IFREG, 'regular file'),
-                0, {
+                0, st.st_mtime, {
                     'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
                     'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
                     '__size__': 0,
@@ -448,7 +448,7 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
         self.assertEqual(list(gemato.verify.get_file_metadata(
             self.path, hashes=['MD5', 'SHA1'])),
             [True, st.st_dev, (stat.S_IFREG, 'regular file'),
-                st.st_size, {
+                st.st_size, st.st_mtime, {
                     'MD5': '9e107d9d372bb6826bd81d3542a419d6',
                     'SHA1': '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12',
                     '__size__': 43,
@@ -628,7 +628,7 @@ class ProcFileVerificationTest(unittest.TestCase):
         self.assertEqual(list(gemato.verify.get_file_metadata(
             self.path, hashes=['MD5', 'SHA1'])),
             [True, st.st_dev, (stat.S_IFREG, 'regular file'),
-                st.st_size, {
+                st.st_size, st.st_mtime, {
                     'MD5': self.md5,
                     'SHA1': self.sha1,
                     '__size__': self.size,
