@@ -255,6 +255,22 @@ class ManifestRecursiveLoader(object):
                     return e
         return None
 
+    def set_timestamp(self, ts):
+        """
+        Set Manifest timestamp to @ts.
+
+        If the Manifest already contains a TIMESTAMP entry, it will
+        be updated. Otherwise, a new entry will be created.
+        """
+
+        e = self.find_timestamp()
+        if e is not None:
+            e.ts = ts
+        else:
+            m = self.loaded_manifests[self.top_level_manifest_filename]
+            e = gemato.manifest.ManifestEntryTIMESTAMP(ts)
+            m.entries.append(e)
+
     def find_path_entry(self, path):
         """
         Find a matching entry for path @path and return it. Returns

@@ -112,6 +112,17 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertEqual(m.find_timestamp().ts,
                 datetime.datetime(2017, 1, 1, 1, 1, 1))
 
+    def test_set_timestamp(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.set_timestamp(datetime.datetime(2010, 7, 7, 7, 7, 7))
+        self.assertEqual(m.find_timestamp().ts,
+                datetime.datetime(2010, 7, 7, 7, 7, 7))
+        self.assertEqual(
+                len([x for x in m.loaded_manifests['Manifest'].entries
+                             if x.tag == 'TIMESTAMP']),
+                1)
+
     def test_find_path_entry(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -939,6 +950,14 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest.gz')))
         self.assertTrue(os.path.exists(
             os.path.join(self.dir, 'Manifest')))
+
+    def test_set_timestamp(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertIsNone(m.find_timestamp())
+        m.set_timestamp(datetime.datetime(2010, 7, 7, 7, 7, 7))
+        self.assertEqual(m.find_timestamp().ts,
+                datetime.datetime(2010, 7, 7, 7, 7, 7))
 
 
 class DuplicateManifestFileEntryTest(TempDirTestCase):
