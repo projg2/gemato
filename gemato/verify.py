@@ -120,7 +120,7 @@ def get_file_metadata(path, hashes):
         yield ret
 
 
-def verify_path(path, e, expected_dev=None):
+def verify_path(path, e, expected_dev=None, last_mtime=None):
     """
     Verify the file at system path @path against the data in entry @e.
     The path/filename is not matched against the entry -- the correct
@@ -135,6 +135,10 @@ def verify_path(path, e, expected_dev=None):
     on specified device. If the device does not match, raises
     ManifestCrossDevice exception. It can be used to verify that
     the files do not cross filesystem boundaries.
+
+    If @last_mtime is not None, it specifies the timestamp corresponding
+    to the previous file verification. If the file is not newer
+    than that, the checksum verification is skipped.
 
     Each name can be:
     - __exists__ (boolean) to indicate whether the file existed,
@@ -183,8 +187,12 @@ def verify_path(path, e, expected_dev=None):
         if st_size != 0 and st_size != e.size:
             return (False, [('__size__', e.size, st_size)])
 
-        # 5. skip st_mtime for now
+        # 5. skip checksums if file has not changed since the last time
+        #    (and st_size != 0 since we can't trust weird filesystems)
         st_mtime = next(g)
+        if (last_mtime is not None and st_mtime <= last_mtime
+                and st_size != 0):
+            return (True, [])
 
         # 6. verify the real size from checksum data
         checksums = next(g)
@@ -206,7 +214,8 @@ def verify_path(path, e, expected_dev=None):
     return (True, [])
 
 
-def update_entry_for_path(path, e, hashes=None, expected_dev=None):
+def update_entry_for_path(path, e, hashes=None, expected_dev=None,
+        last_mtime=None):
     """
     Update the data in entry @e to match the current state of file
     at path @path. Uses hashes listed in @hashes (using Manifest names),
@@ -223,6 +232,10 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None):
     on specified device. If the device does not match, raises
     ManifestCrossDevice exception. It can be used to verify that
     the files do not cross filesystem boundaries.
+
+    If @last_mtime is not None, it specifies the timestamp corresponding
+    to the previous file update. If the file is not newer than that,
+    the checksum calculation is skipped.
     """
 
     assert e.tag not in ('IGNORE', 'OPTIONAL', 'TIMESTAMP')
@@ -251,8 +264,12 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None):
         # 4. get the apparent file size
         st_size = next(g)
 
-        # 5. skip st_mtime for now
+        # 5. skip checksums if file has not changed since the last time
+        #    (and st_size makes sense)
         st_mtime = next(g)
+        if (last_mtime is not None and st_mtime <= last_mtime
+                and st_size != 0 and st_size == e.size):
+            return False
 
         # 6. get the checksums and real size
         checksums = next(g)

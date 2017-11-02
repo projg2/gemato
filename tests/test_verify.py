@@ -430,6 +430,67 @@ class EmptyFileVerificationTest(unittest.TestCase):
         self.assertEqual(e.size, 0)
         self.assertDictEqual(e.checksums, {})
 
+    def test_wrong_checksum_DATA_with_old_mtime(self):
+        """
+        Test whether the checksums are verified if last mtime is older
+        than the current one.
+        """
+        e = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', os.path.basename(self.path), '0',
+                    'MD5', '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1', 'da39a3ee5e6b4b0d3255bfef95601890afd80709'))
+        self.assertEqual(
+                gemato.verify.verify_path(self.path, e,
+                    last_mtime=0),
+                (False, [('MD5', '9e107d9d372bb6826bd81d3542a419d6', 'd41d8cd98f00b204e9800998ecf8427e')]))
+
+    def test_wrong_checksum_DATA_with_new_mtime(self):
+        """
+        Test whether the checksums are verified if last mtime indicates
+        that the file did not change (with st_size == 0).
+        """
+        e = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', os.path.basename(self.path), '0',
+                    'MD5', '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1', 'da39a3ee5e6b4b0d3255bfef95601890afd80709'))
+        st = os.stat(self.path)
+        self.assertEqual(
+                gemato.verify.verify_path(self.path, e,
+                    last_mtime=st.st_mtime),
+                (False, [('MD5', '9e107d9d372bb6826bd81d3542a419d6', 'd41d8cd98f00b204e9800998ecf8427e')]))
+
+    def test_update_with_hashes_and_old_mtime(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {
+                    'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                })
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e,
+                    ['MD5', 'SHA1'], last_mtime=0))
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 0)
+        self.assertDictEqual(e.checksums, {
+                'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
+                'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+            })
+
+    def test_update_with_hashes_and_new_mtime(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {
+                    'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                })
+        st = os.stat(self.path)
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e,
+                    ['MD5', 'SHA1'], last_mtime=st.st_mtime))
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 0)
+        self.assertDictEqual(e.checksums, {
+                'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
+                'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+            })
 
 
 class NonEmptyFileVerificationTest(unittest.TestCase):
@@ -542,6 +603,100 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
                 os.path.basename(self.path), 0, {'MD5': '', 'SHA1': ''})
         self.assertTrue(
                 gemato.verify.update_entry_for_path(self.path, e))
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 43)
+        self.assertDictEqual(e.checksums, {
+                'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                'SHA1': '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12',
+            })
+
+    def test_wrong_checksum_DATA_with_old_mtime(self):
+        """
+        Test whether the checksums are verified if last mtime is older
+        than the current one.
+        """
+        e = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', os.path.basename(self.path), '43',
+                    'MD5', '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1', 'da39a3ee5e6b4b0d3255bfef95601890afd80709'))
+        self.assertEqual(
+                gemato.verify.verify_path(self.path, e,
+                    last_mtime=0),
+                (False, [('SHA1', 'da39a3ee5e6b4b0d3255bfef95601890afd80709', '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12')]))
+
+    def test_wrong_checksum_DATA_with_new_mtime(self):
+        """
+        Test whether the checksums are verified if last mtime indicates
+        that the file did not change.
+        """
+        e = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', os.path.basename(self.path), '43',
+                    'MD5', '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1', 'da39a3ee5e6b4b0d3255bfef95601890afd80709'))
+        st = os.stat(self.path)
+        self.assertEqual(
+                gemato.verify.verify_path(self.path, e,
+                    last_mtime=st.st_mtime),
+                (True, []))
+
+    def test_wrong_checksum_DATA_with_new_mtime_and_wrong_size(self):
+        """
+        Test whether the checksums are verified if last mtime indicates
+        that the file did not change but size is different.
+        """
+        e = gemato.manifest.ManifestEntryDATA.from_list(
+                ('DATA', os.path.basename(self.path), '33',
+                    'MD5', '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1', 'da39a3ee5e6b4b0d3255bfef95601890afd80709'))
+        st = os.stat(self.path)
+        self.assertEqual(
+                gemato.verify.verify_path(self.path, e,
+                    last_mtime=st.st_mtime),
+                (False, [('__size__', 33, 43)]))
+
+    def test_update_with_hashes_and_old_mtime(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 0, {
+                    'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                })
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e,
+                    ['MD5', 'SHA1'], last_mtime=0))
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 43)
+        self.assertDictEqual(e.checksums, {
+                'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                'SHA1': '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12',
+            })
+
+    def test_update_with_hashes_and_new_mtime(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 43, {
+                    'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                })
+        st = os.stat(self.path)
+        self.assertFalse(
+                gemato.verify.update_entry_for_path(self.path, e,
+                    ['MD5', 'SHA1'], last_mtime=st.st_mtime))
+        self.assertEqual(e.path, os.path.basename(self.path))
+        self.assertEqual(e.size, 43)
+        self.assertDictEqual(e.checksums, {
+                'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+            })
+
+    def test_update_with_hashes_and_new_mtime_but_wrong_size(self):
+        e = gemato.manifest.ManifestEntryDATA(
+                os.path.basename(self.path), 33, {
+                    'MD5': '9e107d9d372bb6826bd81d3542a419d6',
+                    'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+                })
+        st = os.stat(self.path)
+        self.assertTrue(
+                gemato.verify.update_entry_for_path(self.path, e,
+                    ['MD5', 'SHA1'], last_mtime=st.st_mtime))
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, 43)
         self.assertDictEqual(e.checksums, {
