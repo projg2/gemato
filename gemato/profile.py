@@ -22,6 +22,16 @@ class DefaultProfile(object):
         return 'DATA'
 
     def want_manifest_in_directory(self, relpath, dirnames, filenames):
+        """
+        Determine whether a Manifest file is expected in the specified
+        directory. @relpath is the relative path to the directory,
+        @dirnames and @filenames list respectively all directories
+        and files directly underneath it.
+
+        Should return True if Manifest is expected, False otherwise.
+        If True is returned and the directory does not contain a single
+        file of Manifest type, a new one will be created as 'Manifest'.
+        """
         return False
 
 
