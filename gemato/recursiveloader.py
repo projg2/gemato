@@ -21,15 +21,30 @@ class ManifestRecursiveLoader(object):
     and provides methods to access the entries in them.
     """
 
-    __slots__ = ['root_directory', 'loaded_manifests', 'verify_openpgp',
-            'openpgp_env', 'sign_openpgp', 'openpgp_keyid', 'hashes',
-            'openpgp_signed', 'updated_manifests', 'manifest_device',
-            'profile']
+    __slots__ = [
+        # configuration properties
+        'root_directory',
+        'verify_openpgp',
+        'openpgp_env',
+        'sign_openpgp',
+        'openpgp_keyid',
+        'hashes',
+        'openpgp_signed',
+        'sort',
+        'compress_watermark',
+        'compress_format',
+        'profile',
+        # internal variables
+        'loaded_manifests',
+        'updated_manifests',
+        'manifest_device'
+    ]
 
     def __init__(self, top_manifest_path,
             verify_openpgp=True, openpgp_env=None,
             sign_openpgp=None, openpgp_keyid=None,
-            hashes=None, allow_create=False,
+            hashes=None, allow_create=False, sort=False,
+            compress_watermark=None, compress_format='gz',
             profile=gemato.profile.DefaultProfile()):
         """
         Instantiate the loader for a Manifest tree starting at top-level
@@ -57,6 +72,18 @@ class ManifestRecursiveLoader(object):
         a new Manifest tree will be initialized. Otherwise, opening
         a non-existing file will cause an exception.
 
+        If @sort is True, the Manifest entries will be sorted prior
+        to saving. By default they are not.
+
+        If @compress_watermark is not None, then the uncompressed
+        Manifest files whose size is larger than or equal to the value
+        will be compressed using @compress_format. The Manifest files
+        whose size is smaller will be uncompressed. To compress all
+        Manifest files, pass a size of 0.
+
+        If @compress_watermark is None, the compression is left as-is.
+        The default @compress_format is 'gz'.
+
         @profile can be used to provide the profile for the repository.
         """
 
@@ -67,6 +94,9 @@ class ManifestRecursiveLoader(object):
         self.openpgp_keyid = openpgp_keyid
         self.hashes = hashes
         self.profile = profile
+        self.sort = sort
+        self.compress_watermark = compress_watermark
+        self.compress_format = compress_format
 
         self.loaded_manifests = {}
         self.updated_manifests = set()
@@ -429,23 +459,25 @@ class ManifestRecursiveLoader(object):
 
         return ret
 
-    def save_manifests(self, hashes=None, force=False, sort=False,
-            compress_watermark=None, compress_format='gz'):
+    def save_manifests(self, hashes=None, force=False, sort=None,
+            compress_watermark=None, compress_format=None):
         """
         Save the Manifests modified since the last save_manifests()
         call.
 
-        @hashes specifies the requested hash set. If specified,
-        it overrides the hash set used in Manifest. If None, the set
-        specified in ManifestLoader constructor is used. If that one
-        is None as well, the routine reuses the existing hash set
-        in the entry.
+        @hashes, @sort, @compress_watermark and @compress_format
+        override the value specified in the constructor. If None,
+        the values from the constructor are used. If those were None
+        as well, the defaults are used.
+
+        @hashes specifies the requested hash set. The effective value
+        must be non-null since new entries can be created.
 
         If @force is True, all Manifests will be rewritten even
         if they were not modified.
 
         If @sort is True, the Manifest entries will be sorted prior
-        to saving.
+        to saving. By default they are not.
 
         If @compress_watermark is not None, then the uncompressed
         Manifest files whose size is larger than or equal to the value
@@ -458,6 +490,12 @@ class ManifestRecursiveLoader(object):
 
         if hashes is None:
             hashes = self.hashes
+        if sort is None:
+            sort = self.sort
+        if compress_watermark is None:
+            compress_watermark = self.compress_watermark
+        if compress_format is None:
+            compress_format = self.compress_format
         if force:
             self.load_manifests_for_path('', recursive=True)
 
@@ -548,14 +586,13 @@ class ManifestRecursiveLoader(object):
         If the path does not exist, all Manifest entries for it will
         be removed except for OPTIONAL entries.
 
-        @hashes specifies the requested hash set. If specified,
-        it overrides the hash set used in Manifest. If None, the set
-        specified in ManifestLoader constructor is used. If that one
-        is None as well, the routine reuses the existing hash set
-        in the entry.
+        @hashes override the value specified in the constructor.
+        If None, the values from the constructor are used. If those were
+        None as well, the defaults are used.
 
-        When creating a new entry, @hashes must be specified explicitly
-        either via the function or on construction.
+        @hashes specifies the requested hash set. If the effective value
+        is None, the routine reuses the existing hash set in the entry.
+        When creating a new entry, @hashes must be non-null.
         """
 
         had_entry = False
@@ -779,10 +816,12 @@ class ManifestRecursiveLoader(object):
         New entries are currently created with DATA type. This will
         be extended in the future.
 
-        @hashes specifies the requested hash set. If specified,
-        it overrides the hash set used in Manifest. If None, the set
-        specified in ManifestLoader constructor is used. Either
-        of the two hash sets must be specified.
+        @hashes override the value specified in the constructor.
+        If None, the values from the constructor are used. If those were
+        None as well, the defaults are used.
+
+        @hashes specifies the requested hash set. The effective value
+        must be non-null since new entries can be created.
         """
 
         if hashes is None:

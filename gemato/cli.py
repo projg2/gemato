@@ -91,15 +91,15 @@ def do_update(args, argp):
             return 1
 
         init_kwargs = {}
-        init_kwargs['hashes'] = args.hashes.split()
         save_kwargs = {}
-        save_kwargs['sort'] = True
+        init_kwargs['hashes'] = args.hashes.split()
+        init_kwargs['sort'] = True
         if args.compress_watermark is not None:
             if args.compress_watermark < 0:
                 argp.error('--compress-watermark must not be negative!')
-            save_kwargs['compress_watermark'] = args.compress_watermark
+            init_kwargs['compress_watermark'] = args.compress_watermark
         if args.compress_format is not None:
-            save_kwargs['compress_format'] = args.compress_format
+            init_kwargs['compress_format'] = args.compress_format
         if args.force_rewrite:
             save_kwargs['force'] = True
         if args.openpgp_id is not None:
@@ -152,16 +152,16 @@ def do_update(args, argp):
 def do_create(args, argp):
     for p in args.paths:
         init_kwargs = {}
+        save_kwargs = {}
         init_kwargs['allow_create'] = True
         init_kwargs['hashes'] = args.hashes.split()
-        save_kwargs = {}
-        save_kwargs['sort'] = True
+        init_kwargs['sort'] = True
         if args.compress_watermark is not None:
             if args.compress_watermark < 0:
                 argp.error('--compress-watermark must not be negative!')
-            save_kwargs['compress_watermark'] = args.compress_watermark
+            init_kwargs['compress_watermark'] = args.compress_watermark
         if args.compress_format is not None:
-            save_kwargs['compress_format'] = args.compress_format
+            init_kwargs['compress_format'] = args.compress_format
         if args.force_rewrite:
             save_kwargs['force'] = True
         if args.openpgp_id is not None:
