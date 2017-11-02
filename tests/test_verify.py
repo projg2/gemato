@@ -492,6 +492,16 @@ class EmptyFileVerificationTest(unittest.TestCase):
                 'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
             })
 
+    def test_None_with_mtime(self):
+        """
+        Test that mtime does not cause stray files to go unnoticed.
+        """
+        st = os.stat(self.path)
+        self.assertEqual(
+                gemato.verify.verify_path(self.path, None,
+                    last_mtime=st.st_mtime),
+                (False, [('__exists__', False, True)]))
+
 
 class NonEmptyFileVerificationTest(unittest.TestCase):
     def setUp(self):
@@ -703,6 +713,16 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
                 'MD5': '9e107d9d372bb6826bd81d3542a419d6',
                 'SHA1': '2fd4e1c67a2d28fced849ee1bb76e7391b93eb12',
             })
+
+    def test_None_with_mtime(self):
+        """
+        Test that mtime does not cause stray files to go unnoticed.
+        """
+        st = os.stat(self.path)
+        self.assertEqual(
+                gemato.verify.verify_path(self.path, None,
+                    last_mtime=st.st_mtime),
+                (False, [('__exists__', False, True)]))
 
 
 class SymbolicLinkVerificationTest(NonEmptyFileVerificationTest):
