@@ -92,7 +92,8 @@ def do_update(args, argp):
 
         init_kwargs = {}
         save_kwargs = {}
-        init_kwargs['hashes'] = args.hashes.split()
+        if args.hashes is not None:
+            init_kwargs['hashes'] = args.hashes.split()
         if args.compress_watermark is not None:
             if args.compress_watermark < 0:
                 argp.error('--compress-watermark must not be negative!')
@@ -125,6 +126,10 @@ def do_update(args, argp):
                 logging.error(str(e))
                 return 1
 
+            # if not specified by user, profile must set it
+            if m.hashes is None:
+                argp.error('--hashes must be specified if not implied by --profile')
+
             relpath = os.path.relpath(p, os.path.dirname(tlm))
             if relpath == '.':
                 relpath = ''
@@ -153,7 +158,8 @@ def do_create(args, argp):
         init_kwargs = {}
         save_kwargs = {}
         init_kwargs['allow_create'] = True
-        init_kwargs['hashes'] = args.hashes.split()
+        if args.hashes is not None:
+            init_kwargs['hashes'] = args.hashes.split()
         if args.compress_watermark is not None:
             if args.compress_watermark < 0:
                 argp.error('--compress-watermark must not be negative!')
@@ -185,6 +191,10 @@ def do_create(args, argp):
             except gemato.exceptions.OpenPGPVerificationFailure as e:
                 logging.error(str(e))
                 return 1
+
+            # if not specified by user, profile must set it
+            if m.hashes is None:
+                argp.error('--hashes must be specified if not implied by --profile')
 
             try:
                 m.update_entries_for_directory()
@@ -240,7 +250,7 @@ def main(argv):
             help='Format for compressed files (e.g. "gz", "bz2"...)')
     update.add_argument('-f', '--force-rewrite', action='store_true',
             help='Force rewriting all the Manifests, even if they did not change')
-    update.add_argument('-H', '--hashes', required=True,
+    update.add_argument('-H', '--hashes',
             help='Whitespace-separated list of hashes to use')
     update.add_argument('-k', '--openpgp-id',
             help='Use the specified OpenPGP key (by ID or user)')
@@ -267,7 +277,7 @@ def main(argv):
             help='Format for compressed files (e.g. "gz", "bz2"...)')
     create.add_argument('-f', '--force-rewrite', action='store_true',
             help='Force rewriting all the Manifests, even if they did not change')
-    create.add_argument('-H', '--hashes', required=True,
+    create.add_argument('-H', '--hashes',
             help='Whitespace-separated list of hashes to use')
     create.add_argument('-k', '--openpgp-id',
             help='Use the specified OpenPGP key (by ID or user)')
