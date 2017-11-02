@@ -590,6 +590,16 @@ OPTIONAL nonstray
         self.assertNotEqual(m.find_timestamp().ts,
                 datetime.datetime(2017, 1, 1, 1, 1, 1))
 
+    def test_compress_manifests_low_watermark(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.save_manifests(force=True, compress_watermark=0)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.dir, 'Manifest')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.dir, 'Manifest.gz')))
+
 
 class MultipleManifestTest(TempDirTestCase):
     DIRS = ['sub']

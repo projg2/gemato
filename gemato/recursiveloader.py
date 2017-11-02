@@ -516,11 +516,13 @@ class ManifestRecursiveLoader(object):
                 if e.tag != 'MANIFEST':
                     continue
 
-                if e.path in renamed_manifests:
-                    e.path = renamed_manifests[e.path]
                 fullpath = os.path.join(relpath, e.path)
                 if not force and fullpath not in self.updated_manifests:
+                    assert fullpath not in renamed_manifests
                     continue
+                if fullpath in renamed_manifests:
+                    fullpath = renamed_manifests[fullpath]
+                    e.path = os.path.relpath(fullpath, relpath)
 
                 gemato.verify.update_entry_for_path(
                     os.path.join(self.root_directory, fullpath),
