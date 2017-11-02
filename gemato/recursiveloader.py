@@ -824,7 +824,8 @@ class ManifestRecursiveLoader(object):
         return new_manifests
 
 
-    def update_entries_for_directory(self, path='', hashes=None):
+    def update_entries_for_directory(self, path='', hashes=None,
+            last_mtime=None):
         """
         Update the Manifest entries for the contents of directory
         @path (top directory by default), recursively. Includes adding
@@ -841,6 +842,12 @@ class ManifestRecursiveLoader(object):
 
         @hashes specifies the requested hash set. The effective value
         must be non-null since new entries can be created.
+
+        If @last_mtime is not None, then only files whose mtime is newer
+        than that value (in st_mtime format) will be updated. Use this
+        option *only* if you can rely on mtimes being bumped
+        monotonically on modified files. Afterwards, the value
+        of @last_mtime should be put into the TIMESTAMP entry.
         """
 
         if hashes is None:
@@ -951,7 +958,8 @@ class ManifestRecursiveLoader(object):
                     os.path.join(dirpath, f),
                     fe,
                     hashes=hashes,
-                    expected_dev=self.manifest_device)
+                    expected_dev=self.manifest_device,
+                    last_mtime=last_mtime)
                 if changed and mpath is not None:
                     self.updated_manifests.add(mpath)
 

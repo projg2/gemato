@@ -2756,3 +2756,20 @@ DATA test 11 MD5 5f8db599de986fab7a21625b7916589c
             os.path.join(self.dir, 'Manifest'))
         st = os.stat(os.path.join(self.dir, 'test'))
         m.assert_directory_verifies('', last_mtime=st.st_mtime)
+
+    def test_update_entries_for_directory_old_mtime(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                os.path.join(self.dir, 'Manifest'),
+                hashes=['MD5'])
+        m.update_entries_for_directory('', last_mtime=0)
+        self.assertEqual(m.find_path_entry('test').checksums['MD5'],
+                '6f8db599de986fab7a21625b7916589c')
+
+    def test_update_entries_for_directory_new_mtime(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+                hashes=['MD5'])
+        st = os.stat(os.path.join(self.dir, 'test'))
+        m.update_entries_for_directory('', last_mtime=st.st_mtime)
+        self.assertEqual(m.find_path_entry('test').checksums['MD5'],
+                '5f8db599de986fab7a21625b7916589c')
