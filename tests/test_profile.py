@@ -5,6 +5,7 @@
 
 import os.path
 
+import gemato.cli
 import gemato.profile
 import gemato.recursiveloader
 
@@ -17,6 +18,7 @@ class EbuildRepositoryTests(TempDirTestCase):
     """
 
     PROFILE = gemato.profile.EbuildRepositoryProfile
+    PROFILE_NAME = 'ebuild'
     DIRS = [
         'dev-foo',
         'dev-foo/bar',
@@ -130,9 +132,29 @@ class EbuildRepositoryTests(TempDirTestCase):
         self.assertIsNotNone(m.compress_watermark)
         self.assertIsNotNone(m.compress_format)
 
+    def test_cli_update(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'create',
+                    '--profile', self.PROFILE_NAME,
+                    self.dir]),
+                0)
+
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                os.path.join(self.dir, 'Manifest'))
+        for f, expt in self.EXPECTED_TYPES.items():
+            self.assertEqual(
+                    m.find_path_entry(f).tag,
+                    expt,
+                    "type mismatch for {}".format(f))
+        for f in self.EXPECTED_MANIFESTS:
+            self.assertEqual(m.find_path_entry(f).tag, 'MANIFEST',
+                    "type mismatch for {}".format(f))
+        return m
+
 
 class BackwardsCompatEbuildRepositoryTests(EbuildRepositoryTests):
     PROFILE = gemato.profile.BackwardsCompatEbuildRepositoryProfile
+    PROFILE_NAME = 'old-ebuild'
 
     def __init__(self, *args, **kwargs):
         self.EXPECTED_TYPES = self.EXPECTED_TYPES.copy()
@@ -154,6 +176,16 @@ class BackwardsCompatEbuildRepositoryTests(EbuildRepositoryTests):
                 m.find_path_entry('dev-foo/bar/files/test.patch').aux_path,
                 'test.patch')
 
+    def test_cli_update(self):
+        m = (super(BackwardsCompatEbuildRepositoryTests, self)
+                .test_cli_update())
+        self.assertEqual(
+                m.find_path_entry('dev-foo/bar/files/test.patch').path,
+                'files/test.patch')
+        self.assertEqual(
+                m.find_path_entry('dev-foo/bar/files/test.patch').aux_path,
+                'test.patch')
+
     def test_compression(self):
         """
         Test that package directory Manifests are not compressed.
@@ -167,6 +199,25 @@ class BackwardsCompatEbuildRepositoryTests(EbuildRepositoryTests):
                 profile=self.PROFILE())
         m.update_entries_for_directory('')
         m.save_manifests()
+
+        for mpath in self.EXPECTED_MANIFESTS:
+            # package manifest should be left uncompressed
+            if mpath == 'dev-foo/bar/Manifest':
+                self.assertTrue(os.path.exists(os.path.join(
+                    self.dir, mpath)))
+            else:
+                self.assertTrue(os.path.exists(os.path.join(
+                    self.dir, mpath + '.gz')))
+                self.assertFalse(os.path.exists(os.path.join(
+                    self.dir, mpath)))
+
+    def test_cli_compression(self):
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'create',
+                    '--profile', self.PROFILE_NAME,
+                    '--compress-watermark=0',
+                    self.dir]),
+                0)
 
         for mpath in self.EXPECTED_MANIFESTS:
             # package manifest should be left uncompressed
