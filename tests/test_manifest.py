@@ -17,7 +17,6 @@ MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6
 IGNORE local
 DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-OPTIONAL ChangeLog
 DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 DATA foo.txt 0
 '''
@@ -82,7 +81,6 @@ class ManifestTest(unittest.TestCase):
         self.assertIsNone(m.find_path_entry('locale'))
         self.assertEqual(m.find_path_entry('myebuild-0.ebuild').path, 'myebuild-0.ebuild')
         self.assertEqual(m.find_path_entry('metadata.xml').path, 'metadata.xml')
-        self.assertEqual(m.find_path_entry('ChangeLog').path, 'ChangeLog')
         self.assertIsNone(m.find_path_entry('mydistfile.tar.gz'))
 
     def test_find_path_entry_AUX(self):
@@ -128,7 +126,6 @@ DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4
 IGNORE local
 MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-OPTIONAL ChangeLog
 TIMESTAMP 2017-10-22T18:06:41Z
 '''.lstrip())
 
@@ -187,13 +184,6 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertListEqual(list(m.to_list()),
                 ['MISC'] + list(self.file_vals))
 
-    def test_OPTIONAL(self):
-        self.assertEqual(gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                    ('OPTIONAL', 'test')).path,
-                'test')
-        self.assertListEqual(list(gemato.manifest.ManifestEntryOPTIONAL('test').to_list()),
-                ['OPTIONAL', 'test'])
-
     def test_DIST(self):
         m = gemato.manifest.ManifestEntryDIST.from_list(
                 ('DIST',) + self.file_vals)
@@ -245,10 +235,6 @@ class ManifestEntryTest(unittest.TestCase):
                 gemato.manifest.ManifestEntryIGNORE.from_list, ('IGNORE', '',))
         self.assertRaises(gemato.exceptions.ManifestSyntaxError,
                 gemato.manifest.ManifestEntryIGNORE.from_list, ('IGNORE', '/foo',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryOPTIONAL.from_list, ('OPTIONAL', '',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryOPTIONAL.from_list, ('OPTIONAL', '/foo',))
         self.assertRaises(gemato.exceptions.ManifestSyntaxError,
                 gemato.manifest.ManifestEntryDATA.from_list, ('DATA', '',))
         self.assertRaises(gemato.exceptions.ManifestSyntaxError,
@@ -360,10 +346,6 @@ class ManifestEntryTest(unittest.TestCase):
         self.assertRaises(gemato.exceptions.ManifestSyntaxError,
                 gemato.manifest.ManifestEntryMISC.from_list, ('MISC', 'foo'))
         self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryOPTIONAL.from_list, ('OPTIONAL',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryOPTIONAL.from_list, ('OPTIONAL', 'foo', 'bar'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
                 gemato.manifest.ManifestEntryDIST.from_list, ('DIST',))
         self.assertRaises(gemato.exceptions.ManifestSyntaxError,
                 gemato.manifest.ManifestEntryDIST.from_list, ('DIST', 'foo'))
@@ -423,11 +405,6 @@ class NewManifestEntryTest(unittest.TestCase):
                 gemato.manifest.new_manifest_entry('MISC',
                     'test', 32, {}),
                 gemato.manifest.ManifestEntryMISC)
-
-    def test_OPTIONAL(self):
-        self.assertIsInstance(
-                gemato.manifest.new_manifest_entry('OPTIONAL', 'test'),
-                gemato.manifest.ManifestEntryOPTIONAL)
 
     def test_DIST(self):
         self.assertIsInstance(

@@ -96,79 +96,70 @@ jCvJNJ7pU8YnJSRTQDH0PZEupAdzDU/AhGSrBz5+Jr7N0pQIxq4duE/Q
 
 SIGNED_MANIFEST = u'''
 -----BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA512
+Hash: SHA256
 
 TIMESTAMP 2017-10-22T18:06:41Z
 MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
 DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-OPTIONAL ChangeLog
 DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 -----BEGIN PGP SIGNATURE-----
 
-iQGTBAEBCgB9FiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAlnwXQpfFIAAAAAALgAo
-aXNzdWVyLWZwckBub3RhdGlvbnMub3BlbnBncC5maWZ0aGhvcnNlbWFuLm5ldDgx
-RTEyQzE2QkQ4RENENjBCRTE4MDg0NTEzNjg4MEU3MkE3QjEzODQACgkQE2iA5yp7
-E4ScZAf+IF4suRtuN3bJki2zyYV/1VtSekK96tO+IzXxXDY0OKXmf61R6ZuuXcUD
-Q+DlBONMILG+CDY+qiDp6snEWPmeLuh57qjkxilTgEX88W7OSCSdvGzSbC5WIRQG
-KHtfZWtVVrZHTzQ6MF3u2Vombkpra/CQrf4Yx+8zdkorsoXwZ6ZjriB3W/zTUWIJ
-XUy2tNfupdu72q9ske3dhVLhUEjtBzq5MlTf6gUjLBEsIHCGSafO2VG00lii3q4E
-14EEilADJlKAOwK5WQUmAOjeeC60ck5EW5tGBotncd954v6n42pwlVXVmqSOJdYy
-9F1V8N1m6n9UEUQ7Hhrv/+BTDPJO0A==
-=9naF
+iQEzBAEBCAAdFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAloCx+YACgkQE2iA5yp7
+E4TYrwf+JxjkVDNtvSN3HjQmdtcayLsaliw/2kqjoaQKs0lZD8+NRe7xPmwSm4bP
+XKfoouJ0+/s87vuYJpBBCjtUDA9C9yZIeRTo8+eW6XsZbRRUmUD5ylTS+FpSsUrS
+bEyYk4yZQMYrat+GQ1QBv+625nqnSDv5LZHBBZ/rG36GGlwHPbIKIishnDfdG2QQ
+zuxkqepNq4Inzp//ES7Bv4qbTzyBI//HzfY31vOgdhhs5N5Ytez3Xxv/KNOTYdi1
+ZIfqeaQ4NoefmxQunyEjT+8X2DMaEeHQni7dwjQc+FiN4ReV9aWbLo2O2cArqEHR
+mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
+=khff
 -----END PGP SIGNATURE-----
 '''
 
 DASH_ESCAPED_SIGNED_MANIFEST = u'''
 -----BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA512
+Hash: SHA256
 
 - TIMESTAMP 2017-10-22T18:06:41Z
 - MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
 - DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-- OPTIONAL ChangeLog
 - DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 -----BEGIN PGP SIGNATURE-----
 
-iQGTBAEBCgB9FiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAlnwXQpfFIAAAAAALgAo
-aXNzdWVyLWZwckBub3RhdGlvbnMub3BlbnBncC5maWZ0aGhvcnNlbWFuLm5ldDgx
-RTEyQzE2QkQ4RENENjBCRTE4MDg0NTEzNjg4MEU3MkE3QjEzODQACgkQE2iA5yp7
-E4ScZAf+IF4suRtuN3bJki2zyYV/1VtSekK96tO+IzXxXDY0OKXmf61R6ZuuXcUD
-Q+DlBONMILG+CDY+qiDp6snEWPmeLuh57qjkxilTgEX88W7OSCSdvGzSbC5WIRQG
-KHtfZWtVVrZHTzQ6MF3u2Vombkpra/CQrf4Yx+8zdkorsoXwZ6ZjriB3W/zTUWIJ
-XUy2tNfupdu72q9ske3dhVLhUEjtBzq5MlTf6gUjLBEsIHCGSafO2VG00lii3q4E
-14EEilADJlKAOwK5WQUmAOjeeC60ck5EW5tGBotncd954v6n42pwlVXVmqSOJdYy
-9F1V8N1m6n9UEUQ7Hhrv/+BTDPJO0A==
-=9naF
+iQEzBAEBCAAdFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAloCx+YACgkQE2iA5yp7
+E4TYrwf+JxjkVDNtvSN3HjQmdtcayLsaliw/2kqjoaQKs0lZD8+NRe7xPmwSm4bP
+XKfoouJ0+/s87vuYJpBBCjtUDA9C9yZIeRTo8+eW6XsZbRRUmUD5ylTS+FpSsUrS
+bEyYk4yZQMYrat+GQ1QBv+625nqnSDv5LZHBBZ/rG36GGlwHPbIKIishnDfdG2QQ
+zuxkqepNq4Inzp//ES7Bv4qbTzyBI//HzfY31vOgdhhs5N5Ytez3Xxv/KNOTYdi1
+ZIfqeaQ4NoefmxQunyEjT+8X2DMaEeHQni7dwjQc+FiN4ReV9aWbLo2O2cArqEHR
+mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
+=khff
 -----END PGP SIGNATURE-----
 '''
 
 MODIFIED_SIGNED_MANIFEST = u'''
 -----BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA512
+Hash: SHA256
 
 TIMESTAMP 2017-10-22T18:06:41Z
 MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
 DATA myebuild-0.ebuild 32
 MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-OPTIONAL ChangeLog
 DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 -----BEGIN PGP SIGNATURE-----
 
-iQGTBAEBCgB9FiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAlnwXQpfFIAAAAAALgAo
-aXNzdWVyLWZwckBub3RhdGlvbnMub3BlbnBncC5maWZ0aGhvcnNlbWFuLm5ldDgx
-RTEyQzE2QkQ4RENENjBCRTE4MDg0NTEzNjg4MEU3MkE3QjEzODQACgkQE2iA5yp7
-E4ScZAf+IF4suRtuN3bJki2zyYV/1VtSekK96tO+IzXxXDY0OKXmf61R6ZuuXcUD
-Q+DlBONMILG+CDY+qiDp6snEWPmeLuh57qjkxilTgEX88W7OSCSdvGzSbC5WIRQG
-KHtfZWtVVrZHTzQ6MF3u2Vombkpra/CQrf4Yx+8zdkorsoXwZ6ZjriB3W/zTUWIJ
-XUy2tNfupdu72q9ske3dhVLhUEjtBzq5MlTf6gUjLBEsIHCGSafO2VG00lii3q4E
-14EEilADJlKAOwK5WQUmAOjeeC60ck5EW5tGBotncd954v6n42pwlVXVmqSOJdYy
-9F1V8N1m6n9UEUQ7Hhrv/+BTDPJO0A==
-=9naF
+iQEzBAEBCAAdFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAloCx+YACgkQE2iA5yp7
+E4TYrwf+JxjkVDNtvSN3HjQmdtcayLsaliw/2kqjoaQKs0lZD8+NRe7xPmwSm4bP
+XKfoouJ0+/s87vuYJpBBCjtUDA9C9yZIeRTo8+eW6XsZbRRUmUD5ylTS+FpSsUrS
+bEyYk4yZQMYrat+GQ1QBv+625nqnSDv5LZHBBZ/rG36GGlwHPbIKIishnDfdG2QQ
+zuxkqepNq4Inzp//ES7Bv4qbTzyBI//HzfY31vOgdhhs5N5Ytez3Xxv/KNOTYdi1
+ZIfqeaQ4NoefmxQunyEjT+8X2DMaEeHQni7dwjQc+FiN4ReV9aWbLo2O2cArqEHR
+mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
+=khff
 -----END PGP SIGNATURE-----
 '''
 
@@ -215,13 +206,13 @@ class SignedManifestTest(unittest.TestCase):
 
     def test_junk_before_manifest_load(self):
         m = gemato.manifest.ManifestFile()
-        with io.StringIO('OPTIONAL test\n' + SIGNED_MANIFEST) as f:
+        with io.StringIO('IGNORE test\n' + SIGNED_MANIFEST) as f:
             self.assertRaises(gemato.exceptions.ManifestUnsignedData,
                     m.load, f, verify_openpgp=False)
 
     def test_junk_after_manifest_load(self):
         m = gemato.manifest.ManifestFile()
-        with io.StringIO(SIGNED_MANIFEST + 'OPTIONAL test\n') as f:
+        with io.StringIO(SIGNED_MANIFEST + 'IGNORE test\n') as f:
             self.assertRaises(gemato.exceptions.ManifestUnsignedData,
                     m.load, f, verify_openpgp=False)
 

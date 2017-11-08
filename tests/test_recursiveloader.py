@@ -22,13 +22,12 @@ class BasicNestingTest(TempDirTestCase):
     FILES = {
         'Manifest': u'''
 TIMESTAMP 2017-01-01T01:01:01Z
-MANIFEST sub/Manifest 146 MD5 81180715a77069664b4b695e53bb856d
+MANIFEST sub/Manifest 128 MD5 30fd28b98a23031c72793908dd35c530
 MANIFEST other/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 DIST topdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
         'sub/Manifest': u'''
 MANIFEST deeper/Manifest 50 MD5 0f7cd9ed779a4844f98d28315dd9176a
-OPTIONAL nonstray
 DIST subdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
         'sub/stray': u'',
@@ -159,11 +158,6 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         self.assertEqual(m.verify_path('sub/deeper/test'), (True, []))
 
-    def test_verify_optional_path(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertEqual(m.verify_path('sub/nonstray'), (True, []))
-
     def test_verify_nonexistent_path(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
@@ -179,11 +173,6 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         m.assert_path_verifies('sub/deeper/test')
-
-    def test_assert_path_verifies_optional_path(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        m.assert_path_verifies('sub/nonstray')
 
     def test_assert_path_verifies_nonexistent_path(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -204,13 +193,11 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             frozenset((
                 'other/Manifest',
                 'sub/Manifest',
-                'sub/nonstray',
                 'sub/deeper/Manifest',
                 'sub/deeper/test',
             )))
         self.assertEqual(entries['other/Manifest'].path, 'other/Manifest')
         self.assertEqual(entries['sub/Manifest'].path, 'sub/Manifest')
-        self.assertEqual(entries['sub/nonstray'].path, 'nonstray')
         self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
         self.assertEqual(entries['sub/deeper/test'].path, 'test')
 
@@ -249,18 +236,15 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             frozenset((
                 'other/Manifest',
                 'sub/Manifest',
-                'sub/nonstray',
                 'sub/deeper/Manifest',
                 'sub/deeper/test',
             )))
         self.assertEqual(entries['other/Manifest'][0], 'Manifest')
         self.assertEqual(entries['sub/Manifest'][0], 'Manifest')
-        self.assertEqual(entries['sub/nonstray'][0], 'sub/Manifest')
         self.assertEqual(entries['sub/deeper/Manifest'][0], 'sub/Manifest')
         self.assertEqual(entries['sub/deeper/test'][0], 'sub/deeper/Manifest')
         self.assertEqual(entries['other/Manifest'][1].path, 'other/Manifest')
         self.assertEqual(entries['sub/Manifest'][1].path, 'sub/Manifest')
-        self.assertEqual(entries['sub/nonstray'][1].path, 'nonstray')
         self.assertEqual(entries['sub/deeper/Manifest'][1].path, 'deeper/Manifest')
         self.assertEqual(entries['sub/deeper/test'][1].path, 'test')
 
@@ -271,12 +255,10 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertSetEqual(frozenset(entries),
             frozenset((
                 'sub/Manifest',
-                'sub/nonstray',
                 'sub/deeper/Manifest',
                 'sub/deeper/test',
             )))
         self.assertEqual(entries['sub/Manifest'].path, 'sub/Manifest')
-        self.assertEqual(entries['sub/nonstray'].path, 'nonstray')
         self.assertEqual(entries['sub/deeper/Manifest'].path, 'deeper/Manifest')
         self.assertEqual(entries['sub/deeper/test'].path, 'test')
 
@@ -288,16 +270,13 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertSetEqual(frozenset(entries),
             frozenset((
                 'sub/Manifest',
-                'sub/nonstray',
                 'sub/deeper/Manifest',
                 'sub/deeper/test',
             )))
         self.assertEqual(entries['sub/Manifest'][0], 'Manifest')
-        self.assertEqual(entries['sub/nonstray'][0], 'sub/Manifest')
         self.assertEqual(entries['sub/deeper/Manifest'][0], 'sub/Manifest')
         self.assertEqual(entries['sub/deeper/test'][0], 'sub/deeper/Manifest')
         self.assertEqual(entries['sub/Manifest'][1].path, 'sub/Manifest')
-        self.assertEqual(entries['sub/nonstray'][1].path, 'nonstray')
         self.assertEqual(entries['sub/deeper/Manifest'][1].path, 'deeper/Manifest')
         self.assertEqual(entries['sub/deeper/test'][1].path, 'test')
 
@@ -421,7 +400,7 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             self.assertEqual(f.read(), u'''
 DIST topdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 MANIFEST other/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
-MANIFEST sub/Manifest 145 MD5 75e2be2f56f58e486fd195ec4d96da4a
+MANIFEST sub/Manifest 127 MD5 de990fbccb1261da02c7513dfec56045
 TIMESTAMP 2017-01-01T01:01:01Z
 '''.lstrip())
         with io.open(os.path.join(self.dir, 'sub/Manifest'),
@@ -429,7 +408,6 @@ TIMESTAMP 2017-01-01T01:01:01Z
             self.assertEqual(f.read(), u'''
 DIST subdistfile-1.txt 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 MANIFEST deeper/Manifest 49 MD5 b86a7748346d54c6455886306f017e6c
-OPTIONAL nonstray
 '''.lstrip())
 
     def test_update_entry_for_path(self):
@@ -1357,68 +1335,6 @@ MISC test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 m.get_deduplicated_file_entry_dict_for_update, '')
 
 
-class DuplicateIncompatibleDataOptionalTypeFileEntryTest(TempDirTestCase):
-    """
-    Test for specifying the entry for the same file twice, with
-    incompatible types.
-    """
-
-    FILES = {
-        'Manifest': u'''
-DATA test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
-OPTIONAL test.ebuild
-''',
-    }
-
-    def test_find_path_entry(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertEqual(m.find_path_entry('test.ebuild').path, 'test.ebuild')
-
-    def test_get_file_entry_dict(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
-                m.get_file_entry_dict, '')
-
-    def test_deduplicated_get_file_entry_dict_for_update(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
-                m.get_deduplicated_file_entry_dict_for_update, '')
-
-
-class DuplicateIncompatibleMiscOptionalTypeFileEntryTest(TempDirTestCase):
-    """
-    Test for specifying the entry for the same file twice, with
-    incompatible types.
-    """
-
-    FILES = {
-        'Manifest': u'''
-MISC test.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e
-OPTIONAL test.ebuild
-''',
-    }
-
-    def test_find_path_entry(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertEqual(m.find_path_entry('test.ebuild').path, 'test.ebuild')
-
-    def test_get_file_entry_dict(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
-                m.get_file_entry_dict, '')
-
-    def test_deduplicated_get_file_entry_dict_for_update(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.exceptions.ManifestIncompatibleEntry,
-                m.get_deduplicated_file_entry_dict_for_update, '')
-
-
 class DuplicateDifferentSizeFileEntryTest(TempDirTestCase):
     """
     Test for specifying the entry for the same file twice, with
@@ -1617,74 +1533,6 @@ MISC foo 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                      'r', encoding='utf8') as f:
             self.assertNotEqual(f.read(), self.FILES['Manifest'])
         m.assert_directory_verifies()
-
-
-class ManifestOptionalEntryTest(TempDirTestCase):
-    """
-    Test for a Manifest file with OPTIONAL.
-    """
-
-    FILES = {
-        'Manifest': u'''
-OPTIONAL foo
-''',
-        'foo': u'test',
-    }
-
-    def test_assert_directory_verifies(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(gemato.exceptions.ManifestMismatch,
-                m.assert_directory_verifies, '')
-
-    def test_assert_directory_verifies_nonstrict(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertTrue(m.assert_directory_verifies('',
-                warn_handler=lambda x: True))
-
-    def test_assert_directory_verifies_nonstrict_false(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        self.assertFalse(m.assert_directory_verifies('',
-                warn_handler=lambda x: False))
-
-    def test_cli_verifies(self):
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'verify', self.dir]),
-            1)
-
-    def test_cli_verifies_nonstrict(self):
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'verify', '--no-strict', self.dir]),
-            0)
-
-    def test_update_entry_for_path(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
-        m.update_entry_for_path('foo')
-        self.assertIsInstance(m.find_path_entry('foo'),
-                gemato.manifest.ManifestEntryOPTIONAL)
-        m.save_manifests()
-        with io.open(os.path.join(self.dir, 'Manifest'),
-                     'r', encoding='utf8') as f:
-            self.assertEqual(f.read(), self.FILES['Manifest'])
-        self.assertRaises(gemato.exceptions.ManifestMismatch,
-                m.assert_directory_verifies, '')
-
-    def test_update_entries_for_directory(self):
-        m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'),
-            hashes=['SHA256', 'SHA512'])
-        m.update_entries_for_directory('')
-        self.assertIsInstance(m.find_path_entry('foo'),
-                gemato.manifest.ManifestEntryOPTIONAL)
-        m.save_manifests()
-        with io.open(os.path.join(self.dir, 'Manifest'),
-                     'r', encoding='utf8') as f:
-            self.assertEqual(f.read(), self.FILES['Manifest'])
-        self.assertRaises(gemato.exceptions.ManifestMismatch,
-                m.assert_directory_verifies, '')
 
 
 class CrossDeviceManifestTest(TempDirTestCase):

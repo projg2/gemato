@@ -93,27 +93,6 @@ class ManifestEntryIGNORE(ManifestPathEntry):
         return (self.tag, self.path)
 
 
-class ManifestEntryOPTIONAL(ManifestPathEntry):
-    """
-    Optional path.
-    """
-
-    tag = 'OPTIONAL'
-
-    def __init__(self, path):
-        super(ManifestEntryOPTIONAL, self).__init__(path)
-        self.size = None
-        self.checksums = {}
-
-    @classmethod
-    def from_list(cls, l):
-        assert l[0] == cls.tag
-        return cls(cls.process_path(l))
-
-    def to_list(self):
-        return (self.tag, self.path)
-
-
 class ManifestFileEntry(ManifestPathEntry):
     """
     Base class for entries providing checksums for a path.
@@ -295,7 +274,6 @@ MANIFEST_TAG_MAPPING = {
     'IGNORE': ManifestEntryIGNORE,
     'DATA': ManifestEntryDATA,
     'MISC': ManifestEntryMISC,
-    'OPTIONAL': ManifestEntryOPTIONAL,
     'DIST': ManifestEntryDIST,
     'EBUILD': ManifestEntryEBUILD,
     'AUX': ManifestEntryAUX,

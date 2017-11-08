@@ -257,7 +257,7 @@ def main(argv):
             help='Require that the top-level Manifest is OpenPGP signed')
     verify.add_argument('-S', '--no-strict', action='store_false',
             dest='strict',
-            help='Do not fail on non-strict Manifest issues (MISC/OPTIONAL entries)')
+            help='Do not fail on non-strict Manifest issues (MISC entries)')
     verify.set_defaults(func=do_verify)
 
     update = subp.add_parser('update',

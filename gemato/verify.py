@@ -154,9 +154,8 @@ def verify_path(path, e, expected_dev=None, last_mtime=None):
         if e.tag == 'IGNORE':
             return (True, [])
 
-    # OPTIONAL does not contain checksums, and expects not to exist
-    # same goes for None
-    if e is None or e.tag == 'OPTIONAL':
+    # None indicates we have no entry, so the file must not exist
+    if e is None:
         expect_exist = False
         checksums = ()
     else:
@@ -238,7 +237,7 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None,
     the checksum calculation is skipped.
     """
 
-    assert e.tag not in ('IGNORE', 'OPTIONAL', 'TIMESTAMP')
+    assert e.tag not in ('IGNORE', 'TIMESTAMP')
 
     if hashes is None:
         hashes = list(e.checksums)

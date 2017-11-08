@@ -40,12 +40,6 @@ class NonExistingFileVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(os.path.join(self.dir, e.path), e),
                 (True, []))
 
-    def testOPTIONAL(self):
-        e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', 'test'))
-        self.assertEqual(gemato.verify.verify_path(os.path.join(self.dir, e.path), e),
-                (True, []))
-
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(os.path.join(self.dir, 'test'), None),
                 (True, []))
@@ -82,12 +76,6 @@ class DirectoryVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(self.dir, e),
                 (True, []))
 
-    def testOPTIONAL(self):
-        e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', os.path.basename(self.dir)))
-        self.assertEqual(gemato.verify.verify_path(self.dir, e),
-                (False, [('__exists__', False, True)]))
-
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.dir, None),
                 (False, [('__exists__', False, True)]))
@@ -120,12 +108,6 @@ class CharacterDeviceVerificationTest(unittest.TestCase):
                 ('IGNORE', os.path.basename(self.path)))
         self.assertEqual(gemato.verify.verify_path(self.path, e),
                 (True, []))
-
-    def testOPTIONAL(self):
-        e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', os.path.basename(self.path)))
-        self.assertEqual(gemato.verify.verify_path(self.path, e),
-                (False, [('__exists__', False, True)]))
 
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
@@ -165,12 +147,6 @@ class NamedPipeVerificationTest(unittest.TestCase):
                 ('IGNORE', os.path.basename(self.path)))
         self.assertEqual(gemato.verify.verify_path(self.path, e),
                 (True, []))
-
-    def testOPTIONAL(self):
-        e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', os.path.basename(self.path)))
-        self.assertEqual(gemato.verify.verify_path(self.path, e),
-                (False, [('__exists__', False, True)]))
 
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
@@ -213,12 +189,6 @@ class UNIXSocketVerificationTest(unittest.TestCase):
                 ('IGNORE', os.path.basename(self.path)))
         self.assertEqual(gemato.verify.verify_path(self.path, e),
                 (True, []))
-
-    def testOPTIONAL(self):
-        e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', os.path.basename(self.path)))
-        self.assertEqual(gemato.verify.verify_path(self.path, e),
-                (False, [('__exists__', False, True)]))
 
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
@@ -302,12 +272,6 @@ class EmptyFileVerificationTest(unittest.TestCase):
                 ('IGNORE', os.path.basename(self.path)))
         self.assertEqual(gemato.verify.verify_path(self.path, e),
                 (True, []))
-
-    def testOPTIONAL(self):
-        e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', os.path.basename(self.path)))
-        self.assertEqual(gemato.verify.verify_path(self.path, e),
-                (False, [('__exists__', False, True)]))
 
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
@@ -407,12 +371,6 @@ class EmptyFileVerificationTest(unittest.TestCase):
         self.assertEqual(e.path, os.path.basename(self.path))
         self.assertEqual(e.size, 0)
         self.assertDictEqual(e.checksums, {})
-
-    def test_update_OPTIONAL(self):
-        e = gemato.manifest.ManifestEntryOPTIONAL(
-                os.path.basename(self.path))
-        self.assertRaises(AssertionError,
-                gemato.verify.update_entry_for_path, self.path, e)
 
     def test_update_IGNORE(self):
         e = gemato.manifest.ManifestEntryIGNORE(
@@ -575,12 +533,6 @@ class NonEmptyFileVerificationTest(unittest.TestCase):
                 ('IGNORE', os.path.basename(self.path)))
         self.assertEqual(gemato.verify.verify_path(self.path, e),
                 (True, []))
-
-    def testOPTIONAL(self):
-        e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', os.path.basename(self.path)))
-        self.assertEqual(gemato.verify.verify_path(self.path, e),
-                (False, [('__exists__', False, True)]))
 
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
@@ -862,12 +814,6 @@ class ProcFileVerificationTest(unittest.TestCase):
         self.assertEqual(gemato.verify.verify_path(self.path, e),
                 (True, []))
 
-    def testOPTIONAL(self):
-        e = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', os.path.basename(self.path)))
-        self.assertEqual(gemato.verify.verify_path(self.path, e),
-                (False, [('__exists__', False, True)]))
-
     def testNone(self):
         self.assertEqual(gemato.verify.verify_path(self.path, None),
                 (False, [('__exists__', False, True)]))
@@ -977,22 +923,6 @@ class EntryCompatibilityVerificationTest(unittest.TestCase):
                 ('MISC', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
         self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
                 (False, [('__type__', 'DATA', 'MISC')]))
-
-    def test_incompatible_types_DATA_OPTIONAL(self):
-        e1 = gemato.manifest.ManifestEntryDATA.from_list(
-                ('DATA', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
-        e2 = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', 'test'))
-        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
-                (False, [('__type__', 'DATA', 'OPTIONAL')]))
-
-    def test_incompatible_types_MISC_OPTIONAL(self):
-        e1 = gemato.manifest.ManifestEntryMISC.from_list(
-                ('MISC', 'test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e'))
-        e2 = gemato.manifest.ManifestEntryOPTIONAL.from_list(
-                ('OPTIONAL', 'test'))
-        self.assertEqual(gemato.verify.verify_entry_compatibility(e1, e2),
-                (False, [('__type__', 'MISC', 'OPTIONAL')]))
 
     def test_incompatible_types_DATA_IGNORE(self):
         e1 = gemato.manifest.ManifestEntryDATA.from_list(

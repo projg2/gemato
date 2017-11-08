@@ -387,7 +387,7 @@ class ManifestRecursiveLoader(object):
                 last_mtime=last_mtime)
 
         if not ret:
-            if e is not None and e.tag in ('MISC', 'OPTIONAL'):
+            if e is not None and e.tag == 'MISC':
                 h = warn_handler
             else:
                 h = fail_handler
@@ -409,7 +409,7 @@ class ManifestRecursiveLoader(object):
 
         @fail_handler is the callback called whenever verification
         fails for 'strong' entries (or stray files). @warn_handler
-        is called whenever verification fails for MISC/OPTIONAL entries.
+        is called whenever verification fails for MISC entries.
 
         The handlers are passed a ManifestMismatch exception object.
         The default fail handler raises the exception. Unless specified
@@ -611,7 +611,7 @@ class ManifestRecursiveLoader(object):
         does not check if they were compatible.
 
         The type of MANIFEST, DATA and MISC derived entries
-        is preserved. OPTIONAL entries are left as-is.
+        is preserved.
 
         If the path exists and has no Manifest entry, a new entry
         of type @new_entry_type will be created in the Manifest most
@@ -620,7 +620,7 @@ class ManifestRecursiveLoader(object):
         to an existing Manifest.
 
         If the path does not exist, all Manifest entries for it will
-        be removed except for OPTIONAL entries.
+        be removed.
 
         @hashes override the value specified in the constructor.
         If None, the values from the constructor are used. If those were
@@ -648,11 +648,6 @@ class ManifestRecursiveLoader(object):
                     # distfiles are not local files, so skip them
                     # timestamp is not a file ;-)
                     pass
-                elif e.tag == 'OPTIONAL':
-                    # leave OPTIONAL entries as-is
-                    fullpath = os.path.join(relpath, e.path)
-                    if fullpath == path:
-                        had_entry = True
                 else:
                     # we update either file at the specified path
                     # or any relevant Manifests
@@ -693,8 +688,7 @@ class ManifestRecursiveLoader(object):
             assert hashes is not None
             for mpath, relpath, m in self._iter_manifests_for_path(path):
                 # add to the first relevant Manifest
-                assert new_entry_type not in (
-                        'DIST', 'IGNORE', 'OPTIONAL')
+                assert new_entry_type not in ('DIST', 'IGNORE')
                 newpath = os.path.relpath(path, relpath)
                 if new_entry_type == 'AUX':
                     # AUX has implicit files/ prefix
@@ -941,7 +935,7 @@ class ManifestRecursiveLoader(object):
                 fpath = os.path.join(relpath, f)
                 mpath, fe = entry_dict.pop(fpath, (None, None))
                 if fe is not None:
-                    if fe.tag in ('IGNORE', 'OPTIONAL'):
+                    if fe.tag == 'IGNORE':
                         continue
                     if fe.tag == 'MANIFEST':
                         manifest_stack.append((fpath, relpath,
@@ -1025,7 +1019,7 @@ class ManifestRecursiveLoader(object):
         # check for removed files
         for relpath, me in entry_dict.items():
             mpath, fe = me
-            if fe.tag in ('IGNORE', 'OPTIONAL'):
+            if fe.tag == 'IGNORE':
                 continue
 
             self.loaded_manifests[mpath].entries.remove(fe)
