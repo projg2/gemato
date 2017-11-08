@@ -600,8 +600,7 @@ class ManifestRecursiveLoader(object):
         entries, the remaining entries will be removed. This function
         does not check if they were compatible.
 
-        The type of MANIFEST, DATA and MISC derived entries
-        is preserved.
+        The type of MANIFEST and DATA derived entries is preserved.
 
         If the path exists and has no Manifest entry, a new entry
         of type @new_entry_type will be created in the Manifest most

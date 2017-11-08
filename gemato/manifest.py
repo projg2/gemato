@@ -185,24 +185,6 @@ class ManifestEntryDATA(ManifestFileEntry):
         return super(ManifestEntryDATA, self).to_list(self.tag)
 
 
-class ManifestEntryMISC(ManifestFileEntry):
-    """
-    Non-obligatory file reference.
-    """
-
-    tag = 'MISC'
-
-    @classmethod
-    def from_list(cls, l):
-        assert l[0] == cls.tag
-        path = cls.process_path(l[:2])
-        size, checksums = cls.process_checksums(l)
-        return cls(path, size, checksums)
-
-    def to_list(self):
-        return super(ManifestEntryMISC, self).to_list(self.tag)
-
-
 class ManifestEntryDIST(ManifestFileEntry):
     """
     Distfile reference.
@@ -241,6 +223,24 @@ class ManifestEntryEBUILD(ManifestFileEntry):
         return super(ManifestEntryEBUILD, self).to_list(self.tag)
 
 
+class ManifestEntryMISC(ManifestFileEntry):
+    """
+    Deprecated 'non-strict' checksum (now equivalent to DATA).
+    """
+
+    tag = 'MISC'
+
+    @classmethod
+    def from_list(cls, l):
+        assert l[0] == cls.tag
+        path = cls.process_path(l[:2])
+        size, checksums = cls.process_checksums(l)
+        return cls(path, size, checksums)
+
+    def to_list(self):
+        return super(ManifestEntryMISC, self).to_list(self.tag)
+
+
 class ManifestEntryAUX(ManifestFileEntry):
     """
     Deprecated AUX file reference (DATA with 'files/' prepended).
@@ -273,9 +273,9 @@ MANIFEST_TAG_MAPPING = {
     'MANIFEST': ManifestEntryMANIFEST,
     'IGNORE': ManifestEntryIGNORE,
     'DATA': ManifestEntryDATA,
-    'MISC': ManifestEntryMISC,
     'DIST': ManifestEntryDIST,
     'EBUILD': ManifestEntryEBUILD,
+    'MISC': ManifestEntryMISC,
     'AUX': ManifestEntryAUX,
 }
 

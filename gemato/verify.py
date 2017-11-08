@@ -224,7 +224,7 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None,
     not change.
 
     The file must exist and be a regular file, and the entry must be
-    of MISC, DATA, MANIFEST or a derived type. The path/filename
+    of DATA, MANIFEST or a derived type. The path/filename
     is not updated nor checked.
 
     If @expected_dev is not None, verifies that the file resides
