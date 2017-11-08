@@ -17,11 +17,6 @@ import gemato.profile
 import gemato.recursiveloader
 
 
-def verify_warning(e):
-    logging.warning(str(e))
-    return True
-
-
 def verify_failure(e):
     logging.error(str(e))
     return False
@@ -40,8 +35,6 @@ def do_verify(args, argp):
         kwargs = {}
         if args.keep_going:
             kwargs['fail_handler'] = verify_failure
-        if not args.strict:
-            kwargs['warn_handler'] = verify_warning
         if not args.openpgp_verify:
             init_kwargs['verify_openpgp'] = False
         with gemato.openpgp.OpenPGPEnvironment() as env:
@@ -255,9 +248,6 @@ def main(argv):
             help='Disable OpenPGP verification of signed Manifests')
     verify.add_argument('-s', '--require-signed-manifest', action='store_true',
             help='Require that the top-level Manifest is OpenPGP signed')
-    verify.add_argument('-S', '--no-strict', action='store_false',
-            dest='strict',
-            help='Do not fail on non-strict Manifest issues (MISC entries)')
     verify.set_defaults(func=do_verify)
 
     update = subp.add_parser('update',

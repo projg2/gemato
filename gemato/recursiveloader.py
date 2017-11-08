@@ -381,18 +381,14 @@ class ManifestRecursiveLoader(object):
         return out
 
     def _verify_one_file(self, path, relpath, e, fail_handler,
-            warn_handler, last_mtime):
+            last_mtime):
         ret, diff = gemato.verify.verify_path(path, e,
                 expected_dev=self.manifest_device,
                 last_mtime=last_mtime)
 
         if not ret:
-            if e is not None and e.tag == 'MISC':
-                h = warn_handler
-            else:
-                h = fail_handler
             err = gemato.exceptions.ManifestMismatch(relpath, e, diff)
-            ret = h(err)
+            ret = fail_handler(err)
             if ret is None:
                 ret = True
 
@@ -400,7 +396,7 @@ class ManifestRecursiveLoader(object):
 
     def assert_directory_verifies(self, path='',
             fail_handler=gemato.util.throw_exception,
-            warn_handler=None, last_mtime=None):
+            last_mtime=None):
         """
         Verify the complete directory tree starting at @path (relative
         to top Manifest directory). Includes testing for stray files.
@@ -408,18 +404,15 @@ class ManifestRecursiveLoader(object):
         verification.
 
         @fail_handler is the callback called whenever verification
-        fails for 'strong' entries (or stray files). @warn_handler
-        is called whenever verification fails for MISC entries.
+        fails (ether for mismatch, missing or stray file). The handler
+        is passed a ManifestMismatch exception object. The default fail
+        handler raises the exception. However, a custom handler can be
+        used to provide a non-strict mode, or continue the scan after
+        the first failure.
 
-        The handlers are passed a ManifestMismatch exception object.
-        The default fail handler raises the exception. Unless specified
-        explicitly, the warn handler defaults to fail handler. However,
-        custom handlers can be used to provide a non-strict mode,
-        or continue the scan after the first failure.
-
-        If none of the handlers raise exceptions, the function returns
-        boolean. It returns False if at least one of the handler calls
-        returned explicit False; True otherwise.
+        If none of the handler calls raise an exception, the function
+        returns boolean. It returns False if at least one of the handler
+        calls returned explicit False; True otherwise.
 
         If @last_mtime is not None, then only files whose mtime is newer
         than that value (in st_mtime format) will be checked. Use this
@@ -432,9 +425,6 @@ class ManifestRecursiveLoader(object):
                 onerror=gemato.util.throw_exception,
                 followlinks=True)
         ret = True
-
-        if warn_handler is None:
-            warn_handler = fail_handler
 
         for dirpath, dirnames, filenames in it:
             relpath = os.path.relpath(dirpath, self.root_directory)
@@ -462,7 +452,7 @@ class ManifestRecursiveLoader(object):
                     skip_dirs.append(d)
                 else:
                     ret &= self._verify_one_file(os.path.join(dirpath, d),
-                            dpath, de, fail_handler, warn_handler, last_mtime)
+                            dpath, de, fail_handler, last_mtime)
 
             # skip scanning ignored directories
             for d in skip_dirs:
@@ -480,13 +470,13 @@ class ManifestRecursiveLoader(object):
                     continue
                 fe = entry_dict.pop(fpath, None)
                 ret &= self._verify_one_file(os.path.join(dirpath, f),
-                        fpath, fe, fail_handler, warn_handler, last_mtime)
+                        fpath, fe, fail_handler, last_mtime)
 
         # check for missing files
         for relpath, e in entry_dict.items():
             syspath = os.path.join(self.root_directory, relpath)
             ret &= self._verify_one_file(syspath, relpath, e,
-                            fail_handler, warn_handler, last_mtime)
+                            fail_handler, last_mtime)
 
         return ret
 
