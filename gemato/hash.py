@@ -34,13 +34,13 @@ def get_hash_by_name(name):
 	Get a hashlib-compatible hash object for hash named @name. Supports
 	multiple backends.
 	"""
-	try:
-		return hashlib.new(name)
-	except ValueError:
-		pass
-
+	# special case hashes
 	if name == '__size__':
 		return SizeHash()
+
+	# general hash support
+	if name in hashlib.algorithms_available:
+		return hashlib.new(name)
 
 	# fallback support
 	if name.startswith('sha3_'):
