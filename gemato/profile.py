@@ -53,7 +53,10 @@ class DefaultProfile(object):
         Should return True to compress Manifest, False to uncompress it
         or None to leave as-is.
         """
-        return unc_size >= compress_watermark
+        # Compress files above the watermark but not the top-level
+        # Manifest. We only check for basename -- if it was compressed
+        # already, we do not change that.
+        return (unc_size >= compress_watermark and relpath != 'Manifest')
 
 
 class EbuildRepositoryProfile(DefaultProfile):
