@@ -11,11 +11,16 @@ import gemato.compression
 import gemato.manifest
 
 
-def find_top_level_manifest(path='.'):
+def find_top_level_manifest(path='.', allow_compressed=False):
     """
     Find top-level Manifest file that covers @path (defaults
     to the current directory). Returns the path to the Manifest
     or None.
+
+    If @allow_compressed is true, the function allows the top-level
+    Manifest to be compressed and opens all compressed files *without*
+    verifying them first. It is false by default to prevent zip bombs
+    and other decompression attacks.
     """
 
     cur_path = path
@@ -24,6 +29,11 @@ def find_top_level_manifest(path='.'):
     m = gemato.manifest.ManifestFile()
 
     root_st = os.stat('/')
+
+    manifest_filenames = ('Manifest',)
+    if allow_compressed:
+        manifest_filenames = list(gemato.compression
+                .get_potential_compressed_names('Manifest'))
 
     while True:
         st = os.stat(cur_path)
@@ -35,9 +45,11 @@ def find_top_level_manifest(path='.'):
             break
 
         m_path = os.path.join(cur_path, 'Manifest')
-        for m_path in (gemato.compression
-                .get_potential_compressed_names(m_path)):
+        for m_name in manifest_filenames:
+            m_path = os.path.join(cur_path, m_name)
             try:
+                # note: this is safe for allow_compressed=False
+                # since it detects compression by filename suffix
                 with (gemato.compression
                         .open_potentially_compressed_path(m_path, 'r',
                             encoding='utf8')) as f:

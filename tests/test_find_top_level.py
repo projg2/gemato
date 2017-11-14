@@ -207,10 +207,15 @@ class TestCompressedManifest(TempDirTestCase):
         with gzip.GzipFile(os.path.join(self.dir, 'subc/sub/Manifest.gz'), 'wb'):
             pass
 
+    def test_find_top_level_manifest_no_allow_compressed(self):
+        self.assertIsNone(
+                gemato.find_top_level.find_top_level_manifest(self.dir))
+
     def test_find_top_level_manifest(self):
         self.assertEqual(
                 os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(self.dir),
+                    gemato.find_top_level.find_top_level_manifest(
+                        self.dir, allow_compressed=True),
                     self.dir),
                 'Manifest.gz')
 
@@ -218,7 +223,8 @@ class TestCompressedManifest(TempDirTestCase):
         self.assertEqual(
                 os.path.relpath(
                     gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'suba')),
+                        os.path.join(self.dir, 'suba'),
+                        allow_compressed=True),
                     self.dir),
                 'Manifest.gz')
 
@@ -226,7 +232,8 @@ class TestCompressedManifest(TempDirTestCase):
         self.assertEqual(
                 os.path.relpath(
                     gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subb')),
+                        os.path.join(self.dir, 'subb'),
+                        allow_compressed=True),
                     self.dir),
                 'Manifest.gz')
 
@@ -234,7 +241,8 @@ class TestCompressedManifest(TempDirTestCase):
         self.assertEqual(
                 os.path.relpath(
                     gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subc', 'sub')),
+                        os.path.join(self.dir, 'subc', 'sub'),
+                        allow_compressed=True),
                     self.dir),
                 'Manifest.gz')
 
@@ -256,20 +264,23 @@ class TestCompressedManifestWithIgnore(TempDirTestCase):
     def test_find_top_level_manifest(self):
         self.assertEqual(
                 os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(self.dir),
+                    gemato.find_top_level.find_top_level_manifest(
+                        self.dir, allow_compressed=True),
                     self.dir),
                 'Manifest.gz')
 
     def test_find_top_level_manifest_from_ignored_empty_subdir(self):
         self.assertIsNone(
                 gemato.find_top_level.find_top_level_manifest(
-                    os.path.join(self.dir, 'suba')))
+                    os.path.join(self.dir, 'suba'),
+                    allow_compressed=True))
 
     def test_find_top_level_manifest_from_manifest_subdir(self):
         self.assertEqual(
                 os.path.relpath(
                     gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subb')),
+                        os.path.join(self.dir, 'subb'),
+                        allow_compressed=True),
                     self.dir),
                 'Manifest.gz')
 
@@ -277,6 +288,7 @@ class TestCompressedManifestWithIgnore(TempDirTestCase):
         self.assertEqual(
                 os.path.relpath(
                     gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subc', 'sub')),
+                        os.path.join(self.dir, 'subc', 'sub'),
+                        allow_compressed=True),
                     self.dir),
                 'subc/sub/Manifest.gz')

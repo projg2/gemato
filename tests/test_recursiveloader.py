@@ -1790,11 +1790,6 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 self.manifest_gz)
         m.assert_directory_verifies('')
 
-    def test_cli_verifies(self):
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'verify', self.dir]),
-            0)
-
     def test_save_manifest(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest.gz'))
@@ -1836,30 +1831,6 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest.gz'),
             hashes=['SHA256', 'SHA512'])
         m.save_manifests(force=True, compress_watermark=4096)
-        self.assertFalse(os.path.exists(
-            os.path.join(self.dir, 'Manifest.gz')))
-        self.assertTrue(os.path.exists(
-            os.path.join(self.dir, 'Manifest')))
-
-    def test_cli_decompress_manifests_low_watermark(self):
-        self.assertEqual(
-                gemato.cli.main(['gemato', 'update',
-                    '--hashes=SHA256 SHA512',
-                    '--compress-watermark=0',
-                    self.dir]),
-                0)
-        self.assertFalse(os.path.exists(
-            os.path.join(self.dir, 'Manifest')))
-        self.assertTrue(os.path.exists(
-            os.path.join(self.dir, 'Manifest.gz')))
-
-    def test_cli_decompress_manifests_high_watermark(self):
-        self.assertEqual(
-                gemato.cli.main(['gemato', 'update',
-                    '--hashes=SHA256 SHA512',
-                    '--compress-watermark=4096',
-                    self.dir]),
-                0)
         self.assertFalse(os.path.exists(
             os.path.join(self.dir, 'Manifest.gz')))
         self.assertTrue(os.path.exists(
@@ -2034,15 +2005,6 @@ MANIFEST a/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 gemato.manifest.ManifestEntryDATA)
         m.save_manifests()
         m.assert_directory_verifies()
-
-    def test_cli_update(self):
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
-                self.dir]),
-            0)
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'verify', self.dir]),
-            0)
 
 
 class MultipleSubdirectoryFilesTest(TempDirTestCase):
