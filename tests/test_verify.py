@@ -752,10 +752,13 @@ class ProcFileVerificationTest(unittest.TestCase):
 
     def test_get_file_metadata(self):
         st = os.stat(self.path)
-        self.assertEqual(list(gemato.verify.get_file_metadata(
-            self.path, hashes=['MD5', 'SHA1'])),
+        metadata = list(gemato.verify.get_file_metadata(
+            self.path, hashes=['MD5', 'SHA1']))
+        # mtime is not meaningful on procfs, and changes with every stat
+        metadata[4] = 0
+        self.assertEqual(metadata,
             [True, st.st_dev, (stat.S_IFREG, 'regular file'),
-                st.st_size, st.st_mtime, {
+                st.st_size, 0, {
                     'MD5': self.md5,
                     'SHA1': self.sha1,
                     '__size__': self.size,
