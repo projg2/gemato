@@ -97,6 +97,12 @@ class EbuildRepositoryTests(TempDirTestCase):
     }
     FILES = dict.fromkeys(EXPECTED_TYPES, u'')
 
+    EXPECTED_IGNORE = [
+        'distfiles',
+        'local',
+        'packages',
+    ]
+
     def test_get_entry_type_for_path(self):
         p = self.PROFILE()
         for f, expt in self.EXPECTED_TYPES.items():
@@ -119,6 +125,11 @@ class EbuildRepositoryTests(TempDirTestCase):
                     "type mismatch for {}".format(f))
         for f in self.EXPECTED_MANIFESTS:
             self.assertEqual(m.find_path_entry(f).tag, 'MANIFEST',
+                    "type mismatch for {}".format(f))
+        for f in self.EXPECTED_IGNORE:
+            self.assertIsNotNone(m.find_path_entry(f),
+                    "missing IGNORE entry for {}".format(f))
+            self.assertEqual(m.find_path_entry(f).tag, 'IGNORE',
                     "type mismatch for {}".format(f))
         return m
 

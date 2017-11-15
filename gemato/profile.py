@@ -42,6 +42,17 @@ class DefaultProfile(object):
         """
         return False
 
+    def get_ignore_paths_for_new_manifest(self, relpath):
+        """
+        Get the list of IGNORE paths that should be added to the newly
+        created Manifest in directory @relpath. The paths must be
+        relative to @relpath.
+
+        This function is only called when a new Manifest file is being
+        created.
+        """
+        return ()
+
     def want_compressed_manifest(self, relpath, manifest, unc_size,
             compress_watermark):
         """
@@ -91,6 +102,12 @@ class EbuildRepositoryProfile(DefaultProfile):
             if spl[0:2] == ['metadata', 'md5-cache']:
                 return True
         return False
+
+    def get_ignore_paths_for_new_manifest(self, relpath):
+        if relpath == '':
+            # traditionally present in /usr/portage
+            return ('distfiles', 'local', 'packages')
+        return ()
 
     def set_loader_options(self, loader):
         if loader.hashes is None:
