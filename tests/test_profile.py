@@ -67,10 +67,6 @@ class EbuildRepositoryTests(TempDirTestCase):
         'metadata/layout.conf': 'DATA',
         'metadata/projects.xml': 'DATA',
         'metadata/pkg_desc_index': 'DATA',
-        'metadata/timestamp': 'DATA',
-        'metadata/timestamp.chk': 'DATA',
-        'metadata/timestamp.commit': 'DATA',
-        'metadata/timestamp.x': 'DATA',
         'metadata/dtd/foo.dtd': 'DATA',
         'metadata/glsa/glsa-202001-01.xml': 'DATA',
         'metadata/install-qa-check.d/50foo': 'DATA',
@@ -95,12 +91,21 @@ class EbuildRepositoryTests(TempDirTestCase):
         'profiles/desc/foo.desc': 'DATA',
         'profiles/updates/1Q-2020': 'DATA',
     }
-    FILES = dict.fromkeys(EXPECTED_TYPES, u'')
+    FILES = dict.fromkeys(list(EXPECTED_TYPES) + [
+        'metadata/timestamp',
+        'metadata/timestamp.chk',
+        'metadata/timestamp.commit',
+        'metadata/timestamp.x',
+    ], u'')
 
     EXPECTED_IGNORE = [
         'distfiles',
         'local',
         'packages',
+        'metadata/timestamp',
+        'metadata/timestamp.chk',
+        'metadata/timestamp.commit',
+        'metadata/timestamp.x',
     ]
 
     def test_get_entry_type_for_path(self):

@@ -107,6 +107,9 @@ class EbuildRepositoryProfile(DefaultProfile):
         if relpath == '':
             # traditionally present in /usr/portage
             return ('distfiles', 'local', 'packages')
+        elif relpath == 'metadata':
+            return ('timestamp', 'timestamp.chk', 'timestamp.commit',
+                    'timestamp.x')
         return ()
 
     def set_loader_options(self, loader):
