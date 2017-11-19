@@ -283,7 +283,7 @@ def main(argv):
 
     create = subp.add_parser('create',
             help='Create a Manifest tree starting at the specified file')
-    create.add_argument('paths', nargs='*', default=['Manifest'],
+    create.add_argument('paths', nargs='*', default=['.'],
             help='Paths to create (defaults to "Manifest" if none specified)')
     create.add_argument('-c', '--compress-watermark', type=int,
             help='Minimum Manifest size for files to be compressed')
