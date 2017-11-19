@@ -150,7 +150,8 @@ class ManifestRecursiveLoader(object):
 
                 # add initial IGNORE entries
                 for ip in (self.profile
-                           .get_ignore_paths_for_new_manifest('')):
+                           .get_ignore_paths_for_new_manifest(
+                               os.path.dirname(relpath))):
                     ie = gemato.manifest.ManifestEntryIGNORE(ip)
                     m.entries.append(ie)
             else:
@@ -977,11 +978,6 @@ class ManifestRecursiveLoader(object):
                 fe = gemato.manifest.ManifestEntryMANIFEST(
                         mpath, 0, {})
                 new_entries.append(fe)
-
-                for ip in (self.profile
-                           .get_ignore_paths_for_new_manifest(relpath)):
-                    ie = gemato.manifest.ManifestEntryIGNORE(ip)
-                    m.entries.append(ie)
 
             if new_entries:
                 mpath, mdirpath, m = manifest_stack[-1]
