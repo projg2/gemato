@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim:fileencoding=utf-8
 # Ultra-optimized Meta-Manifest writing.
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
