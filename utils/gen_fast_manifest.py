@@ -92,7 +92,7 @@ def gen_manifest(top_dir):
             for l in f:
                 if l.startswith(b'DIST') or l.startswith(b'IGNORE'):
                     manifest_entries.append(l.rstrip())
-    except OSError as e:
+    except IOError as e:
         if e.errno != errno.ENOENT:
             raise
     else:
