@@ -102,6 +102,10 @@ def gen_manifest(top_dir):
     compat_mode = generate_manifest_entries(manifest_entries, top_dir)
     manifest_entries.sort()
 
+    # do not compress files which we want valid top-level Manifests
+    if top_dir.endswith('metadata/glsa') or top_dir.endswith('metadata/news'):
+        compat_mode = True
+
     manifest_data = b'\n'.join(manifest_entries) + b'\n'
     if len(manifest_data) > 4096 and not compat_mode:
         with gzip.GzipFile(os.path.join(top_dir, 'Manifest.gz'), 'wb') as f:

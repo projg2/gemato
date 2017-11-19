@@ -80,8 +80,14 @@ IGNORE packages
     gen_fast_manifest.gen_manifest('.')
 
     # write timestamp
+    ts = datetime.datetime.utcnow().strftime(
+            'TIMESTAMP %Y-%m-%dT%H:%M:%SZ\n').encode('ascii')
+    with io.open('metadata/glsa/Manifest', 'ab') as f:
+        f.write(ts)
+    with io.open('metadata/news/Manifest', 'ab') as f:
+        f.write(ts)
     with io.open('Manifest', 'ab') as f:
-        f.write(datetime.datetime.utcnow().strftime('TIMESTAMP %Y-%m-%dT%H:%M:%SZ\n').encode('ascii'))
+        f.write(ts)
 
 
 if __name__ == '__main__':
