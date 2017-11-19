@@ -7,6 +7,7 @@
 import datetime
 import glob
 import io
+import multiprocessing
 import os
 import os.path
 import subprocess
@@ -17,37 +18,38 @@ sys.path.insert(0, os.path.dirname(__file__))
 import gen_fast_manifest
 
 
-def manifest_dir_generator():
+def manifest_dir_generator(iter_n):
     with io.open('profiles/categories', 'r') as f:
         categories = [x.strip() for x in f]
 
     for c in categories:
-        # all package directories
-        for d in glob.glob(os.path.join(c, '*/')):
-            yield d
-        # category directory
-        yield c
-        # md5-cache for the category
-        yield os.path.join('metadata/md5-cache', c)
+        if iter_n == 1:
+            # all package directories
+            for d in glob.glob(os.path.join(c, '*/')):
+                yield d
+            # md5-cache for the category
+            yield os.path.join('metadata/md5-cache', c)
+        elif iter_n == 2:
+            # category directory
+            yield c
 
-    # few special metadata directories
-    yield 'metadata/glsa'
-    yield 'metadata/md5-cache'
-    yield 'metadata/news'
+    if iter_n == 1:
+        # few special metadata subdirectories
+        yield 'metadata/glsa'
+        yield 'metadata/md5-cache'
+        yield 'metadata/news'
 
-    # top-level dirs
-    yield 'metadata'
-    yield 'eclass'
-    yield 'licenses'
-    yield 'profiles'
-
-    # finally, the whole repo
-    yield '.'
+        # independent top-level dirs
+        yield 'eclass'
+        yield 'licenses'
+        yield 'profiles'
+    elif iter_n == 2:
+        # top-level dirs
+        yield 'metadata'
 
 
 def gen_metamanifest(top_dir):
     os.chdir(top_dir)
-    alldirs = manifest_dir_generator()
 
     # pre-populate IGNORE entries
     with io.open('metadata/Manifest', 'wb') as f:
@@ -62,9 +64,20 @@ IGNORE local
 IGNORE packages
 ''')
 
-    # call the fast-gen routine
-    for path in alldirs:
-        gen_fast_manifest.gen_manifest(path)
+    p = multiprocessing.Pool()
+
+    # generate 1st batch of sub-Manifests
+    # expecting 20000+ items, so use iterator with a reasonably large
+    # chunksize
+    p.map(gen_fast_manifest.gen_manifest, manifest_dir_generator(1), chunksize=64)
+
+    # 2nd batch (files depending on results of 1st batch)
+    # this one is fast to generate, so let's pass a list and let map()
+    # choose optimal chunksize
+    p.map(gen_fast_manifest.gen_manifest, list(manifest_dir_generator(2)))
+
+    # finally, generate the top-level Manifest
+    gen_fast_manifest.gen_manifest('.')
 
     # write timestamp
     with io.open('Manifest', 'ab') as f:
