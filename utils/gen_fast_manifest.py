@@ -41,7 +41,7 @@ def generate_manifest_entries(out, topdir):
                     out.append(get_manifest_entry('MANIFEST',
                             fp, os.path.relpath(fp, topdir)))
                     # do not descend
-                    dirs.clear()
+                    del dirs[:]
                     skip = True
                     break
             else:
