@@ -6,6 +6,7 @@
 import datetime
 import io
 import os.path
+import re
 
 import gemato.exceptions
 import gemato.openpgp
@@ -54,9 +55,13 @@ class ManifestPathEntry(object):
     """
 
     __slots__ = ['path']
+    disallowed_path_re = re.compile(r'[\0\s]', re.U)
 
     def __init__(self, path):
         assert path[0] != '/'
+        m = self.disallowed_path_re.search(path)
+        if m is not None:
+            raise gemato.exceptions.ManifestInvalidFilename(path, m.start())
         self.path = path
 
     @staticmethod

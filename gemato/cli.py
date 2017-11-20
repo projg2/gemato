@@ -159,6 +159,9 @@ def do_update(args, argp):
             except gemato.exceptions.ManifestInvalidPath as e:
                 logging.error(str(e))
                 return 1
+            except gemato.exceptions.ManifestInvalidFilename as e:
+                logging.error(str(e))
+                return 1
 
             stop = timeit.default_timer()
             logging.info('{} updated in {:.2f} seconds'.format(p, stop - start))
@@ -221,6 +224,9 @@ def do_create(args, argp):
                 logging.error(str(e))
                 return 1
             except gemato.exceptions.ManifestInvalidPath as e:
+                logging.error(str(e))
+                return 1
+            except gemato.exceptions.ManifestInvalidFilename as e:
                 logging.error(str(e))
                 return 1
 

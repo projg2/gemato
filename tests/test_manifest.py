@@ -423,3 +423,23 @@ class NewManifestEntryTest(unittest.TestCase):
                 gemato.manifest.new_manifest_entry('AUX',
                     'test', 32, {}),
                 gemato.manifest.ManifestEntryAUX)
+
+    def test_space_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
+            gemato.manifest.new_manifest_entry, 'DATA',
+            'tes t', 32, {}),
+
+    def test_tab_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
+            gemato.manifest.new_manifest_entry, 'DATA',
+            'tes\tt', 32, {}),
+
+    def test_nbsp_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
+            gemato.manifest.new_manifest_entry, 'DATA',
+            u'tes\u00a0t', 32, {}),
+
+    def test_null_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
+            gemato.manifest.new_manifest_entry, 'DATA',
+            u'tes\0t', 32, {}),

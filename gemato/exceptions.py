@@ -120,3 +120,18 @@ class ManifestInvalidPath(Exception):
         super(ManifestInvalidPath, self).__init__(
                 "Attempting to add invalid path {} to Manifest: {} must not be {}"
                 .format(path, detail[0], detail[1]))
+
+
+class ManifestInvalidFilename(Exception):
+    """
+    An exception raised when an entry for invalid filename is created.
+    """
+
+    __slots__ = ['filename', 'pos']
+
+    def __init__(self, filename, pos):
+        self.filename = filename
+        self.pos = pos
+        super(ManifestInvalidFilename, self).__init__(
+                "Attempting to add invalid filename {!r} to Manifest: disallowed character U+{:04X} at position {}"
+                .format(filename, ord(filename[pos]), pos))
