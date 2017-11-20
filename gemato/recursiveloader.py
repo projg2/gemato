@@ -971,6 +971,7 @@ class ManifestRecursiveLoader(object):
                     self.updated_manifests.add(mpath)
 
             # do we have Manifest in this directory?
+            new_ignore_paths = []
             if want_manifest and manifest_stack[-1][1] != relpath:
                 mpath = os.path.join(relpath, 'Manifest')
                 m = self.create_manifest(mpath)
@@ -982,11 +983,21 @@ class ManifestRecursiveLoader(object):
                 for ip in (self.profile
                            .get_ignore_paths_for_new_manifest(relpath)):
                     ie = gemato.manifest.ManifestEntryIGNORE(ip)
+                    iep = os.path.join(relpath, ip)
+
+                    if self.find_path_entry(iep):
+                        raise NotImplementedError('Need to remove old parent entry for now-ignored path')
+
                     m.entries.append(ie)
+                    new_ignore_paths.append(iep)
 
             if new_entries:
                 mpath, mdirpath, m = manifest_stack[-1]
                 for fe in new_entries:
+                    # skip files that should have been ignored
+                    if fe.path in new_ignore_paths:
+                        continue
+
                     if fe.tag == 'MANIFEST':
                         # Manifest needs to go level up
                         mmpath = mpath
@@ -1014,6 +1025,7 @@ class ManifestRecursiveLoader(object):
                                     'files')
                         else:
                             fe.path = os.path.relpath(fe.path, mdirpath)
+                        # do not add duplicate entry if the path is ignored
                         m.entries.append(fe)
                 self.updated_manifests.add(mpath)
 
