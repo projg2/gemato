@@ -138,6 +138,19 @@ class EbuildRepositoryTests(TempDirTestCase):
                     "type mismatch for {}".format(f))
         return m
 
+    def test_regression_top_level_ignore_in_all_manifests(self):
+        assert 'distfiles' in self.EXPECTED_IGNORE[0]
+        assert 'dev-foo/Manifest' in self.EXPECTED_MANIFESTS
+
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+                os.path.join(self.dir, 'Manifest'),
+                hashes=['SHA256', 'SHA512'],
+                allow_create=True,
+                profile=self.PROFILE())
+        m.update_entries_for_directory('')
+
+        self.assertIsNone(m.find_path_entry('dev-foo/distfiles'))
+
     def test_set_loader_options(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
                 os.path.join(self.dir, 'Manifest'),

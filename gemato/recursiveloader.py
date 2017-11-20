@@ -148,11 +148,12 @@ class ManifestRecursiveLoader(object):
                 # trigger saving
                 self.updated_manifests.add(relpath)
 
-                # add initial IGNORE entries
-                for ip in (self.profile
-                           .get_ignore_paths_for_new_manifest('')):
-                    ie = gemato.manifest.ManifestEntryIGNORE(ip)
-                    m.entries.append(ie)
+                # add initial IGNORE entries to top-level Manifest
+                if relpath == 'Manifest':
+                    for ip in (self.profile
+                               .get_ignore_paths_for_new_manifest('')):
+                        ie = gemato.manifest.ManifestEntryIGNORE(ip)
+                        m.entries.append(ie)
             else:
                 raise err
 
