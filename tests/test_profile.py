@@ -136,6 +136,8 @@ class EbuildRepositoryTests(TempDirTestCase):
                     "missing IGNORE entry for {}".format(f))
             self.assertEqual(m.find_path_entry(f).tag, 'IGNORE',
                     "type mismatch for {}".format(f))
+        m.save_manifests()
+        m.assert_directory_verifies('')
         return m
 
     def test_regression_top_level_ignore_in_all_manifests(self):
@@ -178,6 +180,11 @@ class EbuildRepositoryTests(TempDirTestCase):
         for f in self.EXPECTED_MANIFESTS:
             self.assertEqual(m.find_path_entry(f).tag, 'MANIFEST',
                     "type mismatch for {}".format(f))
+
+        self.assertEqual(
+                gemato.cli.main(['gemato', 'verify', self.dir]),
+                0)
+
         return m
 
 
