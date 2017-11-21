@@ -317,4 +317,6 @@ def main(argv):
     create.set_defaults(func=do_create)
 
     vals = argp.parse_args(argv[1:])
+    if not hasattr(vals, 'func'):
+        argp.error('No function specified')
     return vals.func(vals, argp)
