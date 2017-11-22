@@ -7,6 +7,7 @@ import datetime
 import io
 import os.path
 import re
+import sys
 
 import gemato.exceptions
 import gemato.openpgp
@@ -49,6 +50,10 @@ class ManifestEntryTIMESTAMP(object):
                 or (self.tag == other.tag and self.ts < other.ts))
 
 
+if sys.hexversion >= 0x03000000:
+    unichr = chr
+
+
 class ManifestPathEntry(object):
     """
     Base class for entries using a path.
@@ -68,7 +73,7 @@ class ManifestPathEntry(object):
         if val is None:
             raise gemato.exceptions.ManifestSyntaxError(
                     'Invalid escape sequence at pos {} of: {}'.format(m.start(), m.string))
-        return chr(int(val[1:], base=16))
+        return unichr(int(val[1:], base=16))
 
     @classmethod
     def process_path(cls, l):

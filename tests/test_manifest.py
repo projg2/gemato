@@ -446,15 +446,15 @@ class ManifestPathEncodingTest(unittest.TestCase):
 
     def test_encode_nbsp_in_filename(self):
         m = gemato.manifest.new_manifest_entry('DATA',
-            'tes\u00a0t', 32, {})
-        self.assertEqual(m.path, 'tes\u00a0t')
+            u'tes\u00a0t', 32, {})
+        self.assertEqual(m.path, u'tes\u00a0t')
         self.assertListEqual(list(m.to_list()),
                 ['DATA', 'tes\\u00A0t', '32'])
 
     def test_encode_en_quad_in_filename(self):
         m = gemato.manifest.new_manifest_entry('DATA',
-            'tes\u2000t', 32, {})
-        self.assertEqual(m.path, 'tes\u2000t')
+            u'tes\u2000t', 32, {})
+        self.assertEqual(m.path, u'tes\u2000t')
         self.assertListEqual(list(m.to_list()),
                 ['DATA', 'tes\\u2000t', '32'])
 
@@ -495,17 +495,17 @@ class ManifestPathEncodingTest(unittest.TestCase):
     def test_decode_nbsp_in_filename(self):
         m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
             'tes\\u00A0t', 32])
-        self.assertEqual(m.path, 'tes\u00a0t')
+        self.assertEqual(m.path, u'tes\u00a0t')
 
     def test_decode_nbsp_in_filename_lc(self):
         m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
             'tes\\u00a0t', 32])
-        self.assertEqual(m.path, 'tes\u00a0t')
+        self.assertEqual(m.path, u'tes\u00a0t')
 
     def test_decode_en_quad_in_filename(self):
         m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
             'tes\\u2000t', 32])
-        self.assertEqual(m.path, 'tes\u2000t')
+        self.assertEqual(m.path, u'tes\u2000t')
 
     def test_decode_null_in_filename(self):
         m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
