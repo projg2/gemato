@@ -59,9 +59,6 @@ class ManifestPathEntry(object):
 
     def __init__(self, path):
         assert path[0] != '/'
-        m = self.disallowed_path_re.search(path)
-        if m is not None:
-            raise gemato.exceptions.ManifestInvalidFilename(path, m.start())
         self.path = path
 
     @staticmethod
@@ -73,6 +70,21 @@ class ManifestPathEntry(object):
             raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: expected relative path, got: {}'.format(l[0], l[1:]))
         return l[1]
+
+    @staticmethod
+    def encode_char(m):
+        assert len(m.group(0)) == 1
+        cp = ord(m.group(0))
+        if cp <= 0x7F:
+            return '\\x{:02X}'.format(cp)
+        elif cp <= 0xFFFF:
+            return '\\u{:04X}'.format(cp)
+        else:
+            return '\\U{:08X}'.format(cp)
+
+    @property
+    def encoded_path(self):
+        return self.disallowed_path_re.sub(self.encode_char, self.path)
 
     def __eq__(self, other):
         return self.tag == other.tag and self.path == other.path
@@ -95,7 +107,7 @@ class ManifestEntryIGNORE(ManifestPathEntry):
         return cls(cls.process_path(l))
 
     def to_list(self):
-        return (self.tag, self.path)
+        return (self.tag, self.encoded_path)
 
 
 class ManifestFileEntry(ManifestPathEntry):
@@ -141,7 +153,7 @@ class ManifestFileEntry(ManifestPathEntry):
         return size, checksums
 
     def to_list(self, tag):
-        ret = [tag, self.path, str(self.size)]
+        ret = [tag, self.encoded_path, str(self.size)]
         for k, v in sorted(self.checksums.items()):
             ret += [k, v]
         return ret

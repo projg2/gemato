@@ -424,27 +424,50 @@ class NewManifestEntryTest(unittest.TestCase):
                     'test', 32, {}),
                 gemato.manifest.ManifestEntryAUX)
 
-    def test_space_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
-            gemato.manifest.new_manifest_entry, 'DATA',
-            'tes t', 32, {}),
 
-    def test_tab_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
-            gemato.manifest.new_manifest_entry, 'DATA',
-            'tes\tt', 32, {}),
+class ManifestPathEncodingTest(unittest.TestCase):
+    """
+    Tests for path encoding.
+    """
 
-    def test_nbsp_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
-            gemato.manifest.new_manifest_entry, 'DATA',
-            u'tes\u00a0t', 32, {}),
+    def test_encode_space_in_filename(self):
+        m = gemato.manifest.new_manifest_entry('DATA',
+            'tes t', 32, {})
+        self.assertEqual(m.path, 'tes t')
+        self.assertListEqual(list(m.to_list()),
+                ['DATA', 'tes\\x20t', '32'])
 
-    def test_null_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
-            gemato.manifest.new_manifest_entry, 'DATA',
-            u'tes\0t', 32, {}),
+    def test_encode_tab_in_filename(self):
+        m = gemato.manifest.new_manifest_entry('DATA',
+            'tes\tt', 32, {})
+        self.assertEqual(m.path, 'tes\tt')
+        self.assertListEqual(list(m.to_list()),
+                ['DATA', 'tes\\x09t', '32'])
 
-    def test_backslash_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
-            gemato.manifest.new_manifest_entry, 'DATA',
-            u'tes\\t', 32, {}),
+    def test_encode_nbsp_in_filename(self):
+        m = gemato.manifest.new_manifest_entry('DATA',
+            'tes\u00a0t', 32, {})
+        self.assertEqual(m.path, 'tes\u00a0t')
+        self.assertListEqual(list(m.to_list()),
+                ['DATA', 'tes\\u00A0t', '32'])
+
+    def test_encode_en_quad_in_filename(self):
+        m = gemato.manifest.new_manifest_entry('DATA',
+            'tes\u2000t', 32, {})
+        self.assertEqual(m.path, 'tes\u2000t')
+        self.assertListEqual(list(m.to_list()),
+                ['DATA', 'tes\\u2000t', '32'])
+
+    def test_encode_null_in_filename(self):
+        m = gemato.manifest.new_manifest_entry('DATA',
+            'tes\x00t', 32, {})
+        self.assertEqual(m.path, 'tes\x00t')
+        self.assertListEqual(list(m.to_list()),
+                ['DATA', 'tes\\x00t', '32'])
+
+    def test_encode_backslash_in_filename(self):
+        m = gemato.manifest.new_manifest_entry('DATA',
+            'tes\\t', 32, {})
+        self.assertEqual(m.path, 'tes\\t')
+        self.assertListEqual(list(m.to_list()),
+                ['DATA', 'tes\\x5Ct', '32'])
