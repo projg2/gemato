@@ -443,3 +443,8 @@ class NewManifestEntryTest(unittest.TestCase):
         self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
             gemato.manifest.new_manifest_entry, 'DATA',
             u'tes\0t', 32, {}),
+
+    def test_backslash_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestInvalidFilename,
+            gemato.manifest.new_manifest_entry, 'DATA',
+            u'tes\\t', 32, {}),

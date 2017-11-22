@@ -55,7 +55,7 @@ class ManifestPathEntry(object):
     """
 
     __slots__ = ['path']
-    disallowed_path_re = re.compile(r'[\0\s]', re.U)
+    disallowed_path_re = re.compile(r'[\0\s\\]', re.U)
 
     def __init__(self, path):
         assert path[0] != '/'
