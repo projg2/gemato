@@ -471,3 +471,98 @@ class ManifestPathEncodingTest(unittest.TestCase):
         self.assertEqual(m.path, 'tes\\t')
         self.assertListEqual(list(m.to_list()),
                 ['DATA', 'tes\\x5Ct', '32'])
+
+    def test_decode_space_in_filename(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\x20t', 32])
+        self.assertEqual(m.path, 'tes t')
+
+    def test_decode_space_in_filename_u(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\u0020t', 32])
+        self.assertEqual(m.path, 'tes t')
+
+    def test_decode_space_in_filename_lu(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\U00000020t', 32])
+        self.assertEqual(m.path, 'tes t')
+
+    def test_decode_tab_in_filename(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\x09t', 32])
+        self.assertEqual(m.path, 'tes\tt')
+
+    def test_decode_nbsp_in_filename(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\u00A0t', 32])
+        self.assertEqual(m.path, 'tes\u00a0t')
+
+    def test_decode_nbsp_in_filename_lc(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\u00a0t', 32])
+        self.assertEqual(m.path, 'tes\u00a0t')
+
+    def test_decode_en_quad_in_filename(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\u2000t', 32])
+        self.assertEqual(m.path, 'tes\u2000t')
+
+    def test_decode_null_in_filename(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\x00t', 32])
+        self.assertEqual(m.path, 'tes\x00t')
+
+    def test_decode_backslash_in_filename(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\x5Ct', 32])
+        self.assertEqual(m.path, 'tes\\t')
+
+    def test_decode_backslash_in_filename_lc(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\x5ct', 32])
+        self.assertEqual(m.path, 'tes\\t')
+
+    def test_decode_invalid_backslash_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list,
+                ['DATA', 'tes\\t', 32])
+
+    def test_decode_double_backslash_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list,
+                ['DATA', 'tes\\\\t', 32])
+
+    def test_decode_trailing_backslash_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list,
+                ['DATA', 'tes\\', 32])
+
+    def test_decode_empty_x_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list,
+                ['DATA', 'tes\\xt', 32])
+
+    def test_decode_short_x_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list,
+                ['DATA', 'tes\\x5t', 32])
+
+    def test_decode_empty_u_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list,
+                ['DATA', 'tes\\ut', 32])
+
+    def test_decode_short_u_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list,
+                ['DATA', 'tes\\u345t', 32])
+
+    def test_decode_empty_lu_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list,
+                ['DATA', 'tes\\Ut', 32])
+
+    def test_decode_short_lu_in_filename(self):
+        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
+                gemato.manifest.ManifestEntryDATA.from_list,
+                ['DATA', 'tes\\U0000345t', 32])

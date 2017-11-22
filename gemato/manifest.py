@@ -56,20 +56,29 @@ class ManifestPathEntry(object):
 
     __slots__ = ['path']
     disallowed_path_re = re.compile(r'[\0\s\\]', re.U)
+    escape_seq_re = re.compile(r'\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})?')
 
     def __init__(self, path):
         assert path[0] != '/'
         self.path = path
 
     @staticmethod
-    def process_path(l):
+    def decode_char(m):
+        val = m.group(1)
+        if val is None:
+            raise gemato.exceptions.ManifestSyntaxError(
+                    'Invalid escape sequence at pos {} of: {}'.format(m.start(), m.string))
+        return chr(int(val[1:], base=16))
+
+    @classmethod
+    def process_path(cls, l):
         if len(l) != 2:
             raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: expects 1 value, got: {}'.format(l[0], l[1:]))
         if not l[1] or l[1][0] == '/':
             raise gemato.exceptions.ManifestSyntaxError(
                     '{} line: expected relative path, got: {}'.format(l[0], l[1:]))
-        return l[1]
+        return cls.escape_seq_re.sub(cls.decode_char, l[1])
 
     @staticmethod
     def encode_char(m):
