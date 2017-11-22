@@ -2512,3 +2512,78 @@ DATA test 11 MD5 5f8db599de986fab7a21625b7916589c
         m.update_entries_for_directory('', last_mtime=st.st_mtime)
         self.assertEqual(m.find_path_entry('test').checksums['MD5'],
                 '5f8db599de986fab7a21625b7916589c')
+
+
+class ManifestWhitespaceInFilenameTest(TempDirTestCase):
+    """
+    Test for a Manifest tree where filename contains whitespace.
+    """
+
+    FILENAME = '  foo bar  '
+    FILES = {
+        'Manifest': u'''
+DATA \\x20\\x20foo\\x20bar\\x20\\x20 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        FILENAME: u''
+    }
+
+    def test_find_path_entry(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertIsNotNone(m.find_path_entry(self.FILENAME))
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.assert_directory_verifies('')
+
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            0)
+
+    def test_rewrite_manifest(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.save_manifests(force=True)
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertEqual(f.read(), self.FILES['Manifest'].lstrip())
+
+    def test_update_entry_for_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA1'])
+        m.update_entry_for_path(self.FILENAME)
+        self.assertIsNotNone(m.find_path_entry(self.FILENAME))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertIsNotNone(m.find_path_entry(self.FILENAME))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
+
+class ManifestBackslashInFilenameTest(ManifestWhitespaceInFilenameTest):
+    """
+    Test for a Manifest tree where filename contains backslash.
+    """
+
+    FILENAME = 'foo\\bar'
+    FILES = {
+        'Manifest': u'''
+DATA foo\\x5Cbar 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        FILENAME: u''
+    }
