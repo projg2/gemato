@@ -60,7 +60,7 @@ class ManifestPathEntry(object):
     """
 
     __slots__ = ['path']
-    disallowed_path_re = re.compile(r'[\0\s\\]', re.U)
+    disallowed_path_re = re.compile(r'[\x00-\x1F\x7F-\x9F\s\\]', re.U)
     escape_seq_re = re.compile(r'\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})?')
 
     def __init__(self, path):

@@ -465,6 +465,27 @@ class ManifestPathEncodingTest(unittest.TestCase):
         self.assertListEqual(list(m.to_list()),
                 ['DATA', 'tes\\x00t', '32'])
 
+    def test_encode_bell_in_filename(self):
+        m = gemato.manifest.new_manifest_entry('DATA',
+            'tes\at', 32, {})
+        self.assertEqual(m.path, 'tes\at')
+        self.assertListEqual(list(m.to_list()),
+                ['DATA', 'tes\\x07t', '32'])
+
+    def test_encode_del_in_filename(self):
+        m = gemato.manifest.new_manifest_entry('DATA',
+            'tes\x7Ft', 32, {})
+        self.assertEqual(m.path, 'tes\x7Ft')
+        self.assertListEqual(list(m.to_list()),
+                ['DATA', 'tes\\x7Ft', '32'])
+
+    def test_encode_pad_in_filename(self):
+        m = gemato.manifest.new_manifest_entry('DATA',
+            u'tes\u0080t', 32, {})
+        self.assertEqual(m.path, u'tes\u0080t')
+        self.assertListEqual(list(m.to_list()),
+                ['DATA', 'tes\\u0080t', '32'])
+
     def test_encode_backslash_in_filename(self):
         m = gemato.manifest.new_manifest_entry('DATA',
             'tes\\t', 32, {})
@@ -511,6 +532,26 @@ class ManifestPathEncodingTest(unittest.TestCase):
         m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
             'tes\\x00t', 32])
         self.assertEqual(m.path, 'tes\x00t')
+
+    def test_decode_bell_in_filename(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\x07t', 32])
+        self.assertEqual(m.path, 'tes\at')
+
+    def test_decode_del_in_filename(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\x7Ft', 32])
+        self.assertEqual(m.path, 'tes\x7Ft')
+
+    def test_decode_del_in_filename_lc(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\x7ft', 32])
+        self.assertEqual(m.path, 'tes\x7Ft')
+
+    def test_decode_pad_in_filename(self):
+        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
+            'tes\\u0080t', 32])
+        self.assertEqual(m.path, u'tes\u0080t')
 
     def test_decode_backslash_in_filename(self):
         m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
