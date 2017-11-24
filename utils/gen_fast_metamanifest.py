@@ -61,6 +61,7 @@ IGNORE timestamp.x
     with io.open('Manifest', 'wb') as f:
         f.write(b'''IGNORE distfiles
 IGNORE local
+IGNORE lost+found
 IGNORE packages
 ''')
 

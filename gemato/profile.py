@@ -106,7 +106,7 @@ class EbuildRepositoryProfile(DefaultProfile):
     def get_ignore_paths_for_new_manifest(self, relpath):
         if relpath == '':
             # traditionally present in /usr/portage
-            return ('distfiles', 'local', 'packages')
+            return ('distfiles', 'local', 'lost+found', 'packages')
         elif relpath == 'metadata':
             return ('timestamp', 'timestamp.chk', 'timestamp.commit',
                     'timestamp.x')

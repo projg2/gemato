@@ -101,6 +101,7 @@ class EbuildRepositoryTests(TempDirTestCase):
     EXPECTED_IGNORE = [
         'distfiles',
         'local',
+        'lost+found',
         'packages',
         'metadata/timestamp',
         'metadata/timestamp.chk',
