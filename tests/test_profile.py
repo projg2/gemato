@@ -47,10 +47,12 @@ class EbuildRepositoryTests(TempDirTestCase):
         'eclass/Manifest',
         'licenses/Manifest',
         'metadata/Manifest',
+        'metadata/dtd/Manifest',
         'metadata/glsa/Manifest',
         'metadata/md5-cache/Manifest',
         'metadata/md5-cache/dev-foo/Manifest',
         'metadata/news/Manifest',
+        'metadata/xml-schema/Manifest',
         'profiles/Manifest',
     ]
     EXPECTED_TYPES = {

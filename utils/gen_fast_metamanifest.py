@@ -35,9 +35,11 @@ def manifest_dir_generator(iter_n):
 
     if iter_n == 1:
         # few special metadata subdirectories
+        yield 'metadata/dtd'
         yield 'metadata/glsa'
         yield 'metadata/md5-cache'
         yield 'metadata/news'
+        yield 'metadata/xml-schema'
 
         # independent top-level dirs
         yield 'eclass'
@@ -57,12 +59,8 @@ def gen_metamanifest(top_dir):
 IGNORE timestamp.chk
 IGNORE timestamp.commit
 IGNORE timestamp.x
-IGNORE dtd/timestamp
-IGNORE dtd/timestamp.chk
-IGNORE xml-schema/timestamp
-IGNORE xml-schema/timestamp.chk
 ''')
-    for mdir in ('glsa', 'news'):
+    for mdir in ('dtd', 'glsa', 'news', 'xml-schema'):
         with io.open(os.path.join('metadata', mdir, 'Manifest'), 'wb') as f:
             f.write(b'''IGNORE timestamp
     IGNORE timestamp.chk

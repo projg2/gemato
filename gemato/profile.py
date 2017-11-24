@@ -94,8 +94,8 @@ class EbuildRepositoryProfile(DefaultProfile):
             if any(f.endswith('.ebuild') for f in filenames):
                 return True
             # some standard directories worth separate Manifests
-            if spl[0] == 'metadata' and spl[1] in ('glsa', 'md5-cache',
-                    'news'):
+            if spl[0] == 'metadata' and spl[1] in ('dtd', 'glsa',
+                    'md5-cache', 'news', 'xml-schema'):
                 return True
         elif len(spl) == 3:
             # metadata cache -> per-directory Manifests
@@ -109,9 +109,9 @@ class EbuildRepositoryProfile(DefaultProfile):
             return ('distfiles', 'local', 'lost+found', 'packages')
         elif relpath == 'metadata':
             return ('timestamp', 'timestamp.chk', 'timestamp.commit',
-                    'timestamp.x', 'dtd/timestamp', 'dtd/timestamp.chk',
-                    'xml-schema/timestamp', 'xml-schema/timestamp.chk')
-        elif relpath in ('metadata/glsa', 'metadata/news'):
+                    'timestamp.x')
+        elif relpath in ('metadata/dtd', 'metadata/glsa',
+                         'metadata/news', 'metadata/xml-schema'):
             return ('timestamp', 'timestamp.chk')
         return ()
 
