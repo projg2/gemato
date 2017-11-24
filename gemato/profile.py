@@ -112,7 +112,7 @@ class EbuildRepositoryProfile(DefaultProfile):
                     'timestamp.x')
         elif relpath in ('metadata/dtd', 'metadata/glsa',
                          'metadata/news', 'metadata/xml-schema'):
-            return ('timestamp', 'timestamp.chk')
+            return ('timestamp.chk', 'timestamp.commit')
         return ()
 
     def set_loader_options(self, loader):
