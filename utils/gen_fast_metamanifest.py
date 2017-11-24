@@ -57,6 +57,15 @@ def gen_metamanifest(top_dir):
 IGNORE timestamp.chk
 IGNORE timestamp.commit
 IGNORE timestamp.x
+IGNORE dtd/timestamp
+IGNORE dtd/timestamp.chk
+IGNORE xml-schema/timestamp
+IGNORE xml-schema/timestamp.chk
+''')
+    for mdir in ('glsa', 'news'):
+        with io.open(os.path.join('metadata', mdir, 'Manifest'), 'wb') as f:
+            f.write(b'''IGNORE timestamp
+    IGNORE timestamp.chk
 ''')
     with io.open('Manifest', 'wb') as f:
         f.write(b'''IGNORE distfiles

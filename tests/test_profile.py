@@ -107,6 +107,14 @@ class EbuildRepositoryTests(TempDirTestCase):
         'metadata/timestamp.chk',
         'metadata/timestamp.commit',
         'metadata/timestamp.x',
+        'metadata/dtd/timestamp',
+        'metadata/dtd/timestamp.chk',
+        'metadata/glsa/timestamp',
+        'metadata/glsa/timestamp.chk',
+        'metadata/news/timestamp',
+        'metadata/news/timestamp.chk',
+        'metadata/xml-schema/timestamp',
+        'metadata/xml-schema/timestamp.chk',
     ]
 
     def test_get_entry_type_for_path(self):

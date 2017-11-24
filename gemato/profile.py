@@ -109,7 +109,10 @@ class EbuildRepositoryProfile(DefaultProfile):
             return ('distfiles', 'local', 'lost+found', 'packages')
         elif relpath == 'metadata':
             return ('timestamp', 'timestamp.chk', 'timestamp.commit',
-                    'timestamp.x')
+                    'timestamp.x', 'dtd/timestamp', 'dtd/timestamp.chk',
+                    'xml-schema/timestamp', 'xml-schema/timestamp.chk')
+        elif relpath in ('metadata/glsa', 'metadata/news'):
+            return ('timestamp', 'timestamp.chk')
         return ()
 
     def set_loader_options(self, loader):
