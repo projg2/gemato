@@ -63,7 +63,7 @@ IGNORE timestamp.x
     for mdir in ('dtd', 'glsa', 'news', 'xml-schema'):
         with io.open(os.path.join('metadata', mdir, 'Manifest'), 'wb') as f:
             f.write(b'''IGNORE timestamp
-    IGNORE timestamp.chk
+IGNORE timestamp.chk
 ''')
     with io.open('Manifest', 'wb') as f:
         f.write(b'''IGNORE distfiles
