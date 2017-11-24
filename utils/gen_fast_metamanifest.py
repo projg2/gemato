@@ -79,6 +79,14 @@ IGNORE packages
     # chunksize
     p.map(gen_fast_manifest.gen_manifest, manifest_dir_generator(1), chunksize=64)
 
+    # timestamp into tier 1 directories
+    ts = datetime.datetime.utcnow().strftime(
+            'TIMESTAMP %Y-%m-%dT%H:%M:%SZ\n').encode('ascii')
+    with io.open('metadata/glsa/Manifest', 'ab') as f:
+        f.write(ts)
+    with io.open('metadata/news/Manifest', 'ab') as f:
+        f.write(ts)
+
     # 2nd batch (files depending on results of 1st batch)
     # this one is fast to generate, so let's pass a list and let map()
     # choose optimal chunksize
@@ -87,13 +95,9 @@ IGNORE packages
     # finally, generate the top-level Manifest
     gen_fast_manifest.gen_manifest('.')
 
-    # write timestamp
+    # final timestamp
     ts = datetime.datetime.utcnow().strftime(
             'TIMESTAMP %Y-%m-%dT%H:%M:%SZ\n').encode('ascii')
-    with io.open('metadata/glsa/Manifest', 'ab') as f:
-        f.write(ts)
-    with io.open('metadata/news/Manifest', 'ab') as f:
-        f.write(ts)
     with io.open('Manifest', 'ab') as f:
         f.write(ts)
 
