@@ -86,17 +86,16 @@ def gen_manifest(top_dir):
     manifest_entries = []
 
     # load DIST and IGNORE entries from existing Manifest
-    had_manifest = False
     try:
         with io.open(os.path.join(top_dir, 'Manifest'), 'rb') as f:
             for l in f:
                 if l.startswith(b'DIST') or l.startswith(b'IGNORE'):
                     manifest_entries.append(l.rstrip())
+        had_manifest = True
     except IOError as e:
         if e.errno != errno.ENOENT:
             raise
-    else:
-        had_manifest = True
+        had_manifest = False
 
     # generate local file entries
     compat_mode = generate_manifest_entries(manifest_entries, top_dir)
