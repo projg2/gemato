@@ -36,7 +36,7 @@ def generate_manifest_entries(out, topdir):
     for dirpath, dirs, files in os.walk(topdir):
         if dirpath != topdir:
             for f in files:
-                if f.startswith('Manifest'):
+                if f in ('Manifest', 'Manifest.gz'):
                     fp = os.path.join(dirpath, f)
                     out.append(get_manifest_entry('MANIFEST',
                             fp, os.path.relpath(fp, topdir)))
@@ -50,7 +50,7 @@ def generate_manifest_entries(out, topdir):
                 continue
         else:
             # enable compat mode for ebuild directories
-            if any(f.endswith('.ebuild') for f in files):
+            if any(f.endswith('.ebuild') and f != 'skel.ebuild' for f in files):
                 compat_mode = True
 
         # skip dot-dirs
@@ -100,10 +100,6 @@ def gen_manifest(top_dir):
     # generate local file entries
     compat_mode = generate_manifest_entries(manifest_entries, top_dir)
     manifest_entries.sort()
-
-    # do not compress files which we want valid top-level Manifests
-    if top_dir.endswith('metadata/glsa') or top_dir.endswith('metadata/news'):
-        compat_mode = True
 
     manifest_data = b'\n'.join(manifest_entries) + b'\n'
     if len(manifest_data) > 4096 and not compat_mode:

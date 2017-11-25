@@ -50,6 +50,20 @@ def manifest_dir_generator(iter_n):
         yield 'metadata'
 
 
+def make_toplevel(d, ts):
+    for suffix in ('.gz', ''):
+        src = os.path.join(d, 'Manifest' + suffix)
+        if os.path.exists(src):
+            dstsplit = os.path.join(d, 'Manifest.files' + suffix)
+            dsttop = os.path.join(d, 'Manifest')
+            os.rename(src, dstsplit)
+            with io.open(dsttop, 'wb') as f:
+                me = gen_fast_manifest.get_manifest_entry('MANIFEST',
+                        dstsplit, 'Manifest.files' + suffix)
+                f.write(me + b'\n' + ts)
+            break
+
+
 def gen_metamanifest(top_dir):
     os.chdir(top_dir)
 
@@ -79,13 +93,11 @@ IGNORE packages
     # chunksize
     p.map(gen_fast_manifest.gen_manifest, manifest_dir_generator(1), chunksize=64)
 
-    # timestamp into tier 1 directories
+    # special directories: we split Manifest there, and add timestamp
     ts = datetime.datetime.utcnow().strftime(
             'TIMESTAMP %Y-%m-%dT%H:%M:%SZ\n').encode('ascii')
-    with io.open('metadata/glsa/Manifest', 'ab') as f:
-        f.write(ts)
-    with io.open('metadata/news/Manifest', 'ab') as f:
-        f.write(ts)
+    make_toplevel('metadata/glsa', ts)
+    make_toplevel('metadata/news', ts)
 
     # 2nd batch (files depending on results of 1st batch)
     # this one is fast to generate, so let's pass a list and let map()
@@ -95,11 +107,10 @@ IGNORE packages
     # finally, generate the top-level Manifest
     gen_fast_manifest.gen_manifest('.')
 
-    # final timestamp
+    # final split
     ts = datetime.datetime.utcnow().strftime(
             'TIMESTAMP %Y-%m-%dT%H:%M:%SZ\n').encode('ascii')
-    with io.open('Manifest', 'ab') as f:
-        f.write(ts)
+    make_toplevel('', ts)
 
 
 if __name__ == '__main__':
