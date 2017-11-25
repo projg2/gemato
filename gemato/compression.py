@@ -50,9 +50,9 @@ def open_compressed_file(suffix, f, mode='rb'):
                 def read1(self, *args, **kwargs):
                     return self.read(*args, **kwargs)
 
-            return FixedGzipFile(fileobj=f, mode=mode, mtime=0)
+            return FixedGzipFile(fileobj=f, mode=mode, filename='', mtime=0)
 
-        return gzip.GzipFile(fileobj=f, mode=mode, mtime=0)
+        return gzip.GzipFile(fileobj=f, mode=mode, filename='', mtime=0)
     elif suffix == "bz2" and bz2 is not None:
         return bz2.BZ2File(f, mode=mode)
     elif suffix == "lzma" and lzma is not None:

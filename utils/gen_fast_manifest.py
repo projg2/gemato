@@ -103,7 +103,8 @@ def gen_manifest(top_dir):
 
     manifest_data = b'\n'.join(manifest_entries) + b'\n'
     if len(manifest_data) > 4096 and not compat_mode:
-        with gzip.GzipFile(os.path.join(top_dir, 'Manifest.gz'), 'wb', mtime=0) as f:
+        with gzip.GzipFile(os.path.join(top_dir, 'Manifest.gz'), 'wb',
+                           filename='', mtime=0) as f:
             f.write(manifest_data)
         if had_manifest:
             os.unlink(os.path.join(top_dir, 'Manifest'))
