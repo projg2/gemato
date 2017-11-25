@@ -122,8 +122,9 @@ class EbuildRepositoryProfile(DefaultProfile):
         if loader.sort is None:
             loader.sort = True
         if loader.compress_watermark is None:
-            # GLEP 61 suggested value
-            loader.compress_watermark = 32768
+            # 128 should be a safe value where gzip can actually
+            # gain anything without making things worse by overhead
+            loader.compress_watermark = 128
         if loader.compress_format is None:
             loader.compress_format = 'gz'
 

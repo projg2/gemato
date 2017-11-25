@@ -102,7 +102,7 @@ def gen_manifest(top_dir):
     manifest_entries.sort()
 
     manifest_data = b'\n'.join(manifest_entries) + b'\n'
-    if len(manifest_data) > 4096 and not compat_mode:
+    if not compat_mode:
         with gzip.GzipFile(os.path.join(top_dir, 'Manifest.gz'), 'wb',
                            filename='', mtime=0) as f:
             f.write(manifest_data)
