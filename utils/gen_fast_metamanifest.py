@@ -50,21 +50,37 @@ def manifest_dir_generator(iter_n):
         yield 'metadata'
 
 
-def make_toplevel(d, ts):
+def make_toplevel(d, ts, pgp_key):
     for suffix in ('.gz', ''):
         src = os.path.join(d, 'Manifest' + suffix)
         if os.path.exists(src):
             dstsplit = os.path.join(d, 'Manifest.files' + suffix)
             dsttop = os.path.join(d, 'Manifest')
             os.rename(src, dstsplit)
+
+            me = gen_fast_manifest.get_manifest_entry('MANIFEST',
+                    dstsplit, 'Manifest.files' + suffix)
+            data = me + b'\n' + ts
+
+            if pgp_key is not None:
+                cmd = []
+                p = subprocess.Popen(['gpg', '--batch', '-u', pgp_key,
+                                      '--armor', '--clearsign'],
+                                     stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+                sout, serr = p.communicate(data)
+                if p.wait() != 0:
+                    raise ValueError('GPG error: {}'.format(serr))
+                data = sout
+
             with io.open(dsttop, 'wb') as f:
-                me = gen_fast_manifest.get_manifest_entry('MANIFEST',
-                        dstsplit, 'Manifest.files' + suffix)
-                f.write(me + b'\n' + ts)
+                f.write(data)
+
             break
 
 
-def gen_metamanifest(top_dir):
+def gen_metamanifest(top_dir, pgp_key):
     os.chdir(top_dir)
 
     # pre-populate IGNORE entries
@@ -96,8 +112,8 @@ IGNORE packages
     # special directories: we split Manifest there, and add timestamp
     ts = datetime.datetime.utcnow().strftime(
             'TIMESTAMP %Y-%m-%dT%H:%M:%SZ\n').encode('ascii')
-    make_toplevel('metadata/glsa', ts)
-    make_toplevel('metadata/news', ts)
+    make_toplevel('metadata/glsa', ts, pgp_key)
+    make_toplevel('metadata/news', ts, pgp_key)
 
     # 2nd batch (files depending on results of 1st batch)
     # this one is fast to generate, so let's pass a list and let map()
@@ -110,12 +126,12 @@ IGNORE packages
     # final split
     ts = datetime.datetime.utcnow().strftime(
             'TIMESTAMP %Y-%m-%dT%H:%M:%SZ\n').encode('ascii')
-    make_toplevel('', ts)
+    make_toplevel('', ts, pgp_key)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print('Usage: {} <top-directory>'.format(sys.argv[0]))
+    if len(sys.argv) not in (2, 3):
+        print('Usage: {} <top-directory> [<openpgp-key>]'.format(sys.argv[0]))
         sys.exit(1)
 
-    gen_metamanifest(sys.argv[1])
+    gen_metamanifest(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else None)
