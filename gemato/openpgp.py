@@ -14,7 +14,7 @@ import gemato.exceptions
 def _spawn_gpg(options, home, stdin):
     env = None
     if home is not None:
-        env={'HOME': home}
+        env={'GNUPGHOME': home}
 
     try:
         p = subprocess.Popen(['gpg', '--batch'] + options,
