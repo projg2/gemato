@@ -53,12 +53,20 @@ class OpenPGPEnvironment(object):
         if self._home is not None:
             self.close()
 
+    @staticmethod
+    def _rmtree_error_handler(func, path, exc_info):
+        # ignore ENOENT -- it probably means a race condition between
+        # us and gpg-agent cleaning up after itself
+        if (not isinstance(exc_info[1], OSError)
+                or exc_info[1].errno != errno.ENOENT):
+            raise exc_info[1]
+
     def close(self):
         if self._home is not None:
             # terminate the agent spawned by the process
             subprocess.Popen(['gpgconf', '--kill', 'all'],
                 env={'GNUPGHOME': self._home}).wait()
-            shutil.rmtree(self._home)
+            shutil.rmtree(self._home, onerror=self._rmtree_error_handler)
             self._home = None
 
     def import_key(self, keyfile):
