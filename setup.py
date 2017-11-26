@@ -8,7 +8,7 @@ from distutils.core import setup
 
 setup(
     name='gemato',
-    version='1',
+    version='6',
     author='Michał Górny',
     author_email='mgorny@gentoo.org',
     url='http://github.com/mgorny/gemato',
