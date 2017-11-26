@@ -55,6 +55,9 @@ class OpenPGPEnvironment(object):
 
     def close(self):
         if self._home is not None:
+            # terminate the agent spawned by the process
+            subprocess.Popen(['gpgconf', '--kill', 'all'],
+                env={'GNUPGHOME': self._home}).wait()
             shutil.rmtree(self._home)
             self._home = None
 
