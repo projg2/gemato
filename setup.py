@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name='gemato',
-    version='6',
+    version='7',
     author='Michał Górny',
     author_email='mgorny@gentoo.org',
     url='http://github.com/mgorny/gemato',
