@@ -9,8 +9,11 @@ from setuptools import setup
 setup(
     name='gemato',
     version='7',
+    description='Gentoo Manifest Tool -- a stand-alone utility to verify and update Gentoo Manifest files',
+
     author='Michał Górny',
     author_email='mgorny@gentoo.org',
+    license='BSD',
     url='http://github.com/mgorny/gemato',
 
     extras_require={
