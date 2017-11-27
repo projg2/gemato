@@ -16,6 +16,8 @@ def _spawn_gpg(options, env_instance, stdin):
     impls = ['gpg2', 'gpg']
     if env_instance is not None:
         env={'GNUPGHOME': env_instance.home}
+        if env_instance._impl is not None:
+            impls = [env_instance._impl]
 
     for impl in impls:
         try:
@@ -33,7 +35,7 @@ def _spawn_gpg(options, env_instance, stdin):
         raise gemato.exceptions.OpenPGPNoImplementation()
 
     if env_instance is not None:
-        env_instance._set_started()
+        env_instance._impl = impl
 
     out, err = p.communicate(stdin)
     return (p.wait(), out, err)
@@ -48,11 +50,11 @@ class OpenPGPEnvironment(object):
     or use as a context manager (via 'with').
     """
 
-    __slots__ = ['_home', '_started']
+    __slots__ = ['_home', '_impl']
 
     def __init__(self):
         self._home = tempfile.mkdtemp()
-        self._started = False
+        self._impl = None
 
     def __enter__(self):
         return self
@@ -60,9 +62,6 @@ class OpenPGPEnvironment(object):
     def __exit__(self, exc_type, exc_value, exc_cb):
         if self._home is not None:
             self.close()
-
-    def _set_started(self):
-        self._started = True
 
     @staticmethod
     def _rmtree_error_handler(func, path, exc_info):
@@ -74,7 +73,7 @@ class OpenPGPEnvironment(object):
 
     def close(self):
         if self._home is not None:
-            if self._started:
+            if self._impl is not None:
                 try:
                     # terminate the agent spawned by the process
                     subprocess.Popen(['gpgconf', '--kill', 'all'],
