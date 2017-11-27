@@ -28,6 +28,9 @@ def _spawn_gpg(options, env_instance, stdin):
         else:
             raise
 
+    if env_instance is not None:
+        env_instance._set_started()
+
     out, err = p.communicate(stdin)
     return (p.wait(), out, err)
 
@@ -41,10 +44,11 @@ class OpenPGPEnvironment(object):
     or use as a context manager (via 'with').
     """
 
-    __slots__ = ['_home']
+    __slots__ = ['_home', '_started']
 
     def __init__(self):
         self._home = tempfile.mkdtemp()
+        self._started = False
 
     def __enter__(self):
         return self
@@ -52,6 +56,9 @@ class OpenPGPEnvironment(object):
     def __exit__(self, exc_type, exc_value, exc_cb):
         if self._home is not None:
             self.close()
+
+    def _set_started(self):
+        self._started = True
 
     @staticmethod
     def _rmtree_error_handler(func, path, exc_info):
@@ -63,9 +70,10 @@ class OpenPGPEnvironment(object):
 
     def close(self):
         if self._home is not None:
-            # terminate the agent spawned by the process
-            subprocess.Popen(['gpgconf', '--kill', 'all'],
-                env={'GNUPGHOME': self._home}).wait()
+            if self._started:
+                # terminate the agent spawned by the process
+                subprocess.Popen(['gpgconf', '--kill', 'all'],
+                    env={'GNUPGHOME': self._home}).wait()
             shutil.rmtree(self._home, onerror=self._rmtree_error_handler)
             self._home = None
 
