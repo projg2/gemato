@@ -11,10 +11,10 @@ import tempfile
 import gemato.exceptions
 
 
-def _spawn_gpg(options, home, stdin):
+def _spawn_gpg(options, env_instance, stdin):
     env = None
-    if home is not None:
-        env={'GNUPGHOME': home}
+    if env_instance is not None:
+        env={'GNUPGHOME': env_instance.home}
 
     try:
         p = subprocess.Popen(['gpg', '--batch'] + options,
@@ -76,8 +76,7 @@ class OpenPGPEnvironment(object):
         at the beginning.
         """
 
-        exitst, out, err = _spawn_gpg(['--import'], self.home,
-                keyfile.read())
+        exitst, out, err = _spawn_gpg(['--import'], self, keyfile.read())
         if exitst != 0:
             raise RuntimeError('Unable to import key: {}'.format(err.decode('utf8')))
 
@@ -116,9 +115,7 @@ def verify_file(f, env=None):
     results, prepare a dedicated OpenPGPEnvironment and pass it as @env.
     """
 
-    exitst, out, err = _spawn_gpg(['--verify'],
-            env.home if env is not None else None,
-            f.read().encode('utf8'))
+    exitst, out, err = _spawn_gpg(['--verify'], env, f.read().encode('utf8'))
     if exitst != 0:
         raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
 
@@ -138,9 +135,8 @@ def clear_sign_file(f, outf, keyid=None, env=None):
     args = []
     if keyid is not None:
         args += ['--local-user', keyid]
-    exitst, out, err = _spawn_gpg(['--clearsign'] + args,
-            env.home if env is not None else None,
-            f.read().encode('utf8'))
+    exitst, out, err = _spawn_gpg(['--clearsign'] + args, env,
+                                  f.read().encode('utf8'))
     if exitst != 0:
         raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
 
