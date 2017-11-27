@@ -13,20 +13,24 @@ import gemato.exceptions
 
 def _spawn_gpg(options, env_instance, stdin):
     env = None
+    impls = ['gpg2', 'gpg']
     if env_instance is not None:
         env={'GNUPGHOME': env_instance.home}
 
-    try:
-        p = subprocess.Popen(['gpg', '--batch'] + options,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env)
-    except OSError as e:
-        if e.errno == errno.ENOENT:
-            raise gemato.exceptions.OpenPGPNoImplementation()
+    for impl in impls:
+        try:
+            p = subprocess.Popen([impl, '--batch'] + options,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=env)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
         else:
-            raise
+            break
+    else:
+        raise gemato.exceptions.OpenPGPNoImplementation()
 
     if env_instance is not None:
         env_instance._set_started()
