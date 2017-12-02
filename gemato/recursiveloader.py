@@ -426,8 +426,9 @@ class ManifestRecursiveLoader(object):
                             verify_manifests=True):
         """
         Find all file entries that apply to paths starting with @path.
-        Return a dictionary mapping relative paths to entries. Raises
-        an exception if multiple entries for file collide.
+        Returns a nested dictionary that maps directories -> filenames
+        inside the directory -> entries. Raises an exception if multiple
+        entries for file collide.
 
         If @only_types are specified as a list, only files of specified
         types will be collected. If it is not specified, then all types
@@ -457,12 +458,16 @@ class ManifestRecursiveLoader(object):
 
                 fullpath = os.path.join(relpath, e.path)
                 if gemato.util.path_starts_with(fullpath, path):
-                    if fullpath in out:
+                    dirpath = os.path.dirname(fullpath)
+                    filename = os.path.basename(e.path)
+                    dirout = out.setdefault(dirpath, {})
+                    if filename in dirout:
                         # compare the two entries
                         ret, diff = gemato.verify.verify_entry_compatibility(
-                                out[fullpath], e)
+                                dirout[filename], e)
                         if not ret:
-                            raise gemato.exceptions.ManifestIncompatibleEntry(out[fullpath], e, diff)
+                            raise gemato.exceptions.ManifestIncompatibleEntry(
+                                    dirout[filename], e, diff)
                         # we need to construct a single entry with both checksums
                         if diff:
                             new_checksums = dict(e.checksums)
@@ -470,7 +475,7 @@ class ManifestRecursiveLoader(object):
                                 if d2 is None:
                                     new_checksums[k] = d1
                             e = type(e)(e.path, e.size, new_checksums)
-                    out[fullpath] = e
+                    dirout[filename] = e
         return out
 
     def _verify_one_file(self, path, relpath, e, fail_handler,
@@ -524,6 +529,7 @@ class ManifestRecursiveLoader(object):
             # strip dot to avoid matching problems
             if relpath == '.':
                 relpath = ''
+            dirdict = entry_dict.get(relpath, {})
 
             skip_dirs = []
             for d in dirnames:
@@ -532,8 +538,7 @@ class ManifestRecursiveLoader(object):
                     skip_dirs.append(d)
                     continue
 
-                dpath = os.path.join(relpath, d)
-                de = entry_dict.pop(dpath, None)
+                de = dirdict.pop(d, None)
                 if de is None:
                     syspath = os.path.join(dirpath, d)
                     st = os.stat(syspath)
@@ -544,6 +549,7 @@ class ManifestRecursiveLoader(object):
                 if de.tag == 'IGNORE':
                     skip_dirs.append(d)
                 else:
+                    dpath = os.path.join(relpath, d)
                     ret &= self._verify_one_file(os.path.join(dirpath, d),
                             dpath, de, fail_handler, last_mtime)
 
@@ -561,15 +567,17 @@ class ManifestRecursiveLoader(object):
                 # an entry for it
                 if fpath == self.top_level_manifest_filename:
                     continue
-                fe = entry_dict.pop(fpath, None)
+                fe = dirdict.pop(f, None)
                 ret &= self._verify_one_file(os.path.join(dirpath, f),
                         fpath, fe, fail_handler, last_mtime)
 
         # check for missing files
-        for relpath, e in entry_dict.items():
-            syspath = os.path.join(self.root_directory, relpath)
-            ret &= self._verify_one_file(syspath, relpath, e,
-                            fail_handler, last_mtime)
+        for relpath, dirdict in entry_dict.items():
+            for f, e in dirdict.items():
+                fpath = os.path.join(relpath, f)
+                syspath = os.path.join(self.root_directory, fpath)
+                ret &= self._verify_one_file(syspath, fpath, e,
+                                fail_handler, last_mtime)
 
         return ret
 
@@ -883,6 +891,7 @@ class ManifestRecursiveLoader(object):
             # strip dot to avoid matching problems
             if relpath == '.':
                 relpath = ''
+            dirdict = entry_dict.get(relpath, {})
 
             skip_dirs = []
             for d in dirnames:
@@ -891,8 +900,7 @@ class ManifestRecursiveLoader(object):
                     skip_dirs.append(d)
                     continue
 
-                dpath = os.path.join(relpath, d)
-                de = entry_dict.get(dpath, None)
+                de = dirdict.get(d, None)
                 if de is None:
                     syspath = os.path.join(dirpath, d)
                     st = os.stat(syspath)
