@@ -321,7 +321,7 @@ class ManifestRecursiveLoader(object):
             if not to_load:
                 break
 
-            manifests = pool.map(self.manifest_loader, to_load,
+            manifests = pool.imap_unordered(self.manifest_loader, to_load,
                                  chunksize=16)
             self.loaded_manifests.update(manifests)
 
