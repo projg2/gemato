@@ -327,6 +327,7 @@ class ManifestRecursiveLoader(object):
 
         pool.close()
         pool.join()
+        pool.terminate()
 
     def find_timestamp(self):
         """
