@@ -300,34 +300,36 @@ class ManifestRecursiveLoader(object):
 
         pool = multiprocessing.Pool(processes=self.max_jobs)
 
-        # TODO: figure out how to avoid confusing uses of 'recursive'
-        while True:
-            to_load = []
-            for curmpath, relpath, m in self._iter_manifests_for_path(
-                                            path, recursive):
-                for e in m.entries:
-                    if e.tag != 'MANIFEST':
-                        continue
-                    mpath = os.path.join(relpath, e.path)
-                    if curmpath == mpath or mpath in self.loaded_manifests:
-                        continue
-                    mdir = os.path.dirname(mpath)
-                    if not verify:
-                        e = None
-                    if gemato.util.path_starts_with(path, mdir):
-                        to_load.append((mpath, e))
-                    elif recursive and gemato.util.path_starts_with(mdir, path):
-                        to_load.append((mpath, e))
-            if not to_load:
-                break
+        try:
+            # TODO: figure out how to avoid confusing uses of 'recursive'
+            while True:
+                to_load = []
+                for curmpath, relpath, m in self._iter_manifests_for_path(
+                                                path, recursive):
+                    for e in m.entries:
+                        if e.tag != 'MANIFEST':
+                            continue
+                        mpath = os.path.join(relpath, e.path)
+                        if curmpath == mpath or mpath in self.loaded_manifests:
+                            continue
+                        mdir = os.path.dirname(mpath)
+                        if not verify:
+                            e = None
+                        if gemato.util.path_starts_with(path, mdir):
+                            to_load.append((mpath, e))
+                        elif recursive and gemato.util.path_starts_with(mdir, path):
+                            to_load.append((mpath, e))
+                if not to_load:
+                    break
 
-            manifests = pool.imap_unordered(self.manifest_loader, to_load,
-                                 chunksize=16)
-            self.loaded_manifests.update(manifests)
+                manifests = pool.imap_unordered(self.manifest_loader, to_load,
+                                     chunksize=16)
+                self.loaded_manifests.update(manifests)
 
-        pool.close()
-        pool.join()
-        pool.terminate()
+            pool.close()
+            pool.join()
+        finally:
+            pool.terminate()
 
     def find_timestamp(self):
         """
