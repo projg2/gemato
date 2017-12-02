@@ -7,17 +7,20 @@ class UnsupportedCompression(Exception):
     def __init__(self, suffix):
         super(UnsupportedCompression, self).__init__(
                 'Unsupported compression suffix: {}'.format(suffix))
+        self.args = (suffix,)
 
 
 class UnsupportedHash(Exception):
     def __init__(self, hash_name):
         super(UnsupportedHash, self).__init__(
                 'Unsupported hash name: {}'.format(hash_name))
+        self.args = (hash_name,)
 
 
 class ManifestSyntaxError(Exception):
     def __init__(self, message):
         super(ManifestSyntaxError, self).__init__(message)
+        self.args = (message,)
 
 
 class ManifestIncompatibleEntry(Exception):
@@ -31,6 +34,7 @@ class ManifestIncompatibleEntry(Exception):
         self.e1 = e1
         self.e2 = e2
         self.diff = diff
+        self.args = (e1, e2, diff)
 
 
 class ManifestMismatch(Exception):
@@ -48,6 +52,7 @@ class ManifestMismatch(Exception):
         self.path = path
         self.entry = entry
         self.diff = diff
+        self.args = (path, entry, diff)
 
 
 class ManifestCrossDevice(Exception):
@@ -62,6 +67,7 @@ class ManifestCrossDevice(Exception):
         super(ManifestCrossDevice, self).__init__(
             "Path {} crosses filesystem boundaries, it must be IGNORE-d explicitly"
             .format(path))
+        self.args = (path,)
 
 
 class ManifestUnsignedData(Exception):
@@ -83,6 +89,7 @@ class OpenPGPVerificationFailure(Exception):
     def __init__(self, output):
         super(OpenPGPVerificationFailure, self).__init__(
                 "OpenPGP verification failed:\n{}".format(output))
+        self.args = (output,)
 
 
 class OpenPGPSigningFailure(Exception):
@@ -93,6 +100,7 @@ class OpenPGPSigningFailure(Exception):
     def __init__(self, output):
         super(OpenPGPSigningFailure, self).__init__(
                 "OpenPGP signing failed:\n{}".format(output))
+        self.args = (output,)
 
 
 class OpenPGPNoImplementation(Exception):
@@ -120,6 +128,7 @@ class ManifestInvalidPath(Exception):
         super(ManifestInvalidPath, self).__init__(
                 "Attempting to add invalid path {} to Manifest: {} must not be {}"
                 .format(path, detail[0], detail[1]))
+        self.args = (path, detail)
 
 
 class ManifestInvalidFilename(Exception):
@@ -135,3 +144,4 @@ class ManifestInvalidFilename(Exception):
         super(ManifestInvalidFilename, self).__init__(
                 "Attempting to add invalid filename {!r} to Manifest: disallowed character U+{:04X} at position {}"
                 .format(filename, ord(filename[pos]), pos))
+        self.args = (filename, pos)
