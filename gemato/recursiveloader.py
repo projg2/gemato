@@ -635,7 +635,7 @@ class ManifestRecursiveLoader(object):
                 ret = all(pool.imap_unordered(verifier, _walk_directory(it),
                                    chunksize=64))
             else:
-                # in py<3.5 imap() swallows exceptions, so fall back
+                # in py<3.5.4 imap() swallows exceptions, so fall back
                 # to regular map() [it's only a little slower]
                 ret = all(pool.map(verifier, _walk_directory(it),
                                    chunksize=64))

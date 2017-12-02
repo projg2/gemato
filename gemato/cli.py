@@ -10,6 +10,7 @@ import datetime
 import io
 import logging
 import os.path
+import sys
 import timeit
 
 import gemato.find_top_level
@@ -320,3 +321,8 @@ def main(argv):
     if not hasattr(vals, 'func'):
         argp.error('No function specified')
     return vals.func(vals, argp)
+
+
+def setuptools_main():
+    logging.getLogger().setLevel(logging.INFO)
+    sys.exit(main(sys.argv))

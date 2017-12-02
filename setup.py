@@ -24,7 +24,11 @@ setup(
     },
 
     packages=['gemato'],
-    scripts=['bin/gemato'],
+    entry_points={
+        'console_scripts': [
+            'gemato=gemato.cli:setuptools_main',
+        ],
+    },
 
     classifiers=[
         'Development Status :: 4 - Beta',
