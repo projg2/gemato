@@ -892,7 +892,7 @@ class ManifestRecursiveLoader(object):
                     continue
 
                 dpath = os.path.join(relpath, d)
-                de = entry_dict.pop(dpath, None)
+                de = entry_dict.get(dpath, None)
                 if de is None:
                     syspath = os.path.join(dirpath, d)
                     st = os.stat(syspath)
