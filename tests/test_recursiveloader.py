@@ -17,6 +17,14 @@ import gemato.recursiveloader
 from tests.testutil import TempDirTestCase
 
 
+def callback_return_true(e):
+    return True
+
+
+def callback_return_false(e):
+    return False
+
+
 class BasicNestingTest(TempDirTestCase):
     DIRS = ['sub', 'sub/deeper', 'other']
     FILES = {
@@ -305,13 +313,13 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertTrue(m.assert_directory_verifies(
-                'sub', fail_handler=lambda x: True))
+                'sub', fail_handler=callback_return_true))
 
     def test_assert_directory_verifies_stray_file_nofail_false(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertFalse(m.assert_directory_verifies(
-                'sub', fail_handler=lambda x: False))
+                'sub', fail_handler=callback_return_false))
 
     def test_cli_verifies(self):
         self.assertEqual(
@@ -1497,7 +1505,7 @@ MISC foo 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertTrue(m.assert_directory_verifies('',
-                fail_handler=lambda x: True))
+                fail_handler=callback_return_true))
 
     def test_cli_verifies(self):
         self.assertEqual(
@@ -1554,7 +1562,7 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.assert_directory_verifies, '',
-                fail_handler=lambda x: True)
+                fail_handler=callback_return_true)
 
     def test_cli_verifies(self):
         self.assertEqual(
@@ -1600,7 +1608,7 @@ class CrossDeviceEmptyManifestTest(TempDirTestCase):
             os.path.join(self.dir, 'Manifest'))
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.assert_directory_verifies, '',
-                fail_handler=lambda x: True)
+                fail_handler=callback_return_true)
 
     def test_cli_verifies(self):
         self.assertEqual(
@@ -2671,7 +2679,7 @@ DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
         self.assertTrue(m.assert_directory_verifies('',
-                fail_handler=lambda x: True))
+                fail_handler=callback_return_true))
 
     def test_cli_verifies(self):
         self.assertEqual(
