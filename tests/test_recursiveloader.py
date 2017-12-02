@@ -2647,3 +2647,56 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                      'r', encoding='utf8') as f:
             self.assertNotEqual(f.read(), self.FILES['Manifest'].lstrip())
         m.assert_directory_verifies()
+
+
+class ManifestMissingDirectoryTest(TempDirTestCase):
+    """
+    Test handling Manifest with file in directory that does not exist.
+    """
+
+    DIRS = []
+    FILES = {
+        'Manifest': u'''
+DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+    }
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
+                m.assert_directory_verifies, '')
+
+    def test_assert_directory_verifies_nonstrict_via_fail_handler(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertTrue(m.assert_directory_verifies('',
+                fail_handler=lambda x: True))
+
+    def test_cli_verifies(self):
+        self.assertEqual(
+            gemato.cli.main(['gemato', 'verify', self.dir]),
+            1)
+
+    def test_update_entry_for_path(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        m.update_entry_for_path('sub/test')
+        self.assertIsNone(m.find_path_entry('sub/test'))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        m.update_entries_for_directory('')
+        self.assertIsNone(m.find_path_entry('sub/test'))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'])
+        m.assert_directory_verifies()
