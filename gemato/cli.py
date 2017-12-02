@@ -9,6 +9,7 @@ import argparse
 import datetime
 import io
 import logging
+import multiprocessing
 import os.path
 import sys
 import timeit
@@ -34,6 +35,10 @@ def do_verify(args, argp):
 
         init_kwargs = {}
         kwargs = {}
+        if args.jobs is not None:
+            if args.jobs < 1:
+                argp.error('--jobs must be positive')
+            init_kwargs['max_jobs'] = args.jobs
         if args.keep_going:
             kwargs['fail_handler'] = verify_failure
         if not args.openpgp_verify:
@@ -97,6 +102,10 @@ def do_update(args, argp):
             init_kwargs['compress_format'] = args.compress_format
         if args.force_rewrite:
             save_kwargs['force'] = True
+        if args.jobs is not None:
+            if args.jobs < 1:
+                argp.error('--jobs must be positive')
+            init_kwargs['max_jobs'] = args.jobs
         if args.openpgp_id is not None:
             init_kwargs['openpgp_keyid'] = args.openpgp_id
         if args.profile is not None:
@@ -184,6 +193,10 @@ def do_create(args, argp):
             init_kwargs['compress_format'] = args.compress_format
         if args.force_rewrite:
             save_kwargs['force'] = True
+        if args.jobs is not None:
+            if args.jobs < 1:
+                argp.error('--jobs must be positive')
+            init_kwargs['max_jobs'] = args.jobs
         if args.openpgp_id is not None:
             init_kwargs['openpgp_keyid'] = args.openpgp_id
         if args.profile is not None:
@@ -246,6 +259,9 @@ def main(argv):
             help='Verify one or more directories against Manifests')
     verify.add_argument('paths', nargs='*', default=['.'],
             help='Paths to verify (defaults to "." if none specified)')
+    verify.add_argument('-j', '--jobs', type=int,
+            help='Specify the maximum number of parallel jobs to use (default: {})'
+                .format(multiprocessing.cpu_count()))
     verify.add_argument('-k', '--keep-going', action='store_true',
             help='Continue reporting errors rather than terminating on the first failure')
     verify.add_argument('-K', '--openpgp-key',
@@ -271,6 +287,9 @@ def main(argv):
             help='Whitespace-separated list of hashes to use')
     update.add_argument('-i', '--incremental', action='store_true',
             help='Perform incremental update by comparing mtimes against TIMESTAMP')
+    update.add_argument('-j', '--jobs', type=int,
+            help='Specify the maximum number of parallel jobs to use (default: {})'
+                .format(multiprocessing.cpu_count()))
     update.add_argument('-k', '--openpgp-id',
             help='Use the specified OpenPGP key (by ID or user)')
     update.add_argument('-K', '--openpgp-key',
@@ -300,6 +319,9 @@ def main(argv):
             help='Force rewriting all the Manifests, even if they did not change')
     create.add_argument('-H', '--hashes',
             help='Whitespace-separated list of hashes to use')
+    create.add_argument('-j', '--jobs', type=int,
+            help='Specify the maximum number of parallel jobs to use (default: {})'
+                .format(multiprocessing.cpu_count()))
     create.add_argument('-k', '--openpgp-id',
             help='Use the specified OpenPGP key (by ID or user)')
     create.add_argument('-K', '--openpgp-key',
