@@ -14,6 +14,54 @@ import gemato.util
 import gemato.verify
 
 
+class ManifestLoader(object):
+    """
+    Helper class to load Manifests in subprocesses.
+    """
+
+    __slots__ = ['root_directory', 'verify_openpgp', 'openpgp_env']
+
+    def __init__(self, root_directory, verify_openpgp, openpgp_env):
+        """
+        @root_directory specifies top directory of Manifest tree.
+
+        If @verify_openpgp is True and a Manifest contain an OpenPGP
+        signature, the signature will be verified. Provide @openpgp_env
+        to perform the verification in specific environment.
+        """
+        self.root_directory = root_directory
+        self.verify_openpgp = verify_openpgp
+        self.openpgp_env = openpgp_env
+
+    def verify_and_load(self, relpath, verify_entry=None):
+        """
+        Load the Manifest from file @relpath (relative to
+        root_directory). If the file is compressed, it is decompressed
+        transparently.
+
+        If @verify_entry is not None, the Manifest file is verified
+        against the entry. If the verification fails, ManifestMismatch
+        exception is raised.
+
+        Returns a tuple of (ManifestFile instance, file stat result).
+        """
+        m = gemato.manifest.ManifestFile()
+        path = os.path.join(self.root_directory, relpath)
+
+        if verify_entry is not None:
+            ret, diff = gemato.verify.verify_path(path, verify_entry)
+            if not ret:
+                raise gemato.exceptions.ManifestMismatch(
+                        relpath, verify_entry, diff)
+
+        with gemato.compression.open_potentially_compressed_path(
+                path, 'r', encoding='utf8') as f:
+            m.load(f, self.verify_openpgp, self.openpgp_env)
+            st = os.fstat(f.fileno())
+
+        return m, st
+
+
 class ManifestRecursiveLoader(object):
     """
     A class encapsulating a tree covered by multiple Manifests.
@@ -24,7 +72,6 @@ class ManifestRecursiveLoader(object):
     __slots__ = [
         # configuration properties
         'root_directory',
-        'verify_openpgp',
         'openpgp_env',
         'sign_openpgp',
         'openpgp_keyid',
@@ -35,6 +82,7 @@ class ManifestRecursiveLoader(object):
         'compress_format',
         'profile',
         # internal variables
+        'manifest_loader',
         'top_level_manifest_filename',
         'loaded_manifests',
         'updated_manifests',
@@ -89,7 +137,6 @@ class ManifestRecursiveLoader(object):
         """
 
         self.root_directory = os.path.dirname(top_manifest_path)
-        self.verify_openpgp = verify_openpgp
         self.openpgp_env = openpgp_env
         self.sign_openpgp = sign_openpgp
         self.openpgp_keyid = openpgp_keyid
@@ -101,13 +148,15 @@ class ManifestRecursiveLoader(object):
 
         self.profile.set_loader_options(self)
 
-        if self.verify_openpgp is None:
-            self.verify_openpgp = True
+        if verify_openpgp is None:
+            verify_openpgp = True
         if self.sort is None:
             self.sort = False
         if self.compress_format is None:
             self.compress_format = 'gz'
 
+        self.manifest_loader = ManifestLoader(self.root_directory,
+                verify_openpgp, self.openpgp_env)
         self.top_level_manifest_filename = os.path.basename(
                 top_manifest_path)
         self.loaded_manifests = {}
@@ -130,20 +179,14 @@ class ManifestRecursiveLoader(object):
         a new Manifest will be added. Otherwise, opening a non-existing
         file will cause an exception.
         """
-        m = gemato.manifest.ManifestFile()
-        path = os.path.join(self.root_directory, relpath)
-        if verify_entry is not None:
-            ret, diff = gemato.verify.verify_path(path, verify_entry)
-            if not ret:
-                raise gemato.exceptions.ManifestMismatch(
-                        relpath, verify_entry, diff)
+
         try:
-            with gemato.compression.open_potentially_compressed_path(
-                    path, 'r', encoding='utf8') as f:
-                m.load(f, self.verify_openpgp, self.openpgp_env)
-                st = os.fstat(f.fileno())
+            m, st = self.manifest_loader.verify_and_load(
+                    relpath, verify_entry)
         except IOError as err:
             if err.errno == errno.ENOENT and allow_create:
+                m = gemato.manifest.ManifestFile()
+                path = os.path.join(self.root_directory, relpath)
                 st = os.stat(os.path.dirname(path))
                 # trigger saving
                 self.updated_manifests.add(relpath)
