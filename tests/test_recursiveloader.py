@@ -2629,3 +2629,19 @@ DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         self.assertRaises(gemato.exceptions.ManifestMismatch,
                 m.load_manifests_for_path, '', recursive=True)
         self.assertNotIn('a/Manifest', m.loaded_manifests)
+
+    def test_update_entries_for_directory(self):
+        """
+        update_entries_for_directory() should ignore Manifest mismatches
+        since it's rewriting Manifests anyway.
+        """
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['MD5'])
+        m.update_entries_for_directory('')
+        self.assertIsNotNone(m.find_path_entry('a/test'))
+        m.save_manifests()
+        with io.open(os.path.join(self.dir, 'Manifest'),
+                     'r', encoding='utf8') as f:
+            self.assertNotEqual(f.read(), self.FILES['Manifest'].lstrip())
+        m.assert_directory_verifies()

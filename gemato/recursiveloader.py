@@ -222,11 +222,16 @@ class ManifestRecursiveLoader(object):
                 key=lambda kdv: len(kdv[1]),
                 reverse=True)
 
-    def load_manifests_for_path(self, path, recursive=False):
+    def load_manifests_for_path(self, path, recursive=False, verify=True):
         """
         Load all Manifests that may apply to the specified path,
         recursively. If @recursive is True, also loads Manifests
         for all subdirectories of @path.
+
+        If @verify is True, sub-Manifests will be tested against entries
+        in parent Manifests and ManifestMismatch will be raised
+        on mismatch. Otherwise, sub-Manifests will be loaded
+        unconditionally of whether they match parent checksums.
         """
         # TODO: figure out how to avoid confusing uses of 'recursive'
         while True:
@@ -247,7 +252,7 @@ class ManifestRecursiveLoader(object):
             if not to_load:
                 break
             for mpath, e in to_load:
-                self.load_manifest(mpath, e)
+                self.load_manifest(mpath, verify_entry=e if verify else None)
 
     def find_timestamp(self):
         """
@@ -342,7 +347,8 @@ class ManifestRecursiveLoader(object):
                     return e
         return None
 
-    def get_file_entry_dict(self, path='', only_types=None):
+    def get_file_entry_dict(self, path='', only_types=None,
+                            verify_manifests=True):
         """
         Find all file entries that apply to paths starting with @path.
         Return a dictionary mapping relative paths to entries. Raises
@@ -351,9 +357,14 @@ class ManifestRecursiveLoader(object):
         If @only_types are specified as a list, only files of specified
         types will be collected. If it is not specified, then all types
         for local files will be processed.
+
+        @verify_manifests determines whether loaded Manifests will
+        be verified against MANIFEST entries. Pass False only when
+        doing updates.
         """
 
-        self.load_manifests_for_path(path, recursive=True)
+        self.load_manifests_for_path(path, recursive=True,
+                                     verify=verify_manifests)
         out = {}
         for mpath, relpath, m in self._iter_manifests_for_path(path,
                                     recursive=True):
@@ -704,7 +715,8 @@ class ManifestRecursiveLoader(object):
                 had_entry = True
                 break
 
-    def get_deduplicated_file_entry_dict_for_update(self, path=''):
+    def get_deduplicated_file_entry_dict_for_update(self, path='',
+            verify_manifests=True):
         """
         Find all file entries that apply to paths starting with @path.
         Remove all duplicate entries and queue the relevant Manifests
@@ -721,9 +733,14 @@ class ManifestRecursiveLoader(object):
         if they have colliding sizes or hashes. If the duplicate
         entries use different hash sets, the preserved entry is updated
         to have the union of their hashes.
+
+        @verify_manifests determines whether loaded Manifests will
+        be verified against MANIFEST entries. Pass False only when
+        doing updates.
         """
 
-        self.load_manifests_for_path(path, recursive=True)
+        self.load_manifests_for_path(path, recursive=True,
+                                     verify=verify_manifests)
         out = {}
         for mpath, relpath, m in self._iter_manifests_for_path(path,
                                     recursive=True):
@@ -759,7 +776,7 @@ class ManifestRecursiveLoader(object):
 
         return out
 
-    def load_unregistered_manifests(self, path=''):
+    def load_unregistered_manifests(self, path='', verify_manifests=True):
         """
         Scan the directory @path (relative to top directory)
         for unregistered (not listed in MANIFEST entries) Manifest
@@ -770,13 +787,17 @@ class ManifestRecursiveLoader(object):
         integrity. Note that the list may contain files that are
         referenced within added Manifests, so the list should
         be verified with regards to existing entries.
+
+        @verify_manifests determines whether loaded Manifests will
+        be verified against MANIFEST entries. Pass False only when
+        doing updates.
         """
 
         manifest_filenames = (gemato.compression
                 .get_potential_compressed_names('Manifest'))
 
         entry_dict = self.get_file_entry_dict(path,
-                only_types=['IGNORE'])
+                only_types=['IGNORE'], verify_manifests=verify_manifests)
         new_manifests = []
         it = os.walk(os.path.join(self.root_directory, path),
                 onerror=gemato.util.throw_exception,
@@ -832,7 +853,7 @@ class ManifestRecursiveLoader(object):
 
 
     def update_entries_for_directory(self, path='', hashes=None,
-            last_mtime=None):
+            last_mtime=None, verify_manifests=False):
         """
         Update the Manifest entries for the contents of directory
         @path (top directory by default), recursively. Includes adding
@@ -855,6 +876,10 @@ class ManifestRecursiveLoader(object):
         option *only* if you can rely on mtimes being bumped
         monotonically on modified files. Afterwards, the value
         of @last_mtime should be put into the TIMESTAMP entry.
+
+        @verify_manifests determines whether loaded Manifests will
+        be verified against MANIFEST entries. Disabled by default since
+        the MANIFEST entries would be updated anyway.
         """
 
         if hashes is None:
@@ -864,9 +889,10 @@ class ManifestRecursiveLoader(object):
         manifest_filenames = (gemato.compression
                 .get_potential_compressed_names('Manifest'))
 
-        new_manifests = self.load_unregistered_manifests(path)
+        new_manifests = self.load_unregistered_manifests(path,
+                verify_manifests=verify_manifests)
         entry_dict = self.get_deduplicated_file_entry_dict_for_update(
-                path)
+                path, verify_manifests=verify_manifests)
         manifest_stack = []
         for mpath, mrpath, m in (self
                 ._iter_manifests_for_path(path)):
