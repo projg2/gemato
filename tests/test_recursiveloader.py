@@ -2587,3 +2587,45 @@ DATA foo\\x5Cbar 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 ''',
         FILENAME: u''
     }
+
+
+class SubManifestMismatchTest(TempDirTestCase):
+    """
+    Test handling sub-Manifest whose checksum is mismatched.
+    """
+
+    DIRS = ['a']
+    FILES = {
+        'Manifest': u'''
+MANIFEST a/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        'a/Manifest': u'''
+DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
+''',
+        'a/test': u'',
+    }
+
+    def test_init(self):
+        """
+        Init should not attempt to load sub-Manifest, and therefore
+        not fail.
+        """
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertIn('Manifest', m.loaded_manifests)
+
+    def test_load_sub_manifest(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertNotIn('a/Manifest', m.loaded_manifests)
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
+                m.load_manifests_for_path, 'a/test')
+        self.assertNotIn('a/Manifest', m.loaded_manifests)
+
+    def test_load_manifests_recursively(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertNotIn('a/Manifest', m.loaded_manifests)
+        self.assertRaises(gemato.exceptions.ManifestMismatch,
+                m.load_manifests_for_path, '', recursive=True)
+        self.assertNotIn('a/Manifest', m.loaded_manifests)
