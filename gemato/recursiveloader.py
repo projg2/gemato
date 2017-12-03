@@ -553,7 +553,7 @@ class ManifestRecursiveLoader(object):
 
     def assert_directory_verifies(self, path='',
             fail_handler=gemato.util.throw_exception,
-            last_mtime=None, jobs=None):
+            last_mtime=None):
         """
         Verify the complete directory tree starting at @path (relative
         to top Manifest directory). Includes testing for stray files.
