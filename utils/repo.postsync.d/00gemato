@@ -1,0 +1,13 @@
+#!/bin/bash
+
+name=${1}
+url=${2}
+path=${3}
+
+# keyring installed by gentoo-keys
+openpgp_key=/var/lib/gentoo/gkeys/keyrings/gentoo/release/pubring.gpg
+
+# Apply only to ::gentoo, when synced over rsync.
+if [[ ${name} == gentoo && ${url} == rsync://* ]]; then
+	gemato verify -K "${openpgp_key}" -s "${path}"
+fi
