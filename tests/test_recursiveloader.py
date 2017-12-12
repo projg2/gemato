@@ -2708,3 +2708,44 @@ DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                      'r', encoding='utf8') as f:
             self.assertNotEqual(f.read(), self.FILES['Manifest'])
         m.assert_directory_verifies()
+
+
+class SymlinkLoopTest(TempDirTestCase):
+    """
+    Test dealing with a directory that contains a symlink to itself.
+    """
+
+    DIRS = ['sub']
+    FILES = {
+        'Manifest': u'',
+    }
+
+    def setUp(self):
+        super(SymlinkLoopTest, self).setUp()
+        os.symlink('.', os.path.join(self.dir, 'sub/sub'))
+
+    def tearDown(self):
+        os.remove(os.path.join(self.dir, 'sub/sub'))
+        super(SymlinkLoopTest, self).tearDown()
+
+    def test_assert_directory_verifies(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(OSError,
+                m.assert_directory_verifies, '')
+
+    def test_cli_verifies(self):
+        self.assertRaises(OSError,
+                gemato.cli.main, ['gemato', 'verify', self.dir])
+
+    def test_update_entries_for_directory(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'),
+            hashes=['SHA256', 'SHA512'])
+        self.assertRaises(OSError,
+                m.update_entries_for_directory, '')
+
+    def test_cli_update(self):
+        self.assertRaises(OSError,
+                gemato.cli.main, ['gemato', 'update',
+                    '--hashes=SHA256 SHA512', self.dir])
