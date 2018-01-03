@@ -1,6 +1,6 @@
 # gemato: compressed file support
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import gzip
@@ -18,9 +18,12 @@ else:
     except ImportError:
         bz2 = None
 
-try:
+# Python 3.3+ has a built-in lzma module. Older versions may have
+# an incompatible external module of the same name, so explicitly
+# force using the backport there.
+if sys.hexversion >= 0x03030000:
     import lzma
-except ImportError:
+else:
     try:
         import backports.lzma as lzma
     except ImportError:
