@@ -4,37 +4,46 @@
 # Licensed under the terms of 2-clause BSD license
 
 class UnsupportedCompression(Exception):
+    __slots__ = ['suffix']
+
     def __init__(self, suffix):
-        super(UnsupportedCompression, self).__init__(
-                'Unsupported compression suffix: {}'.format(suffix))
-        self.args = (suffix,)
+        super(UnsupportedCompression, self).__init__(suffix)
+        self.suffix = suffix
+
+    def __str__(self):
+        return 'Unsupported compression suffix: {}'.format(self.suffix)
 
 
 class UnsupportedHash(Exception):
+    __slots__ = ['hash_name']
+
     def __init__(self, hash_name):
-        super(UnsupportedHash, self).__init__(
-                'Unsupported hash name: {}'.format(hash_name))
-        self.args = (hash_name,)
+        super(UnsupportedHash, self).__init__(hash_name)
+        self.hash_name = hash_name
+
+    def __str__(self):
+        return 'Unsupported hash name: {}'.format(self.hash_name)
 
 
 class ManifestSyntaxError(Exception):
     def __init__(self, message):
         super(ManifestSyntaxError, self).__init__(message)
-        self.args = (message,)
 
 
 class ManifestIncompatibleEntry(Exception):
     __slots__ = ['e1', 'e2', 'diff']
 
     def __init__(self, e1, e2, diff):
-        msg = "Incompatible Manifest entries for {}".format(e1.path)
-        for k, d1, d2 in diff:
-            msg += "\n  {}: e1: {}, e2: {}".format(k, e1, e2)
-        super(ManifestIncompatibleEntry, self).__init__(msg)
+        super(ManifestIncompatibleEntry, self).__init__(e1, e2, diff)
         self.e1 = e1
         self.e2 = e2
         self.diff = diff
-        self.args = (e1, e2, diff)
+
+    def __str__(self):
+        msg = "Incompatible Manifest entries for {}".format(self.e1.path)
+        for k, d1, d2 in self.diff:
+            msg += "\n  {}: e1: {}, e2: {}".format(k, d1, d2)
+        return msg
 
 
 class ManifestMismatch(Exception):
@@ -45,14 +54,16 @@ class ManifestMismatch(Exception):
     __slots__ = ['path', 'entry', 'diff']
 
     def __init__(self, path, entry, diff):
-        msg = "Manifest mismatch for {}".format(path)
-        for k, exp, got in diff:
-            msg += "\n  {}: expected: {}, have: {}".format(k, exp, got)
-        super(ManifestMismatch, self).__init__(msg)
+        super(ManifestMismatch, self).__init__(path, entry, diff)
         self.path = path
         self.entry = entry
         self.diff = diff
-        self.args = (path, entry, diff)
+
+    def __str__(self):
+        msg = "Manifest mismatch for {}".format(self.path)
+        for k, exp, got in self.diff:
+            msg += "\n  {}: expected: {}, have: {}".format(k, exp, got)
+        return msg
 
 
 class ManifestCrossDevice(Exception):
@@ -63,11 +74,12 @@ class ManifestCrossDevice(Exception):
     __slots__ = ['path']
 
     def __init__(self, path):
+        super(ManifestCrossDevice, self).__init__(path)
         self.path = path
-        super(ManifestCrossDevice, self).__init__(
-            "Path {} crosses filesystem boundaries, it must be IGNORE-d explicitly"
-            .format(path))
-        self.args = (path,)
+
+    def __str__(self):
+        return ("Path {} crosses filesystem boundaries, it must be IGNORE-d explicitly"
+            .format(self.path))
 
 
 class ManifestUnsignedData(Exception):
@@ -76,9 +88,8 @@ class ManifestUnsignedData(Exception):
     outside the OpenPGP-signed part.
     """
 
-    def __init__(self):
-        super(ManifestUnsignedData, self).__init__(
-                "Unsigned data found in an OpenPGP signed Manifest")
+    def __str__(self):
+        return "Unsigned data found in an OpenPGP signed Manifest"
 
 
 class OpenPGPVerificationFailure(Exception):
@@ -86,10 +97,14 @@ class OpenPGPVerificationFailure(Exception):
     An exception raised when OpenPGP verification fails.
     """
 
+    __slots__ = ['output']
+
     def __init__(self, output):
-        super(OpenPGPVerificationFailure, self).__init__(
-                "OpenPGP verification failed:\n{}".format(output))
-        self.args = (output,)
+        super(OpenPGPVerificationFailure, self).__init__(output)
+        self.output = output
+
+    def __str__(self):
+        return "OpenPGP verification failed:\n{}".format(self.output)
 
 
 class OpenPGPSigningFailure(Exception):
@@ -97,10 +112,14 @@ class OpenPGPSigningFailure(Exception):
     An exception raised when OpenPGP signing fails.
     """
 
+    __slots__ = ['output']
+
     def __init__(self, output):
-        super(OpenPGPSigningFailure, self).__init__(
-                "OpenPGP signing failed:\n{}".format(output))
-        self.args = (output,)
+        super(OpenPGPSigningFailure, self).__init__(output)
+        self.output = output
+
+    def __str__(self):
+        return "OpenPGP signing failed:\n{}".format(self.output)
 
 
 class OpenPGPNoImplementation(Exception):
@@ -109,9 +128,8 @@ class OpenPGPNoImplementation(Exception):
     is available.
     """
 
-    def __init__(self):
-        super(OpenPGPNoImplementation, self).__init__(
-                "No supported OpenPGP implementation found (install gnupg)")
+    def __str__(self):
+        return "No supported OpenPGP implementation found (install gnupg)"
 
 
 class ManifestInvalidPath(Exception):
@@ -123,12 +141,13 @@ class ManifestInvalidPath(Exception):
     __slots__ = ['path', 'detail']
 
     def __init__(self, path, detail):
+        super(ManifestInvalidPath, self).__init__(path, detail)
         self.path = path
         self.detail = detail
-        super(ManifestInvalidPath, self).__init__(
-                "Attempting to add invalid path {} to Manifest: {} must not be {}"
-                .format(path, detail[0], detail[1]))
-        self.args = (path, detail)
+
+    def __str__(self):
+        return ("Attempting to add invalid path {} to Manifest: {} must not be {}"
+                .format(self.path, self.detail[0], self.detail[1]))
 
 
 class ManifestInvalidFilename(Exception):
@@ -139,9 +158,10 @@ class ManifestInvalidFilename(Exception):
     __slots__ = ['filename', 'pos']
 
     def __init__(self, filename, pos):
+        super(ManifestInvalidFilename, self).__init__(filename, pos)
         self.filename = filename
         self.pos = pos
-        super(ManifestInvalidFilename, self).__init__(
-                "Attempting to add invalid filename {!r} to Manifest: disallowed character U+{:04X} at position {}"
-                .format(filename, ord(filename[pos]), pos))
-        self.args = (filename, pos)
+
+    def __str__(self):
+        return ("Attempting to add invalid filename {!r} to Manifest: disallowed character U+{:04X} at position {}"
+                .format(self.filename, ord(self.filename[self.pos]), self.pos))
