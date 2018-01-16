@@ -28,8 +28,8 @@ class ManifestLoader(object):
         @root_directory specifies top directory of Manifest tree.
 
         If @verify_openpgp is True and a Manifest contain an OpenPGP
-        signature, the signature will be verified. Provide @openpgp_env
-        to perform the verification in specific environment.
+        signature, the signature will be verified. @openpgp_env
+        is the OpenPGP environment to use.
         """
         self.root_directory = root_directory
         self.verify_openpgp = verify_openpgp

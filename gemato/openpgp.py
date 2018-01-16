@@ -42,7 +42,76 @@ def _spawn_gpg(options, env_instance, stdin):
     return (p.wait(), out, err)
 
 
-class OpenPGPEnvironment(object):
+class OpenPGPEnvironmentBase(object):
+    """
+    Base class for OpenPGP environment.
+    """
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_cb):
+        pass
+
+    def close(self):
+        pass
+
+    def import_key(self, keyfile):
+        """
+        Import a public key from open file @keyfile. The file should
+        be open for reading in binary mode, and oriented
+        at the beginning.
+        """
+
+        raise NotImplementedError('import_key() is not implemented by this OpenPGP provider')
+
+    def verify_file(self, f):
+        """
+        Perform an OpenPGP verification of Manifest data in open file @f.
+        The file should be open in text mode and set at the beginning
+        (or start of signed part). Raises an exception if the verification
+        fails.
+        """
+
+        raise NotImplementedError('verify_file() is not implemented by this OpenPGP provider')
+
+    def clear_sign_file(self, f, outf, keyid=None):
+        """
+        Create an OpenPGP cleartext signed message containing the data
+        from open file @f, and writing it into open file @outf.
+        Both files should be open in text mode and set at the appropriate
+        position. Raises an exception if signing fails.
+
+        Pass @keyid to specify the key to use. If not specified,
+        the implementation will use the default key.
+        """
+
+        raise NotImplementedError('clear_sign_file() is not implemented by this OpenPGP provider')
+
+
+class OpenPGPSystemEnvironment(OpenPGPEnvironmentBase):
+    """
+    The system environment for OpenPGP routines.
+    """
+
+    def verify_file(self, f):
+        exitst, out, err = _spawn_gpg(['--verify'], None, f.read().encode('utf8'))
+        if exitst != 0:
+            raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
+
+    def clear_sign_file(self, f, outf, keyid=None):
+        args = []
+        if keyid is not None:
+            args += ['--local-user', keyid]
+        exitst, out, err = _spawn_gpg(['--clearsign'] + args, None,
+                                      f.read().encode('utf8'))
+        if exitst != 0:
+            raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
+
+        outf.write(out.decode('utf8'))
+
+
+class OpenPGPEnvironment(OpenPGPEnvironmentBase):
     """
     An isolated environment for OpenPGP routines. Used to get reliable
     verification results independently of user configuration.
@@ -63,9 +132,6 @@ class OpenPGPEnvironment(object):
 # avoid any smartcard operations, we are running in isolation
 disable-scdaemon
 ''')
-
-    def __enter__(self):
-        return self
 
     def __exit__(self, exc_type, exc_value, exc_cb):
         if self._home is not None:
@@ -95,30 +161,25 @@ disable-scdaemon
             self._home = None
 
     def import_key(self, keyfile):
-        """
-        Import a public key from open file @keyfile. The file should
-        be open for reading in binary mode, and oriented
-        at the beginning.
-        """
-
         exitst, out, err = _spawn_gpg(['--import'], self, keyfile.read())
         if exitst != 0:
             raise RuntimeError('Unable to import key: {}'.format(err.decode('utf8')))
 
     def verify_file(self, f):
-        """
-        A convenience wrapper for verify_file(), using this environment.
-        """
-
-        verify_file(f, env=self)
+        exitst, out, err = _spawn_gpg(['--verify'], self, f.read().encode('utf8'))
+        if exitst != 0:
+            raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
 
     def clear_sign_file(self, f, outf, keyid=None):
-        """
-        A convenience wrapper for clear_sign_file(), using this
-        environment.
-        """
+        args = []
+        if keyid is not None:
+            args += ['--local-user', keyid]
+        exitst, out, err = _spawn_gpg(['--clearsign'] + args, self,
+                                      f.read().encode('utf8'))
+        if exitst != 0:
+            raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
 
-        clear_sign_file(f, outf, keyid=keyid, env=self)
+        outf.write(out.decode('utf8'))
 
     @property
     def home(self):
@@ -126,43 +187,3 @@ disable-scdaemon
             raise RuntimeError(
                     'OpenPGPEnvironment has been closed')
         return self._home
-
-
-def verify_file(f, env=None):
-    """
-    Perform an OpenPGP verification of Manifest data in open file @f.
-    The file should be open in text mode and set at the beginning
-    (or start of signed part). Raises an exception if the verification
-    fails.
-
-    Note that this function does not distinguish whether the key
-    is trusted, and is subject to user configuration. To get reliable
-    results, prepare a dedicated OpenPGPEnvironment and pass it as @env.
-    """
-
-    exitst, out, err = _spawn_gpg(['--verify'], env, f.read().encode('utf8'))
-    if exitst != 0:
-        raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
-
-
-def clear_sign_file(f, outf, keyid=None, env=None):
-    """
-    Create an OpenPGP cleartext signed message containing the data
-    from open file @f, and writing it into open file @outf.
-    Both files should be open in text mode and set at the appropriate
-    position. Raises an exception if signing fails.
-
-    Pass @keyid to specify the key to use. If not specified,
-    the implementation will use the default key. Pass @env to use
-    a dedicated OpenPGPEnvironment.
-    """
-
-    args = []
-    if keyid is not None:
-        args += ['--local-user', keyid]
-    exitst, out, err = _spawn_gpg(['--clearsign'] + args, env,
-                                  f.read().encode('utf8'))
-    if exitst != 0:
-        raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
-
-    outf.write(out.decode('utf8'))

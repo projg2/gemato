@@ -43,11 +43,19 @@ def do_verify(args, argp):
             kwargs['fail_handler'] = verify_failure
         if not args.openpgp_verify:
             init_kwargs['verify_openpgp'] = False
-        with gemato.openpgp.OpenPGPEnvironment() as env:
+
+        # use isolated environment if key is specified;
+        # system environment otherwise
+        if args.openpgp_key is not None:
+            env_class = gemato.openpgp.OpenPGPEnvironment
+        else:
+            env_class = gemato.openpgp.OpenPGPSystemEnvironment
+
+        with env_class() as env:
             if args.openpgp_key is not None:
                 with io.open(args.openpgp_key, 'rb') as f:
                     env.import_key(f)
-                init_kwargs['openpgp_env'] = env
+            init_kwargs['openpgp_env'] = env
 
             start = timeit.default_timer()
             try:
@@ -113,11 +121,19 @@ def do_update(args, argp):
                     args.profile)
         if args.sign is not None:
             init_kwargs['sign_openpgp'] = args.sign
-        with gemato.openpgp.OpenPGPEnvironment() as env:
+
+        # use isolated environment if key is specified;
+        # system environment otherwise
+        if args.openpgp_key is not None:
+            env_class = gemato.openpgp.OpenPGPEnvironment
+        else:
+            env_class = gemato.openpgp.OpenPGPSystemEnvironment
+
+        with env_class() as env:
             if args.openpgp_key is not None:
                 with io.open(args.openpgp_key, 'rb') as f:
                     env.import_key(f)
-                init_kwargs['openpgp_env'] = env
+            init_kwargs['openpgp_env'] = env
 
             start = timeit.default_timer()
             try:
@@ -204,11 +220,19 @@ def do_create(args, argp):
                     args.profile)
         if args.sign is not None:
             init_kwargs['sign_openpgp'] = args.sign
-        with gemato.openpgp.OpenPGPEnvironment() as env:
+
+        # use isolated environment if key is specified;
+        # system environment otherwise
+        if args.openpgp_key is not None:
+            env_class = gemato.openpgp.OpenPGPEnvironment
+        else:
+            env_class = gemato.openpgp.OpenPGPSystemEnvironment
+
+        with env_class() as env:
             if args.openpgp_key is not None:
                 with io.open(args.openpgp_key, 'rb') as f:
                     env.import_key(f)
-                init_kwargs['openpgp_env'] = env
+            init_kwargs['openpgp_env'] = env
 
             start = timeit.default_timer()
             try:

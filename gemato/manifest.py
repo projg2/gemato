@@ -356,8 +356,8 @@ class ManifestFile(object):
         in text mode, and oriented at the beginning.
 
         If @verify_openpgp is True and the Manifest contains an OpenPGP
-        signature, the signature will be verified. Provide @openpgp_env
-        to perform the verification in specific environment.
+        signature, the signature will be verified. In that case,
+        @openpgp_env needs to be provided.
 
         If the verification succeeds, the openpgp_signed property will
         be set to True. If it fails or OpenPGP is not available,
@@ -434,8 +434,9 @@ class ManifestFile(object):
                     "Manifest terminated early, inside signature")
 
         if verify_openpgp and state == ManifestState.POST_SIGNED_DATA:
+            assert openpgp_env
             with io.StringIO(openpgp_data) as f:
-                gemato.openpgp.verify_file(f, env=openpgp_env)
+                openpgp_env.verify_file(f)
             self.openpgp_signed = True
 
     def dump(self, f, sign_openpgp=None, openpgp_keyid=None,
@@ -449,8 +450,9 @@ class ManifestFile(object):
         If it is None (the default), the file will be signed if it
         was originally signed with a valid signature.
 
-        @openpgp_keyid and @openpgp_env specify the key
-        and the environment to use for signing.
+        If @openpgp_keyid is not None, it specifies the key to use
+        for signing. If @sign_openpgp is not False, @openpgp_env must
+        provide an OpenPGP environment for signing.
 
         If @sort is True, the entries are sorted prior to dumping.
         """
@@ -462,12 +464,12 @@ class ManifestFile(object):
             self.entries = sorted(self.entries)
 
         if sign_openpgp:
+            assert openpgp_env
             with io.StringIO() as data:
                 # get the plain data into a stream
                 self.dump(data, sign_openpgp=False)
                 data.seek(0)
-                gemato.openpgp.clear_sign_file(data, f,
-                        keyid=openpgp_keyid, env=openpgp_env)
+                openpgp_env.clear_sign_file(data, f, keyid=openpgp_keyid)
         else:
             for e in self.entries:
                 f.write(u' '.join(e.to_list()) + '\n')
