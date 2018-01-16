@@ -147,16 +147,6 @@ disable-scdaemon
 
     def close(self):
         if self._home is not None:
-            if self._impl is not None:
-                try:
-                    # terminate the agent spawned by the process
-                    subprocess.Popen(['gpgconf', '--kill', 'all'],
-                        env={'GNUPGHOME': self._home}).wait()
-                except OSError as e:
-                    # ignore ENOENT -- most likely it means gpg1 which
-                    # had no gpg-agent
-                    if e.errno != errno.ENOENT:
-                        raise
             shutil.rmtree(self._home, onerror=self._rmtree_error_handler)
             self._home = None
 
