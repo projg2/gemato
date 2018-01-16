@@ -12,9 +12,10 @@ import tempfile
 import gemato.exceptions
 
 
-class OpenPGPEnvironmentBase(object):
+class OpenPGPSystemEnvironment(object):
     """
-    Base class for OpenPGP environment.
+    OpenPGP environment class that uses the global OpenPGP environment
+    (user's home directory or GNUPGHOME).
     """
 
     __slots__ = ['_impl']
@@ -48,7 +49,21 @@ class OpenPGPEnvironmentBase(object):
         fails.
         """
 
-        raise NotImplementedError('verify_file() is not implemented by this OpenPGP provider')
+        exitst, out, err = self._spawn_gpg(['--status-fd', '1', '--verify'],
+                                           f.read().encode('utf8'))
+        if exitst != 0:
+            raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
+
+        # process the output of gpg to find the exact result
+        for l in out.splitlines():
+            if l.startswith(b'[GNUPG:] GOODSIG'):
+                break
+            elif l.startswith(b'[GNUPG:] EXPKEYSIG'):
+                raise gemato.exceptions.OpenPGPExpiredKeyFailure(err.decode('utf8'))
+            elif l.startswith(b'[GNUPG:] REVKEYSIG'):
+                raise gemato.exceptions.OpenPGPRevokedKeyFailure(err.decode('utf8'))
+        else:
+            raise gemato.exceptions.OpenPGPUnknownSigFailure(err.decode('utf8'))
 
     def clear_sign_file(self, f, outf, keyid=None):
         """
@@ -61,7 +76,15 @@ class OpenPGPEnvironmentBase(object):
         the implementation will use the default key.
         """
 
-        raise NotImplementedError('clear_sign_file() is not implemented by this OpenPGP provider')
+        args = []
+        if keyid is not None:
+            args += ['--local-user', keyid]
+        exitst, out, err = self._spawn_gpg(['--clearsign'] + args,
+                                           f.read().encode('utf8'))
+        if exitst != 0:
+            raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
+
+        outf.write(out.decode('utf8'))
 
     def _spawn_gpg(self, options, stdin, env=None):
         impls = ['gpg2', 'gpg']
@@ -89,29 +112,7 @@ class OpenPGPEnvironmentBase(object):
         return (p.wait(), out, err)
 
 
-class OpenPGPSystemEnvironment(OpenPGPEnvironmentBase):
-    """
-    The system environment for OpenPGP routines.
-    """
-
-    def verify_file(self, f):
-        exitst, out, err = self._spawn_gpg(['--verify'], f.read().encode('utf8'))
-        if exitst != 0:
-            raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
-
-    def clear_sign_file(self, f, outf, keyid=None):
-        args = []
-        if keyid is not None:
-            args += ['--local-user', keyid]
-        exitst, out, err = self._spawn_gpg(['--clearsign'] + args,
-                                           f.read().encode('utf8'))
-        if exitst != 0:
-            raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
-
-        outf.write(out.decode('utf8'))
-
-
-class OpenPGPEnvironment(OpenPGPEnvironmentBase):
+class OpenPGPEnvironment(OpenPGPSystemEnvironment):
     """
     An isolated environment for OpenPGP routines. Used to get reliable
     verification results independently of user configuration.
@@ -154,34 +155,6 @@ disable-scdaemon
         exitst, out, err = self._spawn_gpg(['--import'], keyfile.read())
         if exitst != 0:
             raise RuntimeError('Unable to import key: {}'.format(err.decode('utf8')))
-
-    def verify_file(self, f):
-        exitst, out, err = self._spawn_gpg(['--status-fd', '1', '--verify'],
-                                           f.read().encode('utf8'))
-        if exitst != 0:
-            raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
-
-        # process the output of gpg to find the exact result
-        for l in out.splitlines():
-            if l.startswith(b'[GNUPG:] GOODSIG'):
-                break
-            elif l.startswith(b'[GNUPG:] EXPKEYSIG'):
-                raise gemato.exceptions.OpenPGPExpiredKeyFailure(err.decode('utf8'))
-            elif l.startswith(b'[GNUPG:] REVKEYSIG'):
-                raise gemato.exceptions.OpenPGPRevokedKeyFailure(err.decode('utf8'))
-        else:
-            raise gemato.exceptions.OpenPGPUnknownSigFailure(err.decode('utf8'))
-
-    def clear_sign_file(self, f, outf, keyid=None):
-        args = []
-        if keyid is not None:
-            args += ['--local-user', keyid]
-        exitst, out, err = self._spawn_gpg(['--clearsign'] + args,
-                                           f.read().encode('utf8'))
-        if exitst != 0:
-            raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
-
-        outf.write(out.decode('utf8'))
 
     @property
     def home(self):
