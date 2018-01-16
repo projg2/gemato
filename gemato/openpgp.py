@@ -180,4 +180,5 @@ disable-scdaemon
 
     def _spawn_gpg(self, options, stdin):
         env = {'GNUPGHOME': self.home}
+        options = ['--trust-model', 'always'] + options
         return super(OpenPGPEnvironment, self)._spawn_gpg(options, stdin, env)
