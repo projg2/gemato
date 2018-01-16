@@ -37,6 +37,53 @@ jCvJNJ7pU8YnJSRTQDH0PZEupAdzDU/AhGSrBz5+Jr7N0pQIxq4duE/Q
 -----END PGP PUBLIC KEY BLOCK-----
 '''
 
+EXPIRED_PUBLIC_KEY = b'''
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mQENBFnwXJMBCACgaTVz+d10TGL9zR920sb0GBFsitAJ5ZFzO4E0cg3SHhwI+reM
+JQ6LLKmHowY/E1dl5FBbnJoRMxXP7/eScQ7HlhYj1gMPN5XiS2pkPwVkmJKBDV42
+DLwoytC+ot0frRTJvSdEPCX81BNMgFiBSpkeZfXqb9XmU03bh6mFnrdd4CsHpTQG
+csVXHK8QKhaxuqmHTALdpSzKCb/r0N/Z3sQExZhfLcBf/9UUVXj44Nwc6ooqZLRi
+zHydxwQdxNu0aOFGEBn9WTi8Slf7MfR/pF0dI8rs9w6zMzVEq0lhDPpKFGDveoGf
+g/+TpvBNXZ7DWH23GM4kID3pk4LLMc24U1PhABEBAAG0D2dlbWF0byB0ZXN0IGtl
+eYkBTAQTAQoANgIbAwULCQoNBAMVCggCHgECF4AWIQSB4SwWvY3NYL4YCEUTaIDn
+KnsThAUCWfEJZAUJAAH+UQAKCRATaIDnKnsThJTJB/9nXG1vgEBXHp8JsgkbmsAA
+WzcSsdmuRFcr2FI3KDYJ0G7rmBpirJuAaGbWS/2+3BmQGVlOf77RjeC6CtI/DH4U
+Tw3hcI7FYJrRdILV+p3HTkLhPs5fNjxH8bTyKthEE8pM0gQ3fuZxsaNnv1XbSpf0
+P+d/y06ehvGCVYyEe4MHPV6f6YgCrP+ePqQvMqEpvlSizZE/HoFoKy7Ik4u2fDOH
+5RRmIoNLv8j1gOKwp5+SncsuXVdQucY7jdFWSgECOAGIRvzBbGDq9+6ccCQHiOOz
+ncaJWqeCHuTvNj9WfoyvKXM+hpQUdSaTURgz4a92htIGpON5wN7o32VuJz2nWXS4
+=RwD3
+-----END PGP PUBLIC KEY BLOCK-----
+'''
+
+REVOKED_PUBLIC_KEY = b'''
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mQENBFnwXJMBCACgaTVz+d10TGL9zR920sb0GBFsitAJ5ZFzO4E0cg3SHhwI+reM
+JQ6LLKmHowY/E1dl5FBbnJoRMxXP7/eScQ7HlhYj1gMPN5XiS2pkPwVkmJKBDV42
+DLwoytC+ot0frRTJvSdEPCX81BNMgFiBSpkeZfXqb9XmU03bh6mFnrdd4CsHpTQG
+csVXHK8QKhaxuqmHTALdpSzKCb/r0N/Z3sQExZhfLcBf/9UUVXj44Nwc6ooqZLRi
+zHydxwQdxNu0aOFGEBn9WTi8Slf7MfR/pF0dI8rs9w6zMzVEq0lhDPpKFGDveoGf
+g/+TpvBNXZ7DWH23GM4kID3pk4LLMc24U1PhABEBAAGJATYEIAEIACAWIQSB4SwW
+vY3NYL4YCEUTaIDnKnsThAUCWl4LpQIdAAAKCRATaIDnKnsThCvQB/9gzrXiRv7g
+7UIzwRvTBMVXbKlbwjJpI0XnjdZmlYVis5y4ZWxh65z8j94lV4NmTtDtAdlMN8Xd
+OyTVWPGKN5cJMRLMzMRWb+aQV1fCEfwJgngE0hQe0w2dPwuVQQVP3Kv8CC+4f2lQ
+ummcgPW2LVEN3HihAwx9VWA91JSlrsX3luNSvTi2c63BM9YqGb64nJc1sAWqxzDy
+x157gzt0AHKAAQ+Hmwhqt0vnR8MyKJYo60PwNUkzWlUhOLaBpb7WvHAAmva14Rw+
+fCaldU4iFlC5oJrj0jE/yKvGG6SuSYZaS9O0H/UNI5vF8Y/HgGM0i8+NJxXu0hud
+NRH/MmEilKxUtA9nZW1hdG8gdGVzdCBrZXmJAUYEEwEKADAWIQSB4SwWvY3NYL4Y
+CEUTaIDnKnsThAUCWfBckwIbAwULCQoNBAMVCggCHgECF4AACgkQE2iA5yp7E4Qp
+5Af9H4Ux9t9InYZX2YRW1YEy8a4+K6bBoNtCvB5DGlswobDjXSpKmGmLkXJtlEGd
+CoOa5vY0LBmLgJ8x/+18JjpXmPecnFXwZI3vWlxegRKBonJOgvwCucO+73dZHAbS
+Q60+CO78A+MEZMlHQpKVTFU+M+Gme5RyeBAq66yP5oNG/rBkch31z7yD6exdvefS
+/3aW4QWQ3zDhQtAPSwUASZXShW0C4N8c1+LZ4s/wQa6eyo0zjClNLLn7HnSOdMXO
+nLwmAsCRJaqPOr7+vZJWR2oRP5PZyWlADIwryTSe6VPGJyUkU0Ax9D2RLqQHcw1P
+wIRkqwc+fia+zdKUCMauHbhP0A==
+=Zvmi
+-----END PGP PUBLIC KEY BLOCK-----
+'''
+
 PRIVATE_KEY = b'''
 -----BEGIN PGP PRIVATE KEY BLOCK-----
 
@@ -400,6 +447,8 @@ class OpenPGPNoKeyTest(unittest.TestCase):
     Tests performed without correct OpenPGP key set.
     """
 
+    expected_exception = gemato.exceptions.OpenPGPVerificationFailure
+
     def setUp(self):
         self.env = gemato.openpgp.OpenPGPEnvironment()
 
@@ -409,7 +458,7 @@ class OpenPGPNoKeyTest(unittest.TestCase):
     def test_verify_manifest(self):
         with io.StringIO(SIGNED_MANIFEST) as f:
             try:
-                self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                self.assertRaises(self.expected_exception,
                         self.env.verify_file, f)
             except gemato.exceptions.OpenPGPNoImplementation as e:
                 raise unittest.SkipTest(str(e))
@@ -418,7 +467,7 @@ class OpenPGPNoKeyTest(unittest.TestCase):
         m = gemato.manifest.ManifestFile()
         with io.StringIO(SIGNED_MANIFEST) as f:
             try:
-                self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                self.assertRaises(self.expected_exception,
                         m.load, f, openpgp_env=self.env)
             except gemato.exceptions.OpenPGPNoImplementation as e:
                 raise unittest.SkipTest(str(e))
@@ -431,7 +480,7 @@ class OpenPGPNoKeyTest(unittest.TestCase):
         with io.StringIO(SIGNED_MANIFEST) as f:
             try:
                 m.load(f, openpgp_env=self.env)
-            except gemato.exceptions.OpenPGPVerificationFailure:
+            except self.expected_exception:
                 pass
             except gemato.exceptions.OpenPGPNoImplementation:
                 pass
@@ -446,7 +495,7 @@ class OpenPGPNoKeyTest(unittest.TestCase):
                 f.write(SIGNED_MANIFEST)
 
             try:
-                self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                self.assertRaises(self.expected_exception,
                         gemato.recursiveloader.ManifestRecursiveLoader,
                         os.path.join(d, 'Manifest'),
                         verify_openpgp=True,
@@ -464,7 +513,7 @@ class OpenPGPNoKeyTest(unittest.TestCase):
                 cf.write(SIGNED_MANIFEST)
 
             try:
-                self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                self.assertRaises(self.expected_exception,
                         gemato.recursiveloader.ManifestRecursiveLoader,
                         os.path.join(d, 'Manifest.gz'),
                         verify_openpgp=True,
@@ -485,6 +534,50 @@ class OpenPGPNoKeyTest(unittest.TestCase):
                     os.path.join(d, 'Manifest'))
         finally:
             shutil.rmtree(d)
+
+
+class OpenPGPExpiredKeyTest(OpenPGPNoKeyTest):
+    """
+    Tests performed with an expired OpenPGP key.
+    """
+
+    expected_exception = gemato.exceptions.OpenPGPExpiredKeyFailure
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(EXPIRED_PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except RuntimeError:
+            self.env.close()
+            raise unittest.SkipTest('Unable to import OpenPGP key')
+
+    def tearDown(self):
+        self.env.close()
+
+
+class OpenPGPRevokedKeyTest(OpenPGPNoKeyTest):
+    """
+    Tests performed with a revoked OpenPGP key.
+    """
+
+    expected_exception = gemato.exceptions.OpenPGPRevokedKeyFailure
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(REVOKED_PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except RuntimeError:
+            self.env.close()
+            raise unittest.SkipTest('Unable to import OpenPGP key')
+
+    def tearDown(self):
+        self.env.close()
 
 
 class OpenPGPContextManagerTest(unittest.TestCase):

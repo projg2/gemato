@@ -107,6 +107,34 @@ class OpenPGPVerificationFailure(Exception):
         return "OpenPGP verification failed:\n{}".format(self.output)
 
 
+class OpenPGPExpiredKeyFailure(OpenPGPVerificationFailure):
+    """
+    OpenPGP verification rejected because of expired key.
+    """
+
+    def __str__(self):
+        return "OpenPGP signature rejected because of expired key:\n{}".format(self.output)
+
+
+class OpenPGPRevokedKeyFailure(OpenPGPVerificationFailure):
+    """
+    OpenPGP verification rejected because of revoked key.
+    """
+
+    def __str__(self):
+        return "OpenPGP signature rejected because of revoked key:\n{}".format(self.output)
+
+
+class OpenPGPUnknownSigFailure(OpenPGPVerificationFailure):
+    """
+    OpenPGP verification rejected for unknown reason (i.e. unrecognized
+    GPG status).
+    """
+
+    def __str__(self):
+        return "OpenPGP signature rejected for unknown reason:\n{}".format(self.output)
+
+
 class OpenPGPSigningFailure(Exception):
     """
     An exception raised when OpenPGP signing fails.

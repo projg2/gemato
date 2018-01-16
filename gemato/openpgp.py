@@ -156,9 +156,21 @@ disable-scdaemon
             raise RuntimeError('Unable to import key: {}'.format(err.decode('utf8')))
 
     def verify_file(self, f):
-        exitst, out, err = self._spawn_gpg(['--verify'], f.read().encode('utf8'))
+        exitst, out, err = self._spawn_gpg(['--status-fd', '1', '--verify'],
+                                           f.read().encode('utf8'))
         if exitst != 0:
             raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
+
+        # process the output of gpg to find the exact result
+        for l in out.splitlines():
+            if l.startswith(b'[GNUPG:] GOODSIG'):
+                break
+            elif l.startswith(b'[GNUPG:] EXPKEYSIG'):
+                raise gemato.exceptions.OpenPGPExpiredKeyFailure(err.decode('utf8'))
+            elif l.startswith(b'[GNUPG:] REVKEYSIG'):
+                raise gemato.exceptions.OpenPGPRevokedKeyFailure(err.decode('utf8'))
+        else:
+            raise gemato.exceptions.OpenPGPUnknownSigFailure(err.decode('utf8'))
 
     def clear_sign_file(self, f, outf, keyid=None):
         args = []
