@@ -1,6 +1,6 @@
 # gemato: OpenPGP verification support
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
@@ -40,6 +40,15 @@ class OpenPGPSystemEnvironment(object):
         """
 
         raise NotImplementedError('import_key() is not implemented by this OpenPGP provider')
+
+    def refresh_keys(self):
+        """
+        Update the keys from their assigned keyservers. This should be called
+        at start of every execution in order to ensure that revocations
+        are respected. This action requires network access.
+        """
+
+        raise NotImplementedError('refresh_keys() is not implemented by this OpenPGP provider')
 
     def verify_file(self, f):
         """
@@ -155,6 +164,11 @@ disable-scdaemon
         exitst, out, err = self._spawn_gpg(['--import'], keyfile.read())
         if exitst != 0:
             raise RuntimeError('Unable to import key: {}'.format(err.decode('utf8')))
+
+    def refresh_keys(self):
+        exitst, out, err = self._spawn_gpg(['--refresh-keys'], '')
+        if exitst != 0:
+            raise RuntimeError('Unable to refresh keys: {}'.format(err.decode('utf8')))
 
     @property
     def home(self):

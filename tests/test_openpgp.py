@@ -1,6 +1,6 @@
 # gemato: OpenPGP signature support tests
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import base64
@@ -436,6 +436,7 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
             self.assertEqual(
                     gemato.cli.main(['gemato', 'verify',
                         '--openpgp-key', os.path.join(d, '.key.asc'),
+                        '--no-refresh-keys',
                         '--require-signed-manifest', d]),
                     0)
         finally:

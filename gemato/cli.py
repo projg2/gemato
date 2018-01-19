@@ -1,6 +1,6 @@
 # gemato: CLI routines
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 from __future__ import print_function
@@ -55,6 +55,12 @@ def do_verify(args, argp):
             if args.openpgp_key is not None:
                 with io.open(args.openpgp_key, 'rb') as f:
                     env.import_key(f)
+                # always refresh keys to check for revocation
+                # (unless user specifically asked us not to)
+                if args.refresh_keys:
+                    logging.info('Refreshing keys from keyserver...')
+                    env.refresh_keys()
+                    logging.info('Keys refreshed.')
             init_kwargs['openpgp_env'] = env
 
             start = timeit.default_timer()
@@ -69,6 +75,8 @@ def do_verify(args, argp):
             if args.require_signed_manifest and not m.openpgp_signed:
                 logging.error('Top-level Manifest {} is not OpenPGP signed'.format(tlm))
                 return 1
+
+            logging.info('Verifying {}...'.format(p))
 
             relpath = os.path.relpath(p, os.path.dirname(tlm))
             if relpath == '.':
@@ -86,7 +94,7 @@ def do_verify(args, argp):
                 return 1
 
             stop = timeit.default_timer()
-            logging.info('{} validated in {:.2f} seconds'.format(p, stop - start))
+            logging.info('{} verified in {:.2f} seconds'.format(p, stop - start))
     return 0 if ret else 1
 
 
@@ -162,6 +170,8 @@ def do_update(args, argp):
                 if last_ts is None:
                     argp.error('Incremental specified but no timestamp in Manifest')
                 update_kwargs['last_mtime'] = last_ts.ts.timestamp()
+
+            logging.info('Updating Manifests in {}...'.format(p))
 
             try:
                 start_ts = datetime.datetime.utcnow()
@@ -249,6 +259,8 @@ def do_create(args, argp):
             if m.hashes is None:
                 argp.error('--hashes must be specified if not implied by --profile')
 
+            logging.info('Creating Manifests in {}...'.format(p))
+
             try:
                 start_ts = datetime.datetime.utcnow()
                 m.update_entries_for_directory()
@@ -293,6 +305,10 @@ def main(argv):
     verify.add_argument('-P', '--no-openpgp-verify', action='store_false',
             dest='openpgp_verify',
             help='Disable OpenPGP verification of signed Manifests')
+    verify.add_argument('-R', '--no-refresh-keys', action='store_false',
+            dest='refresh_keys',
+            help='Disable refreshing OpenPGP key (prevents network access, applicable '
+                +'when using -K only)')
     verify.add_argument('-s', '--require-signed-manifest', action='store_true',
             help='Require that the top-level Manifest is OpenPGP signed')
     verify.set_defaults(func=do_verify)
