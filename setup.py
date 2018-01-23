@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # vim:fileencoding=utf-8
-# (C) 2017 Michał Górny <mgorny@gentoo.org>
+# (C) 2017-2018 Michał Górny <mgorny@gentoo.org>
 # Licensed under the terms of 2-clause BSD license
 
 from setuptools import setup
@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name='gemato',
-    version='9.3',
+    version='10.0',
     description='Gentoo Manifest Tool -- a stand-alone utility to verify and update Gentoo Manifest files',
 
     author='Michał Górny',
@@ -31,7 +31,7 @@ setup(
     },
 
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: BSD License',
