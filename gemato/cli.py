@@ -76,6 +76,10 @@ def do_verify(args, argp):
                 logging.error('Top-level Manifest {} is not OpenPGP signed'.format(tlm))
                 return 1
 
+            ts = m.find_timestamp()
+            if ts:
+                logging.info('Manifest timestamp: {} UTC'.format(ts.ts))
+
             if m.openpgp_signed:
                 logging.info('Valid OpenPGP signature found:')
                 logging.info('- primary key: {}'.format(
