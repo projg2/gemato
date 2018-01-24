@@ -5,6 +5,7 @@
 
 import datetime
 import errno
+import os
 import os.path
 import shutil
 import subprocess
@@ -139,6 +140,10 @@ class OpenPGPSystemEnvironment(object):
         outf.write(out.decode('utf8'))
 
     def _spawn_gpg(self, options, stdin, env=None):
+        if env is None:
+            env = os.environ.copy()
+        env['TZ'] = 'UTC'
+
         impls = ['gpg2', 'gpg']
         if self._impl is not None:
             impls = [self._impl]

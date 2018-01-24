@@ -86,7 +86,7 @@ def do_verify(args, argp):
                     m.openpgp_signature.primary_key_fingerprint))
                 logging.info('- subkey: {}'.format(
                     m.openpgp_signature.fingerprint))
-                logging.info('- timestamp: {}'.format(
+                logging.info('- timestamp: {} UTC'.format(
                     m.openpgp_signature.timestamp))
 
             logging.info('Verifying {}...'.format(p))

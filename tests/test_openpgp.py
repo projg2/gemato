@@ -212,7 +212,7 @@ mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
 '''
 
 KEY_FINGERPRINT = '81E12C16BD8DCD60BE180845136880E72A7B1384'
-SIG_TIMESTAMP = datetime.datetime(2017, 11, 8, 10, 1, 26)
+SIG_TIMESTAMP = datetime.datetime(2017, 11, 8, 9, 1, 26)
 
 
 def strip_openpgp(text):
