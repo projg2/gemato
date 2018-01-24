@@ -3,6 +3,7 @@
 # (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import datetime
 import errno
 import os.path
 import shutil
@@ -10,6 +11,18 @@ import subprocess
 import tempfile
 
 import gemato.exceptions
+
+
+class OpenPGPSignatureData(object):
+    __slots__ = ['fingerprint', 'timestamp', 'expire_timestamp',
+                 'primary_key_fingerprint']
+
+    def __init__(self, fingerprint, timestamp, expire_timestamp,
+                 primary_key_fingerprint):
+        self.fingerprint = fingerprint
+        self.timestamp = timestamp
+        self.expire_timestamp = expire_timestamp
+        self.primary_key_fingerprint = primary_key_fingerprint
 
 
 class OpenPGPSystemEnvironment(object):
@@ -50,6 +63,21 @@ class OpenPGPSystemEnvironment(object):
 
         raise NotImplementedError('refresh_keys() is not implemented by this OpenPGP provider')
 
+    def _parse_gpg_ts(self, ts):
+        """
+        Parse GnuPG status timestamp that can either be time_t value
+        or ISO 8601 timestamp.
+        """
+        # that's how upstream tells us to detect this
+        if 'T' in ts:
+            # TODO: is this correct for all cases? is it localtime?
+            return datetime.datetime.strptime(ts, '%Y%m%dT%H%M%S')
+        elif ts == '0':
+            # no timestamp
+            return None
+        else:
+            return datetime.datetime.fromtimestamp(int(ts))
+
     def verify_file(self, f):
         """
         Perform an OpenPGP verification of Manifest data in open file @f.
@@ -64,6 +92,7 @@ class OpenPGPSystemEnvironment(object):
             raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
 
         is_good = False
+        sig_data = None
 
         # process the output of gpg to find the exact result
         for l in out.splitlines():
@@ -73,9 +102,20 @@ class OpenPGPSystemEnvironment(object):
                 raise gemato.exceptions.OpenPGPExpiredKeyFailure(err.decode('utf8'))
             elif l.startswith(b'[GNUPG:] REVKEYSIG'):
                 raise gemato.exceptions.OpenPGPRevokedKeyFailure(err.decode('utf8'))
+            elif l.startswith(b'[GNUPG:] VALIDSIG'):
+                spl = l.split(b' ')
+                assert len(spl) >= 12
+                fp = spl[2].decode('utf8')
+                ts = self._parse_gpg_ts(spl[4].decode('utf8'))
+                expts = self._parse_gpg_ts(spl[5].decode('utf8'))
+                pkfp = spl[11].decode('utf8')
 
-        if not is_good:
+                sig_data = OpenPGPSignatureData(fp, ts, expts, pkfp)
+
+        # require both GOODSIG and VALIDSIG
+        if not is_good or sig_data is None:
             raise gemato.exceptions.OpenPGPUnknownSigFailure(err.decode('utf8'))
+        return sig_data
 
     def clear_sign_file(self, f, outf, keyid=None):
         """

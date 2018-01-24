@@ -4,6 +4,7 @@
 # Licensed under the terms of 2-clause BSD license
 
 import base64
+import datetime
 import io
 import os.path
 import shutil
@@ -210,6 +211,9 @@ mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
 -----END PGP SIGNATURE-----
 '''
 
+KEY_FINGERPRINT = '81E12C16BD8DCD60BE180845136880E72A7B1384'
+SIG_TIMESTAMP = datetime.datetime(2017, 11, 8, 10, 1, 26)
+
 
 def strip_openpgp(text):
     lines = text.lstrip().splitlines()
@@ -355,11 +359,19 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
 
     def test_verify_manifest(self):
         with io.StringIO(SIGNED_MANIFEST) as f:
-            self.env.verify_file(f)
+            sig = self.env.verify_file(f)
+            self.assertEqual(sig.fingerprint, KEY_FINGERPRINT)
+            self.assertEqual(sig.timestamp, SIG_TIMESTAMP)
+            self.assertIsNone(sig.expire_timestamp)
+            self.assertEqual(sig.primary_key_fingerprint, KEY_FINGERPRINT)
 
     def test_verify_dash_escaped_manifest(self):
         with io.StringIO(DASH_ESCAPED_SIGNED_MANIFEST) as f:
-            self.env.verify_file(f)
+            sig = self.env.verify_file(f)
+            self.assertEqual(sig.fingerprint, KEY_FINGERPRINT)
+            self.assertEqual(sig.timestamp, SIG_TIMESTAMP)
+            self.assertIsNone(sig.expire_timestamp)
+            self.assertEqual(sig.primary_key_fingerprint, KEY_FINGERPRINT)
 
     def test_verify_modified_manifest(self):
         with io.StringIO(MODIFIED_SIGNED_MANIFEST) as f:
@@ -628,7 +640,11 @@ class OpenPGPContextManagerTest(unittest.TestCase):
                     except RuntimeError:
                         raise unittest.SkipTest('Unable to import OpenPGP key')
 
-                    env.verify_file(f)
+                    sig = env.verify_file(f)
+                    self.assertEqual(sig.fingerprint, KEY_FINGERPRINT)
+                    self.assertEqual(sig.timestamp, SIG_TIMESTAMP)
+                    self.assertIsNone(sig.expire_timestamp)
+                    self.assertEqual(sig.primary_key_fingerprint, KEY_FINGERPRINT)
                 except gemato.exceptions.OpenPGPNoImplementation as e:
                     raise unittest.SkipTest(str(e))
 
@@ -666,7 +682,11 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
 
     def test_verify_manifest(self):
         with io.StringIO(SIGNED_MANIFEST) as f:
-            self.env.verify_file(f)
+            sig = self.env.verify_file(f)
+            self.assertEqual(sig.fingerprint, KEY_FINGERPRINT)
+            self.assertEqual(sig.timestamp, SIG_TIMESTAMP)
+            self.assertIsNone(sig.expire_timestamp)
+            self.assertEqual(sig.primary_key_fingerprint, KEY_FINGERPRINT)
 
     def test_sign_data(self):
         with io.StringIO(self.TEST_STRING) as f:
