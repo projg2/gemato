@@ -63,15 +63,18 @@ class OpenPGPSystemEnvironment(object):
         if exitst != 0:
             raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
 
+        is_good = False
+
         # process the output of gpg to find the exact result
         for l in out.splitlines():
             if l.startswith(b'[GNUPG:] GOODSIG'):
-                break
+                is_good = True
             elif l.startswith(b'[GNUPG:] EXPKEYSIG'):
                 raise gemato.exceptions.OpenPGPExpiredKeyFailure(err.decode('utf8'))
             elif l.startswith(b'[GNUPG:] REVKEYSIG'):
                 raise gemato.exceptions.OpenPGPRevokedKeyFailure(err.decode('utf8'))
-        else:
+
+        if not is_good:
             raise gemato.exceptions.OpenPGPUnknownSigFailure(err.decode('utf8'))
 
     def clear_sign_file(self, f, outf, keyid=None):
