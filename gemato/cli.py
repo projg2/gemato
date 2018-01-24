@@ -76,6 +76,15 @@ def do_verify(args, argp):
                 logging.error('Top-level Manifest {} is not OpenPGP signed'.format(tlm))
                 return 1
 
+            if m.openpgp_signed:
+                logging.info('Valid OpenPGP signature found:')
+                logging.info('- primary key: {}'.format(
+                    m.openpgp_signature.primary_key_fingerprint))
+                logging.info('- subkey: {}'.format(
+                    m.openpgp_signature.fingerprint))
+                logging.info('- timestamp: {}'.format(
+                    m.openpgp_signature.timestamp))
+
             logging.info('Verifying {}...'.format(p))
 
             relpath = os.path.relpath(p, os.path.dirname(tlm))
