@@ -234,6 +234,7 @@ class SignedManifestTest(unittest.TestCase):
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
         self.assertFalse(m.openpgp_signed)
+        self.assertIsNone(m.openpgp_signature)
 
     def test_dash_escaped_manifest_load(self):
         m = gemato.manifest.ManifestFile()
@@ -242,6 +243,7 @@ class SignedManifestTest(unittest.TestCase):
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
         self.assertFalse(m.openpgp_signed)
+        self.assertIsNone(m.openpgp_signature)
 
     def test_modified_manifest_load(self):
         """
@@ -254,6 +256,7 @@ class SignedManifestTest(unittest.TestCase):
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
         self.assertFalse(m.openpgp_signed)
+        self.assertIsNone(m.openpgp_signature)
 
     def test_junk_before_manifest_load(self):
         m = gemato.manifest.ManifestFile()
@@ -295,6 +298,7 @@ class SignedManifestTest(unittest.TestCase):
                     os.path.join(d, 'Manifest'),
                     verify_openpgp=False)
             self.assertFalse(m.openpgp_signed)
+            self.assertIsNone(m.openpgp_signature)
         finally:
             shutil.rmtree(d)
 
@@ -329,6 +333,7 @@ class SignedManifestTest(unittest.TestCase):
                     os.path.join(d, 'Manifest'),
                     verify_openpgp=False)
             self.assertFalse(m.openpgp_signed)
+            self.assertIsNone(m.openpgp_signature)
             m.save_manifest('Manifest')
 
             with io.open(os.path.join(d, 'Manifest'), 'r') as f:
@@ -385,6 +390,10 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
         self.assertTrue(m.openpgp_signed)
+        self.assertEqual(m.openpgp_signature.fingerprint, KEY_FINGERPRINT)
+        self.assertEqual(m.openpgp_signature.timestamp, SIG_TIMESTAMP)
+        self.assertIsNone(m.openpgp_signature.expire_timestamp)
+        self.assertEqual(m.openpgp_signature.primary_key_fingerprint, KEY_FINGERPRINT)
 
     def test_dash_escaped_manifest_load(self):
         m = gemato.manifest.ManifestFile()
@@ -393,6 +402,10 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
         self.assertTrue(m.openpgp_signed)
+        self.assertEqual(m.openpgp_signature.fingerprint, KEY_FINGERPRINT)
+        self.assertEqual(m.openpgp_signature.timestamp, SIG_TIMESTAMP)
+        self.assertIsNone(m.openpgp_signature.expire_timestamp)
+        self.assertEqual(m.openpgp_signature.primary_key_fingerprint, KEY_FINGERPRINT)
 
     def test_modified_manifest_load(self):
         m = gemato.manifest.ManifestFile()
@@ -411,6 +424,10 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
                     verify_openpgp=True,
                     openpgp_env=self.env)
             self.assertTrue(m.openpgp_signed)
+            self.assertEqual(m.openpgp_signature.fingerprint, KEY_FINGERPRINT)
+            self.assertEqual(m.openpgp_signature.timestamp, SIG_TIMESTAMP)
+            self.assertIsNone(m.openpgp_signature.expire_timestamp)
+            self.assertEqual(m.openpgp_signature.primary_key_fingerprint, KEY_FINGERPRINT)
         finally:
             shutil.rmtree(d)
 
@@ -426,6 +443,10 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
                     verify_openpgp=True,
                     openpgp_env=self.env)
             self.assertTrue(m.openpgp_signed)
+            self.assertEqual(m.openpgp_signature.fingerprint, KEY_FINGERPRINT)
+            self.assertEqual(m.openpgp_signature.timestamp, SIG_TIMESTAMP)
+            self.assertIsNone(m.openpgp_signature.expire_timestamp)
+            self.assertEqual(m.openpgp_signature.primary_key_fingerprint, KEY_FINGERPRINT)
         finally:
             shutil.rmtree(d)
 
@@ -500,6 +521,7 @@ class OpenPGPNoKeyTest(unittest.TestCase):
         self.assertIsNotNone(m.find_timestamp())
         self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
         self.assertFalse(m.openpgp_signed)
+        self.assertIsNone(m.openpgp_signature)
 
     def test_recursive_manifest_loader(self):
         d = tempfile.mkdtemp()
@@ -711,6 +733,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
             f.seek(0)
             m.load(f, openpgp_env=self.env)
         self.assertTrue(m.openpgp_signed)
+        self.assertIsNotNone(m.openpgp_signature)
 
     def test_dump_signed_manifest_keyid(self):
         m = gemato.manifest.ManifestFile()
@@ -721,17 +744,20 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
             f.seek(0)
             m.load(f, openpgp_env=self.env)
         self.assertTrue(m.openpgp_signed)
+        self.assertIsNotNone(m.openpgp_signature)
 
     def test_dump_force_signed_manifest(self):
         m = gemato.manifest.ManifestFile()
         with io.StringIO(SIGNED_MANIFEST) as f:
             m.load(f, verify_openpgp=False, openpgp_env=self.env)
         self.assertFalse(m.openpgp_signed)
+        self.assertIsNone(m.openpgp_signature)
         with io.StringIO() as f:
             m.dump(f, sign_openpgp=True, openpgp_env=self.env)
             f.seek(0)
             m.load(f, openpgp_env=self.env)
         self.assertTrue(m.openpgp_signed)
+        self.assertIsNotNone(m.openpgp_signature)
 
     def test_dump_force_unsigned_manifest(self):
         m = gemato.manifest.ManifestFile()
@@ -743,6 +769,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
             f.seek(0)
             m.load(f, openpgp_env=self.env)
         self.assertFalse(m.openpgp_signed)
+        self.assertIsNone(m.openpgp_signature)
 
     def test_recursive_manifest_loader_save_manifest(self):
         d = tempfile.mkdtemp()
@@ -761,6 +788,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
             with io.open(os.path.join(d, 'Manifest'), 'r') as f:
                 m2.load(f, openpgp_env=self.env)
             self.assertTrue(m2.openpgp_signed)
+            self.assertIsNotNone(m.openpgp_signature)
         finally:
             shutil.rmtree(d)
 
@@ -783,6 +811,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     os.path.join(d, 'Manifest.gz'), 'r') as cf:
                 m2.load(cf, openpgp_env=self.env)
             self.assertTrue(m2.openpgp_signed)
+            self.assertIsNotNone(m.openpgp_signature)
         finally:
             shutil.rmtree(d)
 
@@ -798,12 +827,14 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     sign_openpgp=True,
                     openpgp_env=self.env)
             self.assertFalse(m.openpgp_signed)
+            self.assertIsNone(m.openpgp_signature)
 
             m.save_manifest('Manifest')
             m2 = gemato.manifest.ManifestFile()
             with io.open(os.path.join(d, 'Manifest'), 'r') as f:
                 m2.load(f, openpgp_env=self.env)
             self.assertTrue(m2.openpgp_signed)
+            self.assertIsNotNone(m2.openpgp_signature)
         finally:
             shutil.rmtree(d)
 
@@ -820,6 +851,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     sign_openpgp=True,
                     openpgp_env=self.env)
             self.assertFalse(m.openpgp_signed)
+            self.assertIsNone(m.openpgp_signature)
 
             m.save_manifest('Manifest.gz')
             m2 = gemato.manifest.ManifestFile()
@@ -827,6 +859,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     os.path.join(d, 'Manifest.gz'), 'r') as cf:
                 m2.load(cf, openpgp_env=self.env)
             self.assertTrue(m2.openpgp_signed)
+            self.assertIsNotNone(m2.openpgp_signature)
         finally:
             shutil.rmtree(d)
 
@@ -848,6 +881,7 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
                     sign_openpgp=True,
                     openpgp_env=self.env)
             self.assertFalse(m.openpgp_signed)
+            self.assertIsNone(m.openpgp_signature)
 
             m.load_manifest('eclass/Manifest')
             m.save_manifest('eclass/Manifest')
@@ -856,5 +890,6 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
             with io.open(os.path.join(d, 'eclass/Manifest'), 'r') as f:
                 m2.load(f, openpgp_env=self.env)
             self.assertFalse(m2.openpgp_signed)
+            self.assertIsNone(m2.openpgp_signature)
         finally:
             shutil.rmtree(d)

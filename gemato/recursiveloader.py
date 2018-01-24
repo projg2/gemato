@@ -161,6 +161,7 @@ class ManifestRecursiveLoader(object):
         'openpgp_keyid',
         'hashes',
         'openpgp_signed',
+        'openpgp_signature',
         'sort',
         'compress_watermark',
         'compress_format',
@@ -188,7 +189,8 @@ class ManifestRecursiveLoader(object):
         @verify_openpgp and @openpgp_env are passed down
         to ManifestFile. If the top-level Manifest is OpenPGP-signed
         and the verification succeeds, openpgp_signed property
-        is set to True. @verify_openpgp is True by default.
+        is set to True and openpgp_signature will contain the signature
+        data. @verify_openpgp is True by default.
 
         @sign_openpgp is passed down to ManifestFile when writing
         the top-level Manifest. If it is True, the top-level Manifest
@@ -258,6 +260,7 @@ class ManifestRecursiveLoader(object):
         m = self.load_manifest(self.top_level_manifest_filename,
                 allow_create=allow_create)
         self.openpgp_signed = m.openpgp_signed
+        self.openpgp_signature = m.openpgp_signature
 
     def load_manifest(self, relpath, verify_entry=None,
             allow_create=False):

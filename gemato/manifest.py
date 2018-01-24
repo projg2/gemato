@@ -1,6 +1,6 @@
 # gemato: Manifest file objects
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
@@ -337,7 +337,7 @@ class ManifestFile(object):
     from files and writing to them.
     """
 
-    __slots__ = ['entries', 'openpgp_signed']
+    __slots__ = ['entries', 'openpgp_signed', 'openpgp_signature']
 
     def __init__(self, f=None):
         """
@@ -347,6 +347,7 @@ class ManifestFile(object):
 
         self.entries = []
         self.openpgp_signed = None
+        self.openpgp_signature = None
         if f is not None:
             self.load(f)
 
@@ -360,14 +361,16 @@ class ManifestFile(object):
         @openpgp_env needs to be provided.
 
         If the verification succeeds, the openpgp_signed property will
-        be set to True. If it fails or OpenPGP is not available,
-        an exception will be raised. If the exception is caught,
-        the caller can continue using the ManifestFile instance
-        -- it will be loaded completely.
+        be set to True and openpgp_signature will contain the signature
+        data. If it fails or OpenPGP is not available, an exception
+        will be raised. If the exception is caught, the caller
+        can continue using the ManifestFile instance -- it will
+        be loaded completely.
         """
 
         self.entries = []
         self.openpgp_signed = False
+        self.openpgp_signature = None
         state = ManifestState.DATA
         openpgp_data = ''
 
@@ -436,7 +439,7 @@ class ManifestFile(object):
         if verify_openpgp and state == ManifestState.POST_SIGNED_DATA:
             assert openpgp_env
             with io.StringIO(openpgp_data) as f:
-                openpgp_env.verify_file(f)
+                self.openpgp_signature = openpgp_env.verify_file(f)
             self.openpgp_signed = True
 
     def dump(self, f, sign_openpgp=None, openpgp_keyid=None,
