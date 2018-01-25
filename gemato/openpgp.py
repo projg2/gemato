@@ -77,7 +77,7 @@ class OpenPGPSystemEnvironment(object):
             # no timestamp
             return None
         else:
-            return datetime.datetime.fromtimestamp(int(ts))
+            return datetime.datetime.utcfromtimestamp(int(ts))
 
     def verify_file(self, f):
         """
