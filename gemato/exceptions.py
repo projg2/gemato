@@ -3,7 +3,14 @@
 # (c) 2017 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
-class UnsupportedCompression(Exception):
+class GematoException(Exception):
+    """
+    Base class for gemato exceptions. Makes it easier to catch them all.
+    """
+    pass
+
+
+class UnsupportedCompression(GematoException):
     __slots__ = ['suffix']
 
     def __init__(self, suffix):
@@ -14,7 +21,7 @@ class UnsupportedCompression(Exception):
         return 'Unsupported compression suffix: {}'.format(self.suffix)
 
 
-class UnsupportedHash(Exception):
+class UnsupportedHash(GematoException):
     __slots__ = ['hash_name']
 
     def __init__(self, hash_name):
@@ -25,12 +32,12 @@ class UnsupportedHash(Exception):
         return 'Unsupported hash name: {}'.format(self.hash_name)
 
 
-class ManifestSyntaxError(Exception):
+class ManifestSyntaxError(GematoException):
     def __init__(self, message):
         super(ManifestSyntaxError, self).__init__(message)
 
 
-class ManifestIncompatibleEntry(Exception):
+class ManifestIncompatibleEntry(GematoException):
     __slots__ = ['e1', 'e2', 'diff']
 
     def __init__(self, e1, e2, diff):
@@ -46,7 +53,7 @@ class ManifestIncompatibleEntry(Exception):
         return msg
 
 
-class ManifestMismatch(Exception):
+class ManifestMismatch(GematoException):
     """
     An exception raised for verification failure.
     """
@@ -66,7 +73,7 @@ class ManifestMismatch(Exception):
         return msg
 
 
-class ManifestCrossDevice(Exception):
+class ManifestCrossDevice(GematoException):
     """
     An exception caused by attempting to cross filesystem boundaries.
     """
@@ -82,7 +89,7 @@ class ManifestCrossDevice(Exception):
             .format(self.path))
 
 
-class ManifestUnsignedData(Exception):
+class ManifestUnsignedData(GematoException):
     """
     An exception caused by a Manifest file containing non-whitespace
     outside the OpenPGP-signed part.
@@ -92,7 +99,7 @@ class ManifestUnsignedData(Exception):
         return "Unsigned data found in an OpenPGP signed Manifest"
 
 
-class OpenPGPVerificationFailure(Exception):
+class OpenPGPVerificationFailure(GematoException):
     """
     An exception raised when OpenPGP verification fails.
     """
@@ -135,7 +142,7 @@ class OpenPGPUnknownSigFailure(OpenPGPVerificationFailure):
         return "OpenPGP signature rejected for unknown reason:\n{}".format(self.output)
 
 
-class OpenPGPSigningFailure(Exception):
+class OpenPGPSigningFailure(GematoException):
     """
     An exception raised when OpenPGP signing fails.
     """
@@ -150,7 +157,7 @@ class OpenPGPSigningFailure(Exception):
         return "OpenPGP signing failed:\n{}".format(self.output)
 
 
-class OpenPGPNoImplementation(Exception):
+class OpenPGPNoImplementation(GematoException):
     """
     An exception raised when no supported OpenPGP implementation
     is available.
@@ -160,7 +167,7 @@ class OpenPGPNoImplementation(Exception):
         return "No supported OpenPGP implementation found (install gnupg)"
 
 
-class ManifestInvalidPath(Exception):
+class ManifestInvalidPath(GematoException):
     """
     An exception raised when an invalid path tries to be added to
     Manifest.
@@ -178,7 +185,7 @@ class ManifestInvalidPath(Exception):
                 .format(self.path, self.detail[0], self.detail[1]))
 
 
-class ManifestInvalidFilename(Exception):
+class ManifestInvalidFilename(GematoException):
     """
     An exception raised when an entry for invalid filename is created.
     """
