@@ -791,7 +791,7 @@ class OpenPGPContextManagerTest(unittest.TestCase):
     def test_home_after_close(self):
         with gemato.openpgp.OpenPGPEnvironment() as env:
             env.close()
-            with self.assertRaises(RuntimeError):
+            with self.assertRaises(AssertionError):
                 env.home
 
 

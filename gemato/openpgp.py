@@ -228,9 +228,7 @@ disable-scdaemon
 
     @property
     def home(self):
-        if self._home is None:
-            raise RuntimeError(
-                    'OpenPGPEnvironment has been closed')
+        assert self._home is not None
         return self._home
 
     def _spawn_gpg(self, options, stdin):
