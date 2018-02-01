@@ -10,7 +10,6 @@ import re
 import sys
 
 import gemato.exceptions
-import gemato.openpgp
 import gemato.util
 
 
