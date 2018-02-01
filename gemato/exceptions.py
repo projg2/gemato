@@ -99,22 +99,28 @@ class ManifestUnsignedData(GematoException):
         return "Unsigned data found in an OpenPGP signed Manifest"
 
 
-class OpenPGPVerificationFailure(GematoException):
+class OpenPGPRuntimeError(GematoException):
     """
-    An exception raised when OpenPGP verification fails.
+    Base exception class for OpenPGP runtime errors.
     """
 
     __slots__ = ['output']
 
     def __init__(self, output):
-        super(OpenPGPVerificationFailure, self).__init__(output)
+        super(OpenPGPRuntimeError, self).__init__(output)
         self.output = output
+
+
+class OpenPGPVerificationFailure(OpenPGPRuntimeError):
+    """
+    An exception raised when OpenPGP verification fails.
+    """
 
     def __str__(self):
         return "OpenPGP verification failed:\n{}".format(self.output)
 
 
-class OpenPGPExpiredKeyFailure(OpenPGPVerificationFailure):
+class OpenPGPExpiredKeyFailure(OpenPGPRuntimeError):
     """
     OpenPGP verification rejected because of expired key.
     """
@@ -123,7 +129,7 @@ class OpenPGPExpiredKeyFailure(OpenPGPVerificationFailure):
         return "OpenPGP signature rejected because of expired key:\n{}".format(self.output)
 
 
-class OpenPGPRevokedKeyFailure(OpenPGPVerificationFailure):
+class OpenPGPRevokedKeyFailure(OpenPGPRuntimeError):
     """
     OpenPGP verification rejected because of revoked key.
     """
@@ -132,7 +138,7 @@ class OpenPGPRevokedKeyFailure(OpenPGPVerificationFailure):
         return "OpenPGP signature rejected because of revoked key:\n{}".format(self.output)
 
 
-class OpenPGPUnknownSigFailure(OpenPGPVerificationFailure):
+class OpenPGPUnknownSigFailure(OpenPGPRuntimeError):
     """
     OpenPGP verification rejected for unknown reason (i.e. unrecognized
     GPG status).
@@ -142,16 +148,10 @@ class OpenPGPUnknownSigFailure(OpenPGPVerificationFailure):
         return "OpenPGP signature rejected for unknown reason:\n{}".format(self.output)
 
 
-class OpenPGPSigningFailure(GematoException):
+class OpenPGPSigningFailure(OpenPGPRuntimeError):
     """
     An exception raised when OpenPGP signing fails.
     """
-
-    __slots__ = ['output']
-
-    def __init__(self, output):
-        super(OpenPGPSigningFailure, self).__init__(output)
-        self.output = output
 
     def __str__(self):
         return "OpenPGP signing failed:\n{}".format(self.output)
