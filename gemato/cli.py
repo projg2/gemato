@@ -66,14 +66,7 @@ def do_verify(args, argp):
             init_kwargs['openpgp_env'] = env
 
             start = timeit.default_timer()
-            try:
-                m = gemato.recursiveloader.ManifestRecursiveLoader(tlm, **init_kwargs)
-            except gemato.exceptions.OpenPGPNoImplementation as e:
-                logging.error(str(e))
-                return 1
-            except gemato.exceptions.OpenPGPVerificationFailure as e:
-                logging.error(str(e))
-                return 1
+            m = gemato.recursiveloader.ManifestRecursiveLoader(tlm, **init_kwargs)
             if args.require_signed_manifest and not m.openpgp_signed:
                 logging.error('Top-level Manifest {} is not OpenPGP signed'.format(tlm))
                 return 1
@@ -96,17 +89,7 @@ def do_verify(args, argp):
             relpath = os.path.relpath(p, os.path.dirname(tlm))
             if relpath == '.':
                 relpath = ''
-            try:
-                ret &= m.assert_directory_verifies(relpath, **kwargs)
-            except gemato.exceptions.ManifestCrossDevice as e:
-                logging.error(str(e))
-                return 1
-            except gemato.exceptions.ManifestIncompatibleEntry as e:
-                logging.error(str(e))
-                return 1
-            except gemato.exceptions.ManifestMismatch as e:
-                logging.error(str(e))
-                return 1
+            ret &= m.assert_directory_verifies(relpath, **kwargs)
 
             stop = timeit.default_timer()
             logging.info('{} verified in {:.2f} seconds'.format(p, stop - start))
@@ -159,15 +142,8 @@ def do_update(args, argp):
             init_kwargs['openpgp_env'] = env
 
             start = timeit.default_timer()
-            try:
-                m = gemato.recursiveloader.ManifestRecursiveLoader(tlm,
-                        **init_kwargs)
-            except gemato.exceptions.OpenPGPNoImplementation as e:
-                logging.error(str(e))
-                return 1
-            except gemato.exceptions.OpenPGPVerificationFailure as e:
-                logging.error(str(e))
-                return 1
+            m = gemato.recursiveloader.ManifestRecursiveLoader(tlm,
+                    **init_kwargs)
 
             # if not specified by user, profile must set it
             if m.hashes is None:
@@ -188,31 +164,21 @@ def do_update(args, argp):
 
             logging.info('Updating Manifests in {}...'.format(p))
 
-            try:
-                start_ts = datetime.datetime.utcnow()
-                m.update_entries_for_directory(relpath, **update_kwargs)
+            start_ts = datetime.datetime.utcnow()
+            m.update_entries_for_directory(relpath, **update_kwargs)
 
-                # write TIMESTAMP if requested, or if already there
-                if relpath != '':
-                    # skip timestamp if not doing full update
-                    pass
-                elif args.timestamp:
-                    m.set_timestamp(start_ts)
-                else:
-                    ts = m.find_timestamp()
-                    if ts is not None:
-                        ts.ts = start_ts
+            # write TIMESTAMP if requested, or if already there
+            if relpath != '':
+                # skip timestamp if not doing full update
+                pass
+            elif args.timestamp:
+                m.set_timestamp(start_ts)
+            else:
+                ts = m.find_timestamp()
+                if ts is not None:
+                    ts.ts = start_ts
 
-                m.save_manifests(**save_kwargs)
-            except gemato.exceptions.ManifestCrossDevice as e:
-                logging.error(str(e))
-                return 1
-            except gemato.exceptions.ManifestInvalidPath as e:
-                logging.error(str(e))
-                return 1
-            except gemato.exceptions.ManifestInvalidFilename as e:
-                logging.error(str(e))
-                return 1
+            m.save_manifests(**save_kwargs)
 
             stop = timeit.default_timer()
             logging.info('{} updated in {:.2f} seconds'.format(p, stop - start))
@@ -260,15 +226,8 @@ def do_create(args, argp):
             init_kwargs['openpgp_env'] = env
 
             start = timeit.default_timer()
-            try:
-                m = gemato.recursiveloader.ManifestRecursiveLoader(
-                        os.path.join(p, 'Manifest'), **init_kwargs)
-            except gemato.exceptions.OpenPGPNoImplementation as e:
-                logging.error(str(e))
-                return 1
-            except gemato.exceptions.OpenPGPVerificationFailure as e:
-                logging.error(str(e))
-                return 1
+            m = gemato.recursiveloader.ManifestRecursiveLoader(
+                    os.path.join(p, 'Manifest'), **init_kwargs)
 
             # if not specified by user, profile must set it
             if m.hashes is None:
@@ -276,24 +235,14 @@ def do_create(args, argp):
 
             logging.info('Creating Manifests in {}...'.format(p))
 
-            try:
-                start_ts = datetime.datetime.utcnow()
-                m.update_entries_for_directory()
+            start_ts = datetime.datetime.utcnow()
+            m.update_entries_for_directory()
 
-                # write TIMESTAMP if requested, or if already there
-                if args.timestamp:
-                    m.set_timestamp(start_ts)
+            # write TIMESTAMP if requested, or if already there
+            if args.timestamp:
+                m.set_timestamp(start_ts)
 
-                m.save_manifests(**save_kwargs)
-            except gemato.exceptions.ManifestCrossDevice as e:
-                logging.error(str(e))
-                return 1
-            except gemato.exceptions.ManifestInvalidPath as e:
-                logging.error(str(e))
-                return 1
-            except gemato.exceptions.ManifestInvalidFilename as e:
-                logging.error(str(e))
-                return 1
+            m.save_manifests(**save_kwargs)
 
             stop = timeit.default_timer()
             logging.info('{} updated in {:.2f} seconds'.format(p, stop - start))
@@ -397,7 +346,11 @@ def main(argv):
     vals = argp.parse_args(argv[1:])
     if not hasattr(vals, 'func'):
         argp.error('No function specified')
-    return vals.func(vals, argp)
+    try:
+        return vals.func(vals, argp)
+    except gemato.exceptions.GematoException as e:
+        logging.error(str(e))
+        return 1
 
 
 def setuptools_main():
