@@ -14,7 +14,9 @@ import os.path
 import sys
 import timeit
 
+import gemato.exceptions
 import gemato.find_top_level
+import gemato.openpgp
 import gemato.profile
 import gemato.recursiveloader
 
