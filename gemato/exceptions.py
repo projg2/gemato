@@ -111,6 +111,24 @@ class OpenPGPRuntimeError(GematoException):
         self.output = output
 
 
+class OpenPGPKeyImportError(OpenPGPRuntimeError):
+    """
+    An exception raised when key import fails.
+    """
+
+    def __str__(self):
+        return "OpenPGP key import failed:\n{}".format(self.output)
+
+
+class OpenPGPKeyRefreshError(OpenPGPRuntimeError):
+    """
+    An exception raised when keyring refresh (update) fails.
+    """
+
+    def __str__(self):
+        return "OpenPGP keyring refresh failed:\n{}".format(self.output)
+
+
 class OpenPGPVerificationFailure(OpenPGPRuntimeError):
     """
     An exception raised when OpenPGP verification fails.

@@ -375,12 +375,9 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
         self.env = gemato.openpgp.OpenPGPEnvironment()
         try:
             self.env.import_key(io.BytesIO(PUBLIC_KEY))
-        except gemato.exceptions.OpenPGPNoImplementation as e:
+        except gemato.exceptions.OpenPGPRuntimeError as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
-        except RuntimeError:
-            self.env.close()
-            raise unittest.SkipTest('Unable to import OpenPGP key')
 
     def tearDown(self):
         self.env.close()
@@ -605,12 +602,9 @@ class OpenPGPExpiredKeyTest(OpenPGPNoKeyTest):
         self.env = gemato.openpgp.OpenPGPEnvironment()
         try:
             self.env.import_key(io.BytesIO(EXPIRED_PUBLIC_KEY))
-        except gemato.exceptions.OpenPGPNoImplementation as e:
+        except gemato.exceptions.OpenPGPRuntimeError as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
-        except RuntimeError:
-            self.env.close()
-            raise unittest.SkipTest('Unable to import OpenPGP key')
 
     def tearDown(self):
         self.env.close()
@@ -627,12 +621,9 @@ class OpenPGPRevokedKeyTest(OpenPGPNoKeyTest):
         self.env = gemato.openpgp.OpenPGPEnvironment()
         try:
             self.env.import_key(io.BytesIO(REVOKED_PUBLIC_KEY))
-        except gemato.exceptions.OpenPGPNoImplementation as e:
+        except gemato.exceptions.OpenPGPRuntimeError as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
-        except RuntimeError:
-            self.env.close()
-            raise unittest.SkipTest('Unable to import OpenPGP key')
 
     def tearDown(self):
         self.env.close()
@@ -649,12 +640,9 @@ class OpenPGPExpiredSignatureTest(unittest.TestCase):
         self.env = gemato.openpgp.OpenPGPEnvironment()
         try:
             self.env.import_key(io.BytesIO(PUBLIC_KEY))
-        except gemato.exceptions.OpenPGPNoImplementation as e:
+        except gemato.exceptions.OpenPGPRuntimeError as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
-        except RuntimeError:
-            self.env.close()
-            raise unittest.SkipTest('Unable to import OpenPGP key')
 
     def tearDown(self):
         self.env.close()
@@ -756,7 +744,7 @@ class OpenPGPContextManagerTest(unittest.TestCase):
     def test_import_malformed_key(self):
         with gemato.openpgp.OpenPGPEnvironment() as env:
             try:
-                self.assertRaises(RuntimeError,
+                self.assertRaises(gemato.exceptions.OpenPGPKeyImportError,
                         env.import_key,
                         io.BytesIO(MALFORMED_PUBLIC_KEY))
             except gemato.exceptions.OpenPGPNoImplementation as e:
@@ -765,7 +753,7 @@ class OpenPGPContextManagerTest(unittest.TestCase):
     def test_import_no_keys(self):
         with gemato.openpgp.OpenPGPEnvironment() as env:
             try:
-                self.assertRaises(RuntimeError,
+                self.assertRaises(gemato.exceptions.OpenPGPKeyImportError,
                         env.import_key,
                         io.BytesIO(b''))
             except gemato.exceptions.OpenPGPNoImplementation as e:
@@ -785,8 +773,8 @@ class OpenPGPContextManagerTest(unittest.TestCase):
                 try:
                     try:
                         env.import_key(io.BytesIO(PUBLIC_KEY))
-                    except RuntimeError:
-                        raise unittest.SkipTest('Unable to import OpenPGP key')
+                    except gemato.exceptions.OpenPGPRuntimeError as e:
+                        raise unittest.SkipTest(str(e))
 
                     sig = env.verify_file(f)
                     self.assertEqual(sig.fingerprint, KEY_FINGERPRINT)
@@ -818,12 +806,9 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
         self.env = gemato.openpgp.OpenPGPEnvironment()
         try:
             self.env.import_key(io.BytesIO(PRIVATE_KEY))
-        except gemato.exceptions.OpenPGPNoImplementation as e:
+        except gemato.exceptions.OpenPGPRuntimeError as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
-        except RuntimeError:
-            self.env.close()
-            raise unittest.SkipTest('Unable to import OpenPGP key')
 
     def tearDown(self):
         self.env.close()
