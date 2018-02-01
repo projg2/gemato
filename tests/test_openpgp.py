@@ -211,6 +211,29 @@ mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
 -----END PGP SIGNATURE-----
 '''
 
+EXPIRED_SIGNED_MANIFEST = u'''
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+TIMESTAMP 2017-10-22T18:06:41Z
+MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+IGNORE local
+DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+-----BEGIN PGP SIGNATURE-----
+
+iQE5BAEBCAAjFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAlnxCXcFgwABUYAACgkQ
+E2iA5yp7E4SDpQgAizTfQ6HJ1mawgElYV1LsOKGT8ivC6CAeU3Cs1E8zYpitKuy7
+Yu5WrqUgck5GkXfswxHISkV+oWzrA/j0bUV768o+fY2JmlKuc/VWeyYDGnDtgDPz
+NXYoqlQ1z3TDeaRktHcblECghf/A9Hbw0L4i0DVvDdk9APtIswgL/RmpXAQS1Bl7
+sE1aFIy8CMBf3itco7NGjPpCxRt7ckS+UIKNgzrfnS7WEXHIirykEsMYKTLfuN2u
+HSxRUCkTK1jBuP/v/rjdqUJw3LXAbjxFl9SyUX4AgCgHqgso3IZwjAprQRKNSObO
+t5pTRGhLWgdLUrs7vRB7wf7F8h4sci/YBKJRFA==
+=VGMV
+-----END PGP SIGNATURE-----
+'''
+
 KEY_FINGERPRINT = '81E12C16BD8DCD60BE180845136880E72A7B1384'
 SIG_TIMESTAMP = datetime.datetime(2017, 11, 8, 9, 1, 26)
 
@@ -613,6 +636,109 @@ class OpenPGPRevokedKeyTest(OpenPGPNoKeyTest):
 
     def tearDown(self):
         self.env.close()
+
+
+class OpenPGPExpiredSignatureTest(unittest.TestCase):
+    """
+    Tests for handling of expired signature.
+    """
+
+    expected_exception = gemato.exceptions.OpenPGPVerificationFailure
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except RuntimeError:
+            self.env.close()
+            raise unittest.SkipTest('Unable to import OpenPGP key')
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_verify_manifest(self):
+        with io.StringIO(EXPIRED_SIGNED_MANIFEST) as f:
+            try:
+                self.assertRaises(self.expected_exception,
+                        self.env.verify_file, f)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+
+    def test_manifest_load(self):
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(EXPIRED_SIGNED_MANIFEST) as f:
+            try:
+                self.assertRaises(self.expected_exception,
+                        m.load, f, openpgp_env=self.env)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+
+    def test_manifest_load_exception_caught(self):
+        """
+        Test that the Manifest is loaded even if exception is raised.
+        """
+        m = gemato.manifest.ManifestFile()
+        with io.StringIO(EXPIRED_SIGNED_MANIFEST) as f:
+            try:
+                m.load(f, openpgp_env=self.env)
+            except self.expected_exception:
+                pass
+            except gemato.exceptions.OpenPGPNoImplementation:
+                pass
+        self.assertIsNotNone(m.find_timestamp())
+        self.assertIsNotNone(m.find_path_entry('myebuild-0.ebuild'))
+        self.assertFalse(m.openpgp_signed)
+        self.assertIsNone(m.openpgp_signature)
+
+    def test_recursive_manifest_loader(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(EXPIRED_SIGNED_MANIFEST)
+
+            try:
+                self.assertRaises(self.expected_exception,
+                        gemato.recursiveloader.ManifestRecursiveLoader,
+                        os.path.join(d, 'Manifest'),
+                        verify_openpgp=True,
+                        openpgp_env=self.env)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+        finally:
+            shutil.rmtree(d)
+
+    def test_recursive_manifest_loader_compressed(self):
+        d = tempfile.mkdtemp()
+        try:
+            with gemato.compression.open_potentially_compressed_path(
+                    os.path.join(d, 'Manifest.gz'), 'w') as cf:
+                cf.write(EXPIRED_SIGNED_MANIFEST)
+
+            try:
+                self.assertRaises(self.expected_exception,
+                        gemato.recursiveloader.ManifestRecursiveLoader,
+                        os.path.join(d, 'Manifest.gz'),
+                        verify_openpgp=True,
+                        openpgp_env=self.env)
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+        finally:
+            shutil.rmtree(d)
+
+    def test_find_top_level_manifest(self):
+        d = tempfile.mkdtemp()
+        try:
+            with io.open(os.path.join(d, 'Manifest'), 'w') as f:
+                f.write(EXPIRED_SIGNED_MANIFEST)
+
+            self.assertEqual(
+                    gemato.find_top_level.find_top_level_manifest(d),
+                    os.path.join(d, 'Manifest'))
+        finally:
+            shutil.rmtree(d)
 
 
 class OpenPGPContextManagerTest(unittest.TestCase):
