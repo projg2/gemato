@@ -593,10 +593,20 @@ class ManifestRecursiveLoader(object):
             Pre-process os.walk() result for verification. Yield objects
             suitable to passing to subprocesses.
             """
+            directory_ids = {}
+
             for dirpath, dirnames, filenames in it:
                 dir_st = os.stat(dirpath)
                 if dir_st.st_dev != self.manifest_device:
                     raise gemato.exceptions.ManifestCrossDevice(dirpath)
+
+                dir_id = (dir_st.st_dev, dir_st.st_ino)
+                # if this directory was already processed for one of its
+                # parents, we're in a loop
+                parent_dir = os.path.dirname(dirpath)
+                parent_dir_ids = directory_ids.get(parent_dir, [])
+                if dir_id in parent_dir_ids:
+                    raise gemato.exceptions.ManifestSymlinkLoop(dirpath)
 
                 relpath = os.path.relpath(dirpath, self.root_directory)
                 # strip dot to avoid matching problems
@@ -625,6 +635,9 @@ class ManifestRecursiveLoader(object):
                 # skip scanning ignored directories
                 for d in skip_dirs:
                     dirnames.remove(d)
+                # if we are planning to recur, record this dir
+                if dirnames:
+                    directory_ids[dirpath] = parent_dir_ids + [dir_id]
 
                 yield (dirpath, relpath, dirnames, filenames, dirdict)
 
@@ -962,6 +975,7 @@ class ManifestRecursiveLoader(object):
         entry_dict = self.get_file_entry_dict(path,
                 only_types=['IGNORE'], verify_manifests=verify_manifests)
         new_manifests = []
+        directory_ids = {}
         it = os.walk(os.path.join(self.root_directory, path),
                 onerror=gemato.util.throw_exception,
                 followlinks=True)
@@ -970,6 +984,14 @@ class ManifestRecursiveLoader(object):
             dir_st = os.stat(dirpath)
             if dir_st.st_dev != self.manifest_device:
                 raise gemato.exceptions.ManifestCrossDevice(dirpath)
+
+            dir_id = (dir_st.st_dev, dir_st.st_ino)
+            # if this directory was already processed for one of its
+            # parents, we're in a loop
+            parent_dir = os.path.dirname(dirpath)
+            parent_dir_ids = directory_ids.get(parent_dir, [])
+            if dir_id in parent_dir_ids:
+                raise gemato.exceptions.ManifestSymlinkLoop(dirpath)
 
             relpath = os.path.relpath(dirpath, self.root_directory)
             # strip dot to avoid matching problems
@@ -994,6 +1016,9 @@ class ManifestRecursiveLoader(object):
             # skip scanning ignored directories
             for d in skip_dirs:
                 dirnames.remove(d)
+            # if we are planning to recur, record this dir
+            if dirnames:
+                directory_ids[dirpath] = parent_dir_ids + [dir_id]
 
             # check for unregistered Manifest
             for mname in manifest_filenames:
@@ -1061,6 +1086,7 @@ class ManifestRecursiveLoader(object):
                 ._iter_manifests_for_path(path)):
             manifest_stack.append((mpath, mrpath, m))
             break
+        directory_ids = {}
 
         it = os.walk(os.path.join(self.root_directory, path),
                 onerror=gemato.util.throw_exception,
@@ -1070,6 +1096,14 @@ class ManifestRecursiveLoader(object):
             dir_st = os.stat(dirpath)
             if dir_st.st_dev != self.manifest_device:
                 raise gemato.exceptions.ManifestCrossDevice(dirpath)
+
+            dir_id = (dir_st.st_dev, dir_st.st_ino)
+            # if this directory was already processed for one of its
+            # parents, we're in a loop
+            parent_dir = os.path.dirname(dirpath)
+            parent_dir_ids = directory_ids.get(parent_dir, [])
+            if dir_id in parent_dir_ids:
+                raise gemato.exceptions.ManifestSymlinkLoop(dirpath)
 
             relpath = os.path.relpath(dirpath, self.root_directory)
             # strip dot to avoid matching problems
@@ -1110,6 +1144,9 @@ class ManifestRecursiveLoader(object):
             # skip scanning ignored directories
             for d in skip_dirs:
                 dirnames.remove(d)
+            # if we are planning to recur, record this dir
+            if dirnames:
+                directory_ids[dirpath] = parent_dir_ids + [dir_id]
 
             new_entries = []
             for f in filenames:

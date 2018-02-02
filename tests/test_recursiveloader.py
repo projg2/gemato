@@ -2737,21 +2737,20 @@ class SymlinkLoopTest(TempDirTestCase):
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'))
-        self.assertRaises(OSError,
+        self.assertRaises(gemato.exceptions.ManifestSymlinkLoop,
                 m.assert_directory_verifies, '')
 
     def test_cli_verifies(self):
-        self.assertRaises(OSError,
-                gemato.cli.main, ['gemato', 'verify', self.dir])
+        self.assertEqual(gemato.cli.main(['gemato', 'verify', self.dir]),
+                         1)
 
     def test_update_entries_for_directory(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'),
             hashes=['SHA256', 'SHA512'])
-        self.assertRaises(OSError,
+        self.assertRaises(gemato.exceptions.ManifestSymlinkLoop,
                 m.update_entries_for_directory, '')
 
     def test_cli_update(self):
-        self.assertRaises(OSError,
-                gemato.cli.main, ['gemato', 'update',
-                    '--hashes=SHA256 SHA512', self.dir])
+        self.assertEqual(gemato.cli.main(['gemato', 'update',
+                    '--hashes=SHA256 SHA512', self.dir]), 1)

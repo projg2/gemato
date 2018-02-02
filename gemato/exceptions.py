@@ -89,6 +89,23 @@ class ManifestCrossDevice(GematoException):
             .format(self.path))
 
 
+class ManifestSymlinkLoop(GematoException):
+    """
+    An exception caused by hitting a symlink loop (symlink to itself
+    or a parent directory).
+    """
+
+    __slots__ = ['path']
+
+    def __init__(self, path):
+        super(ManifestSymlinkLoop, self).__init__(path)
+        self.path = path
+
+    def __str__(self):
+        return ("Path {} is a symlink to one of its parent directories, it must be IGNORE-d explicitly"
+            .format(self.path))
+
+
 class ManifestUnsignedData(GematoException):
     """
     An exception caused by a Manifest file containing non-whitespace
