@@ -1,6 +1,6 @@
 # gemato: Recursive loader for Manifests
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
@@ -615,8 +615,11 @@ class ManifestRecursiveLoader(object):
                             raise gemato.exceptions.ManifestCrossDevice(syspath)
                         continue
 
+                    # if we have an entry for the directory, it's either
+                    # ignored, or is supposed to be a file -- in both
+                    # cases, we want not to recur
+                    skip_dirs.append(d)
                     if de.tag == 'IGNORE':
-                        skip_dirs.append(d)
                         del dirdict[d]
 
                 # skip scanning ignored directories
