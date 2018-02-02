@@ -594,6 +594,10 @@ class ManifestRecursiveLoader(object):
             suitable to passing to subprocesses.
             """
             for dirpath, dirnames, filenames in it:
+                dir_st = os.stat(dirpath)
+                if dir_st.st_dev != self.manifest_device:
+                    raise gemato.exceptions.ManifestCrossDevice(dirpath)
+
                 relpath = os.path.relpath(dirpath, self.root_directory)
                 # strip dot to avoid matching problems
                 if relpath == '.':
@@ -609,10 +613,6 @@ class ManifestRecursiveLoader(object):
 
                     de = dirdict.get(d)
                     if de is None:
-                        syspath = os.path.join(dirpath, d)
-                        st = os.stat(syspath)
-                        if st.st_dev != self.manifest_device:
-                            raise gemato.exceptions.ManifestCrossDevice(syspath)
                         continue
 
                     # if we have an entry for the directory, it's either
@@ -967,6 +967,10 @@ class ManifestRecursiveLoader(object):
                 followlinks=True)
 
         for dirpath, dirnames, filenames in it:
+            dir_st = os.stat(dirpath)
+            if dir_st.st_dev != self.manifest_device:
+                raise gemato.exceptions.ManifestCrossDevice(dirpath)
+
             relpath = os.path.relpath(dirpath, self.root_directory)
             # strip dot to avoid matching problems
             if relpath == '.':
@@ -982,10 +986,6 @@ class ManifestRecursiveLoader(object):
 
                 de = dirdict.get(d, None)
                 if de is None:
-                    syspath = os.path.join(dirpath, d)
-                    st = os.stat(syspath)
-                    if st.st_dev != self.manifest_device:
-                        raise gemato.exceptions.ManifestCrossDevice(syspath)
                     continue
 
                 assert de.tag == 'IGNORE'
@@ -1067,6 +1067,10 @@ class ManifestRecursiveLoader(object):
                 followlinks=True)
 
         for dirpath, dirnames, filenames in it:
+            dir_st = os.stat(dirpath)
+            if dir_st.st_dev != self.manifest_device:
+                raise gemato.exceptions.ManifestCrossDevice(dirpath)
+
             relpath = os.path.relpath(dirpath, self.root_directory)
             # strip dot to avoid matching problems
             if relpath == '.':
@@ -1090,10 +1094,6 @@ class ManifestRecursiveLoader(object):
                 dpath = os.path.join(relpath, d)
                 mpath, de = entry_dict.pop(dpath, (None, None))
                 if de is None:
-                    syspath = os.path.join(dirpath, d)
-                    st = os.stat(syspath)
-                    if st.st_dev != self.manifest_device:
-                        raise gemato.exceptions.ManifestCrossDevice(syspath)
                     continue
 
                 if de.tag == 'IGNORE':

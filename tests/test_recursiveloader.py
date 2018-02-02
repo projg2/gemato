@@ -1564,6 +1564,12 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
                 m.assert_directory_verifies, '',
                 fail_handler=callback_return_true)
 
+    def test_assert_directory_verifies_subdir(self):
+        m = gemato.recursiveloader.ManifestRecursiveLoader(
+            os.path.join(self.dir, 'Manifest'))
+        self.assertRaises(gemato.exceptions.ManifestCrossDevice,
+                m.assert_directory_verifies, 'sub')
+
     def test_cli_verifies(self):
         self.assertEqual(
             gemato.cli.main(['gemato', 'verify', self.dir]),
