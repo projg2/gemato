@@ -378,6 +378,9 @@ class OpenPGPCorrectKeyTest(unittest.TestCase):
         except gemato.exceptions.OpenPGPRuntimeError as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
 
     def tearDown(self):
         self.env.close()
@@ -605,6 +608,9 @@ class OpenPGPExpiredKeyTest(OpenPGPNoKeyTest):
         except gemato.exceptions.OpenPGPRuntimeError as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
 
     def tearDown(self):
         self.env.close()
@@ -624,6 +630,9 @@ class OpenPGPRevokedKeyTest(OpenPGPNoKeyTest):
         except gemato.exceptions.OpenPGPRuntimeError as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
 
     def tearDown(self):
         self.env.close()
@@ -641,6 +650,9 @@ class OpenPGPExpiredSignatureTest(unittest.TestCase):
         try:
             self.env.import_key(io.BytesIO(PUBLIC_KEY))
         except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
 
@@ -775,6 +787,8 @@ class OpenPGPContextManagerTest(unittest.TestCase):
                         env.import_key(io.BytesIO(PUBLIC_KEY))
                     except gemato.exceptions.OpenPGPRuntimeError as e:
                         raise unittest.SkipTest(str(e))
+                    except gemato.exceptions.OpenPGPNoImplementation as e:
+                        raise unittest.SkipTest(str(e))
 
                     sig = env.verify_file(f)
                     self.assertEqual(sig.fingerprint, KEY_FINGERPRINT)
@@ -807,6 +821,9 @@ class OpenPGPPrivateKeyTest(unittest.TestCase):
         try:
             self.env.import_key(io.BytesIO(PRIVATE_KEY))
         except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
             self.env.close()
             raise unittest.SkipTest(str(e))
 
