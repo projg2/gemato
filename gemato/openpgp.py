@@ -217,14 +217,12 @@ disable-scdaemon
     def import_key(self, keyfile):
         exitst, out, err = self._spawn_gpg(['--import'], keyfile.read())
         if exitst != 0:
-            raise gemato.exceptions.OpenPGPKeyImportError(
-                    'Unable to import key: {}'.format(err.decode('utf8')))
+            raise gemato.exceptions.OpenPGPKeyImportError(err.decode('utf8'))
 
     def refresh_keys(self):
         exitst, out, err = self._spawn_gpg(['--refresh-keys'], '')
         if exitst != 0:
-            raise gemato.exceptions.OpenPGPKeyRefreshError(
-                    'Unable to refresh keys: {}'.format(err.decode('utf8')))
+            raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
 
     @property
     def home(self):
