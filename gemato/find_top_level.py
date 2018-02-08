@@ -1,6 +1,6 @@
 # gemato: Top-level Manifest finding routine
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
@@ -11,11 +11,16 @@ import gemato.compression
 import gemato.manifest
 
 
-def find_top_level_manifest(path='.', allow_compressed=False):
+def find_top_level_manifest(path='.', allow_xdev=True, allow_compressed=False):
     """
     Find top-level Manifest file that covers @path (defaults
     to the current directory). Returns the path to the Manifest
     or None.
+
+    If @allow_xdev is true, the function passes filesystem boundaries.
+    If it is false, it stops upon crossing the boundary and does not
+    return a Manifest that is on a different filesystem than @path.
+    It defaults to true.
 
     If @allow_compressed is true, the function allows the top-level
     Manifest to be compressed and opens all compressed files *without*
@@ -41,7 +46,7 @@ def find_top_level_manifest(path='.', allow_compressed=False):
         # verify that we are not crossing device boundaries
         if original_dev is None:
             original_dev = st.st_dev
-        elif original_dev != st.st_dev:
+        elif original_dev != st.st_dev and not allow_xdev:
             break
 
         for m_name in manifest_filenames:
@@ -53,7 +58,7 @@ def find_top_level_manifest(path='.', allow_compressed=False):
                         .open_potentially_compressed_path(m_path, 'r',
                             encoding='utf8')) as f:
                     fst = os.fstat(f.fileno())
-                    if fst.st_dev != original_dev:
+                    if fst.st_dev != original_dev and not allow_xdev:
                         return last_found
 
                     m.load(f, verify_openpgp=False)
