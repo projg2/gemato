@@ -44,7 +44,6 @@ def find_top_level_manifest(path='.', allow_compressed=False):
         elif original_dev != st.st_dev:
             break
 
-        m_path = os.path.join(cur_path, 'Manifest')
         for m_name in manifest_filenames:
             m_path = os.path.join(cur_path, m_name)
             try:
