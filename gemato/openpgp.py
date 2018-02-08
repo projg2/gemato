@@ -139,10 +139,10 @@ class OpenPGPSystemEnvironment(object):
 
         outf.write(out.decode('utf8'))
 
-    def _spawn_gpg(self, options, stdin, env=None):
-        if env is None:
-            env = os.environ.copy()
+    def _spawn_gpg(self, options, stdin, env_override={}):
+        env = os.environ.copy()
         env['TZ'] = 'UTC'
+        env.update(env_override)
 
         impls = ['gpg2', 'gpg']
         if self._impl is not None:
@@ -230,5 +230,6 @@ disable-scdaemon
         return self._home
 
     def _spawn_gpg(self, options, stdin):
-        env = {'GNUPGHOME': self.home}
-        return super(OpenPGPEnvironment, self)._spawn_gpg(options, stdin, env)
+        env_override = {'GNUPGHOME': self.home}
+        return (super(OpenPGPEnvironment, self)
+                ._spawn_gpg(options, stdin, env_override))
