@@ -170,26 +170,6 @@ class TestCrossDevice(TempDirTestCase):
                     os.path.join(self.dir, 'test')))
 
 
-class TestCrossDeviceManifest(TempDirTestCase):
-    """
-    Test behavior when attempting to use a Manifest from other device
-    (symlinked).
-    """
-
-    DIRS = ['sub']
-
-    def setUp(self):
-        if not os.path.exists('/proc/version'):
-            raise unittest.SkipTest('/proc/version does not exist')
-        super(TestCrossDeviceManifest, self).setUp()
-        os.symlink('/proc/version', os.path.join(self.dir, 'Manifest'))
-
-    def test_find_top_level_manifest(self):
-        self.assertIsNone(
-                gemato.find_top_level.find_top_level_manifest(
-                    os.path.join(self.dir, 'sub')))
-
-
 class TestCompressedManifest(TempDirTestCase):
     """
     Test for finding compressed Manifest in a plain tree.
