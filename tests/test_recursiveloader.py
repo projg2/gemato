@@ -1553,40 +1553,33 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
+            os.path.join(self.dir, 'Manifest'),
+            allow_xdev=False)
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.assert_directory_verifies, '')
 
     def test_assert_directory_verifies_nonstrict(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
+            os.path.join(self.dir, 'Manifest'),
+            allow_xdev=False)
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.assert_directory_verifies, '',
                 fail_handler=callback_return_true)
 
     def test_assert_directory_verifies_subdir(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
+            os.path.join(self.dir, 'Manifest'),
+            allow_xdev=False)
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.assert_directory_verifies, 'sub')
-
-    def test_cli_verifies(self):
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'verify', self.dir]),
-            1)
 
     def test_update_entries_for_directory(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'),
+            allow_xdev=False,
             hashes=['SHA256', 'SHA512'])
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.update_entries_for_directory, '')
-
-    def test_cli_update(self):
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
-                self.dir]),
-            1)
 
 
 class CrossDeviceEmptyManifestTest(TempDirTestCase):
@@ -1605,34 +1598,26 @@ class CrossDeviceEmptyManifestTest(TempDirTestCase):
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
+            os.path.join(self.dir, 'Manifest'),
+            allow_xdev=False)
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.assert_directory_verifies, '')
 
     def test_assert_directory_verifies_nonstrict(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
+            os.path.join(self.dir, 'Manifest'),
+            allow_xdev=False)
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.assert_directory_verifies, '',
                 fail_handler=callback_return_true)
 
-    def test_cli_verifies(self):
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'verify', self.dir]),
-            1)
-
     def test_update_entries_for_directory(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'),
+            allow_xdev=False,
             hashes=['SHA256', 'SHA512'])
         self.assertRaises(gemato.exceptions.ManifestCrossDevice,
                 m.update_entries_for_directory, '')
-
-    def test_cli_update(self):
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'update', '--hashes=SHA256 SHA512',
-                self.dir]),
-            1)
 
 
 class CrossDeviceIgnoreManifestTest(TempDirTestCase):
@@ -1653,17 +1638,14 @@ IGNORE sub
 
     def test_assert_directory_verifies(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
-            os.path.join(self.dir, 'Manifest'))
+            os.path.join(self.dir, 'Manifest'),
+            allow_xdev=False)
         m.assert_directory_verifies('')
-
-    def test_cli_verifies(self):
-        self.assertEqual(
-            gemato.cli.main(['gemato', 'verify', self.dir]),
-            0)
 
     def test_update_entries_for_directory(self):
         m = gemato.recursiveloader.ManifestRecursiveLoader(
             os.path.join(self.dir, 'Manifest'),
+            allow_xdev=False,
             hashes=['SHA256', 'SHA512'])
         m.update_entries_for_directory('')
         self.assertEqual(len(m.loaded_manifests['Manifest'].entries), 1)

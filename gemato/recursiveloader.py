@@ -181,7 +181,7 @@ class ManifestRecursiveLoader(object):
             hashes=None, allow_create=False, sort=None,
             compress_watermark=None, compress_format=None,
             profile=gemato.profile.DefaultProfile(),
-            max_jobs=None):
+            max_jobs=None, allow_xdev=True):
         """
         Instantiate the loader for a Manifest tree starting at top-level
         Manifest @top_manifest_path.
@@ -227,6 +227,11 @@ class ManifestRecursiveLoader(object):
         to optimize some operations. If None (the default), the number
         will automatically be determined based on CPU count. Otherwise,
         the specified number will be used.
+
+        If @allow_xdev is true, Manifest can contain files located
+        across different filesystem. If it is false, gemato will raise
+        an exception upon crossing filesystem boundaries. It defaults
+        to true.
         """
 
         self.root_directory = os.path.dirname(top_manifest_path)
@@ -255,10 +260,11 @@ class ManifestRecursiveLoader(object):
                 top_manifest_path)
         self.loaded_manifests = {}
         self.updated_manifests = set()
+        self.manifest_device = None
 
         # TODO: allow catching OpenPGP exceptions somehow?
         m = self.load_manifest(self.top_level_manifest_filename,
-                allow_create=allow_create, store_dev=True)
+                allow_create=allow_create, store_dev=not allow_xdev)
         self.openpgp_signed = m.openpgp_signed
         self.openpgp_signature = m.openpgp_signature
 
@@ -601,7 +607,8 @@ class ManifestRecursiveLoader(object):
 
             for dirpath, dirnames, filenames in it:
                 dir_st = os.stat(dirpath)
-                if dir_st.st_dev != self.manifest_device:
+                if (self.manifest_device is not None
+                        and dir_st.st_dev != self.manifest_device):
                     raise gemato.exceptions.ManifestCrossDevice(dirpath)
 
                 dir_id = (dir_st.st_dev, dir_st.st_ino)
@@ -986,7 +993,8 @@ class ManifestRecursiveLoader(object):
 
         for dirpath, dirnames, filenames in it:
             dir_st = os.stat(dirpath)
-            if dir_st.st_dev != self.manifest_device:
+            if (self.manifest_device is not None
+                    and dir_st.st_dev != self.manifest_device):
                 raise gemato.exceptions.ManifestCrossDevice(dirpath)
 
             dir_id = (dir_st.st_dev, dir_st.st_ino)
@@ -1098,7 +1106,8 @@ class ManifestRecursiveLoader(object):
 
         for dirpath, dirnames, filenames in it:
             dir_st = os.stat(dirpath)
-            if dir_st.st_dev != self.manifest_device:
+            if (self.manifest_device is not None
+                    and dir_st.st_dev != self.manifest_device):
                 raise gemato.exceptions.ManifestCrossDevice(dirpath)
 
             dir_id = (dir_st.st_dev, dir_st.st_ino)
