@@ -258,12 +258,12 @@ class ManifestRecursiveLoader(object):
 
         # TODO: allow catching OpenPGP exceptions somehow?
         m = self.load_manifest(self.top_level_manifest_filename,
-                allow_create=allow_create)
+                allow_create=allow_create, store_dev=True)
         self.openpgp_signed = m.openpgp_signed
         self.openpgp_signature = m.openpgp_signature
 
     def load_manifest(self, relpath, verify_entry=None,
-            allow_create=False):
+            allow_create=False, store_dev=False):
         """
         Load a single Manifest file whose relative path within Manifest
         tree is @relpath. If @verify_entry is not null, the Manifest
@@ -273,6 +273,9 @@ class ManifestRecursiveLoader(object):
         If @allow_create is True and the Manifest does not exist,
         a new Manifest will be added. Otherwise, opening a non-existing
         file will cause an exception.
+
+        If @store_dev is True, the st_dev for this Manifest will
+        be stored for cross-device checks. Defaults to false.
         """
 
         try:
@@ -295,7 +298,8 @@ class ManifestRecursiveLoader(object):
             else:
                 raise err
 
-        self.manifest_device = st.st_dev
+        if store_dev:
+            self.manifest_device = st.st_dev
         self.loaded_manifests[relpath] = m
         return m
 
