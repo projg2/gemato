@@ -181,7 +181,7 @@ class ManifestRecursiveLoader(object):
             hashes=None, allow_create=False, sort=None,
             compress_watermark=None, compress_format=None,
             profile=gemato.profile.DefaultProfile(),
-            max_jobs=None, allow_xdev=True):
+            max_jobs=None, allow_xdev=False):
         """
         Instantiate the loader for a Manifest tree starting at top-level
         Manifest @top_manifest_path.
@@ -231,7 +231,7 @@ class ManifestRecursiveLoader(object):
         If @allow_xdev is true, Manifest can contain files located
         across different filesystem. If it is false, gemato will raise
         an exception upon crossing filesystem boundaries. It defaults
-        to true.
+        to false.
         """
 
         self.root_directory = os.path.dirname(top_manifest_path)
