@@ -63,7 +63,6 @@ class ManifestPathEntry(object):
     escape_seq_re = re.compile(r'\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})?')
 
     def __init__(self, path):
-        assert path[0] != '/'
         self.path = path
 
     @staticmethod
