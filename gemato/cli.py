@@ -107,7 +107,34 @@ class BaseOpenPGPCommand(GematoCommand):
             self.openpgp_env.close()
 
 
-class VerifyCommand(BaseOpenPGPCommand):
+class VerifyingOpenPGPCommand(BaseOpenPGPCommand):
+    """
+    Verification-class OpenPGP command. Additionally refreshes keys.
+    """
+
+    __slots__ = []
+
+    def add_options(self, subp):
+        super(VerifyingOpenPGPCommand, self).add_options(subp)
+
+        subp.add_argument('-R', '--no-refresh-keys', action='store_false',
+                dest='refresh_keys',
+                help='Disable refreshing OpenPGP key (prevents network access, '
+                    +'applicable when using -K only)')
+
+    def parse_args(self, args, argp):
+        super(VerifyingOpenPGPCommand, self).parse_args(args, argp)
+
+        if args.openpgp_key is not None:
+            # always refresh keys to check for revocation
+            # (unless user specifically asked us not to)
+            if args.refresh_keys:
+                logging.info('Refreshing keys from keyserver...')
+                self.openpgp_env.refresh_keys()
+                logging.info('Keys refreshed.')
+
+
+class VerifyCommand(VerifyingOpenPGPCommand):
     name = 'verify'
     help = 'Verify one or more directories against Manifests'
 
@@ -127,10 +154,6 @@ class VerifyCommand(BaseOpenPGPCommand):
         verify.add_argument('-P', '--no-openpgp-verify', action='store_false',
                 dest='openpgp_verify',
                 help='Disable OpenPGP verification of signed Manifests')
-        verify.add_argument('-R', '--no-refresh-keys', action='store_false',
-                dest='refresh_keys',
-                help='Disable refreshing OpenPGP key (prevents network access, applicable '
-                    +'when using -K only)')
         verify.add_argument('-s', '--require-signed-manifest', action='store_true',
                 help='Require that the top-level Manifest is OpenPGP signed')
 
@@ -151,14 +174,6 @@ class VerifyCommand(BaseOpenPGPCommand):
             self.kwargs['fail_handler'] = verify_failure
         if not args.openpgp_verify:
             self.init_kwargs['verify_openpgp'] = False
-
-        if args.openpgp_key is not None:
-            # always refresh keys to check for revocation
-            # (unless user specifically asked us not to)
-            if args.refresh_keys:
-                logging.info('Refreshing keys from keyserver...')
-                self.openpgp_env.refresh_keys()
-                logging.info('Keys refreshed.')
 
     def __call__(self):
         ret = True
