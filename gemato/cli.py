@@ -31,6 +31,8 @@ class GematoCommand(object):
     Base class for commands supported by gemato.
     """
 
+    __slots__ = []
+
     @property
     def name(self):
         """
@@ -106,6 +108,9 @@ class BaseOpenPGPCommand(GematoCommand):
 class VerifyCommand(BaseOpenPGPCommand):
     name = 'verify'
     help = 'Verify one or more directories against Manifests'
+
+    __slots__ = ['paths', 'require_signed_manifest',
+                 'init_kwargs', 'kwargs']
 
     def add_options(self, verify):
         super(VerifyCommand, self).add_options(verify)
