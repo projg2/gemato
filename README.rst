@@ -32,12 +32,17 @@ of the Manifest tree is specified, only the specified leaf is checked.
 
 Requirements
 ============
-gemato is written in Python and meant to be compatible with CPython 2.7,
-CPython 3.4+, PyPy and PyPy3. It uses only the standard library modules,
-or backports of those modules to older Python versions.
+gemato is written in Python and compatible with implementations
+of Python 2.7 and Python 3.4+. However, the support for Python 2
+is considered 'best effort' and has some known limitations. For example,
+non-ASCII paths on command-line do not work.
 
-The exact runtime dependencies depend on Python standard library version
-used. Those are:
+gemato is currently tested against CPython 2.7, CPython 3.4 through 3.6,
+PyPy and PyPy3.
+
+gemato depends only on standard Python library modules and their
+backports. The exact runtime dependencies depend on the standard library
+version used. Those are:
 
 Python 3.6+
   none -- only standard modules are used
@@ -51,6 +56,9 @@ Python 2.7
 
   - bz2file -- for BZip2 compression support [#bz2file]_ [#bz2py2]_
   - backports.lzma -- for LZMA/XZ compressed file support [#lzma]_
+
+Additionally, gemato calls the GnuPG executable to work with OpenPGP
+signatures. Both GnuPG 1.4.21 and 2.2+ are tested.
 
 
 References and footnotes
