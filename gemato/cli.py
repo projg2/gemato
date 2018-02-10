@@ -441,6 +441,58 @@ class HashCommand(GematoCommand):
             print(' '.join(e.to_list('DATA' if p != '-' else 'STDIN')))
 
 
+class OpenPGPVerifyCommand(VerifyingOpenPGPCommand):
+    name = 'openpgp-verify'
+    help = 'Verify OpenPGP signatures embedded in specified file(s) and/or stdin'
+
+    __slots__ = ['paths']
+
+    def add_options(self, subp):
+        super(OpenPGPVerifyCommand, self).add_options(subp)
+
+        subp.add_argument('paths', nargs='*', default=['-'],
+                help='Paths to hash (defaults to "-" (stdin) if not specified)')
+
+    def parse_args(self, args, argp):
+        super(OpenPGPVerifyCommand, self).parse_args(args, argp)
+
+        self.paths = args.paths
+
+    def __call__(self):
+        ret = True
+
+        for p in self.paths:
+            if p == '-':
+                if sys.hexversion >= 0x03000000:
+                    f = sys.stdin
+                else:
+                    f = io.open(sys.stdin.fileno(), 'r')
+            else:
+                f = io.open(p, 'r')
+
+            try:
+                try:
+                    sig = self.openpgp_env.verify_file(f)
+                except gemato.exceptions.GematoException as e:
+                    logging.error('OpenPGP verification failed for {}:\n{}'
+                            .format(p, str(e)))
+                    ret = False
+                else:
+                    logging.info('Valid OpenPGP signature found in {}:'
+                            .format(p))
+                    logging.info('- primary key: {}'.format(
+                        sig.primary_key_fingerprint))
+                    logging.info('- subkey: {}'.format(
+                        sig.fingerprint))
+                    logging.info('- timestamp: {} UTC'.format(
+                        sig.timestamp))
+            finally:
+                if p != '-':
+                    f.close()
+
+        return 0 if ret else 1
+
+
 def main(argv):
     argp = argparse.ArgumentParser(
             prog=argv[0],
@@ -448,7 +500,7 @@ def main(argv):
     subp = argp.add_subparsers()
 
     commands = [VerifyCommand, UpdateCommand, CreateCommand,
-                HashCommand]
+                HashCommand, OpenPGPVerifyCommand]
     for cmdclass in commands:
         cmd = cmdclass()
         cmdp = subp.add_parser(cmd.name, help=cmd.help)
