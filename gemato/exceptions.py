@@ -18,7 +18,7 @@ class UnsupportedCompression(GematoException):
         self.suffix = suffix
 
     def __str__(self):
-        return 'Unsupported compression suffix: {}'.format(self.suffix)
+        return u'Unsupported compression suffix: {}'.format(self.suffix)
 
 
 class UnsupportedHash(GematoException):
@@ -29,7 +29,7 @@ class UnsupportedHash(GematoException):
         self.hash_name = hash_name
 
     def __str__(self):
-        return 'Unsupported hash name: {}'.format(self.hash_name)
+        return u'Unsupported hash name: {}'.format(self.hash_name)
 
 
 class ManifestSyntaxError(GematoException):
@@ -47,9 +47,9 @@ class ManifestIncompatibleEntry(GematoException):
         self.diff = diff
 
     def __str__(self):
-        msg = "Incompatible Manifest entries for {}".format(self.e1.path)
+        msg = u"Incompatible Manifest entries for {}".format(self.e1.path)
         for k, d1, d2 in self.diff:
-            msg += "\n  {}: e1: {}, e2: {}".format(k, d1, d2)
+            msg += u"\n  {}: e1: {}, e2: {}".format(k, d1, d2)
         return msg
 
 
@@ -67,9 +67,9 @@ class ManifestMismatch(GematoException):
         self.diff = diff
 
     def __str__(self):
-        msg = "Manifest mismatch for {}".format(self.path)
+        msg = u"Manifest mismatch for {}".format(self.path)
         for k, exp, got in self.diff:
-            msg += "\n  {}: expected: {}, have: {}".format(k, exp, got)
+            msg += u"\n  {}: expected: {}, have: {}".format(k, exp, got)
         return msg
 
 
@@ -85,7 +85,7 @@ class ManifestCrossDevice(GematoException):
         self.path = path
 
     def __str__(self):
-        return ("Path {} crosses filesystem boundaries, it must be IGNORE-d explicitly"
+        return (u"Path {} crosses filesystem boundaries, it must be IGNORE-d explicitly"
             .format(self.path))
 
 
@@ -102,7 +102,7 @@ class ManifestSymlinkLoop(GematoException):
         self.path = path
 
     def __str__(self):
-        return ("Path {} is a symlink to one of its parent directories, it must be IGNORE-d explicitly"
+        return (u"Path {} is a symlink to one of its parent directories, it must be IGNORE-d explicitly"
             .format(self.path))
 
 
@@ -113,7 +113,7 @@ class ManifestUnsignedData(GematoException):
     """
 
     def __str__(self):
-        return "Unsigned data found in an OpenPGP signed Manifest"
+        return u"Unsigned data found in an OpenPGP signed Manifest"
 
 
 class OpenPGPRuntimeError(GematoException):
@@ -134,7 +134,7 @@ class OpenPGPKeyImportError(OpenPGPRuntimeError):
     """
 
     def __str__(self):
-        return "OpenPGP key import failed:\n{}".format(self.output)
+        return u"OpenPGP key import failed:\n{}".format(self.output)
 
 
 class OpenPGPKeyRefreshError(OpenPGPRuntimeError):
@@ -143,7 +143,7 @@ class OpenPGPKeyRefreshError(OpenPGPRuntimeError):
     """
 
     def __str__(self):
-        return "OpenPGP keyring refresh failed:\n{}".format(self.output)
+        return u"OpenPGP keyring refresh failed:\n{}".format(self.output)
 
 
 class OpenPGPVerificationFailure(OpenPGPRuntimeError):
@@ -152,7 +152,7 @@ class OpenPGPVerificationFailure(OpenPGPRuntimeError):
     """
 
     def __str__(self):
-        return "OpenPGP verification failed:\n{}".format(self.output)
+        return u"OpenPGP verification failed:\n{}".format(self.output)
 
 
 class OpenPGPExpiredKeyFailure(OpenPGPRuntimeError):
@@ -161,7 +161,7 @@ class OpenPGPExpiredKeyFailure(OpenPGPRuntimeError):
     """
 
     def __str__(self):
-        return "OpenPGP signature rejected because of expired key:\n{}".format(self.output)
+        return u"OpenPGP signature rejected because of expired key:\n{}".format(self.output)
 
 
 class OpenPGPRevokedKeyFailure(OpenPGPRuntimeError):
@@ -170,7 +170,7 @@ class OpenPGPRevokedKeyFailure(OpenPGPRuntimeError):
     """
 
     def __str__(self):
-        return "OpenPGP signature rejected because of revoked key:\n{}".format(self.output)
+        return u"OpenPGP signature rejected because of revoked key:\n{}".format(self.output)
 
 
 class OpenPGPUnknownSigFailure(OpenPGPRuntimeError):
@@ -180,7 +180,7 @@ class OpenPGPUnknownSigFailure(OpenPGPRuntimeError):
     """
 
     def __str__(self):
-        return "OpenPGP signature rejected for unknown reason:\n{}".format(self.output)
+        return u"OpenPGP signature rejected for unknown reason:\n{}".format(self.output)
 
 
 class OpenPGPSigningFailure(OpenPGPRuntimeError):
@@ -189,7 +189,7 @@ class OpenPGPSigningFailure(OpenPGPRuntimeError):
     """
 
     def __str__(self):
-        return "OpenPGP signing failed:\n{}".format(self.output)
+        return u"OpenPGP signing failed:\n{}".format(self.output)
 
 
 class OpenPGPNoImplementation(GematoException):
@@ -199,7 +199,7 @@ class OpenPGPNoImplementation(GematoException):
     """
 
     def __str__(self):
-        return "No supported OpenPGP implementation found (install gnupg)"
+        return u"No supported OpenPGP implementation found (install gnupg)"
 
 
 class ManifestInvalidPath(GematoException):
@@ -216,7 +216,7 @@ class ManifestInvalidPath(GematoException):
         self.detail = detail
 
     def __str__(self):
-        return ("Attempting to add invalid path {} to Manifest: {} must not be {}"
+        return (u"Attempting to add invalid path {} to Manifest: {} must not be {}"
                 .format(self.path, self.detail[0], self.detail[1]))
 
 
@@ -233,5 +233,5 @@ class ManifestInvalidFilename(GematoException):
         self.pos = pos
 
     def __str__(self):
-        return ("Attempting to add invalid filename {!r} to Manifest: disallowed character U+{:04X} at position {}"
+        return (u"Attempting to add invalid filename {!r} to Manifest: disallowed character U+{:04X} at position {}"
                 .format(self.filename, ord(self.filename[self.pos]), self.pos))

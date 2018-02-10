@@ -24,7 +24,7 @@ import gemato.recursiveloader
 
 
 def verify_failure(e):
-    logging.error(str(e))
+    logging.error(e)
     return False
 
 
@@ -474,8 +474,8 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPCommand):
                 try:
                     sig = self.openpgp_env.verify_file(f)
                 except gemato.exceptions.GematoException as e:
-                    logging.error('OpenPGP verification failed for {}:\n{}'
-                            .format(p, str(e)))
+                    logging.error(u'OpenPGP verification failed for {}:\n{}'
+                            .format(p, e))
                     ret = False
                 else:
                     logging.info('Valid OpenPGP signature found in {}:'
@@ -517,7 +517,7 @@ def main(argv):
         finally:
             vals.cmd.cleanup()
     except gemato.exceptions.GematoException as e:
-        logging.error(str(e))
+        logging.error(e)
         return 1
 
 
