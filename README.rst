@@ -30,6 +30,31 @@ and check the specified directory recursively. If a subdirectory
 of the Manifest tree is specified, only the specified leaf is checked.
 
 
+Creating new Manifest tree
+--------------------------
+Creating a new Manifest tree can be accomplished using the ``gemato
+create`` command against the top directory of the new Manifest tree::
+
+    gemato create -p ebuild /var/db/repos/gentoo
+
+Note that for the ``create`` command you always need to specify either
+a profile (via ``-p``) or at least a hash set (via ``-H``).
+
+
+Updating existing Manifests
+---------------------------
+The ``gemato update`` command is provided to update an existing Manifest
+tree::
+
+    gemato update -p ebuild /var/db/repos/gentoo
+
+Alike ``create``, ``update`` also requires specifying a profile (``-p``)
+or a hash set (``-H``). The command locates the appropriate top-level
+Manifest and updates the specified directory recursively.
+If a subdirectory of the Manifest tree is specified, the entries
+for the specified leaf and respective Manifest files are updated.
+
+
 Requirements
 ============
 gemato is written in Python and compatible with implementations
