@@ -330,7 +330,7 @@ class UpdateCommand(BaseUpdateCommand):
                     return 1
                 last_ts = m.find_timestamp()
                 if last_ts is None:
-                    loggng.error('Incremental specified but no timestamp in Manifest')
+                    logging.error('Incremental specified but no timestamp in Manifest')
                     return 1
                 update_kwargs['last_mtime'] = last_ts.ts.timestamp()
 
