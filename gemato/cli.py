@@ -195,15 +195,12 @@ class VerifyCommand(BaseOpenPGPCommand):
         return 0 if ret else 1
 
 
-class UpdateCommand(BaseOpenPGPCommand):
-    name = 'update'
-    help = 'Update the Manifest entries for one or more directory trees'
+class BaseUpdateCommand(BaseOpenPGPCommand):
+    __slots__ = ['timestamp', 'init_kwargs', 'save_kwargs']
 
     def add_options(self, update):
-        super(UpdateCommand, self).add_options(update)
+        super(BaseUpdateCommand, self).add_options(update)
 
-        update.add_argument('paths', nargs='*', default=['.'],
-                help='Paths to update (defaults to "." if none specified)')
         update.add_argument('-c', '--compress-watermark', type=int,
                 help='Minimum Manifest size for files to be compressed')
         update.add_argument('-C', '--compress-format',
@@ -212,8 +209,6 @@ class UpdateCommand(BaseOpenPGPCommand):
                 help='Force rewriting all the Manifests, even if they did not change')
         update.add_argument('-H', '--hashes',
                 help='Whitespace-separated list of hashes to use')
-        update.add_argument('-i', '--incremental', action='store_true',
-                help='Perform incremental update by comparing mtimes against TIMESTAMP')
         update.add_argument('-j', '--jobs', type=int,
                 help='Specify the maximum number of parallel jobs to use (default: {})'
                     .format(multiprocessing.cpu_count()))
@@ -232,15 +227,12 @@ class UpdateCommand(BaseOpenPGPCommand):
                 help='Include TIMESTAMP entry in Manifest')
 
     def parse_args(self, args, argp):
-        super(UpdateCommand, self).parse_args(args, argp)
+        super(BaseUpdateCommand, self).parse_args(args, argp)
 
-        self.paths = args.paths
         self.timestamp = args.timestamp
-        self.incremental = args.incremental
 
         self.init_kwargs = {}
         self.save_kwargs = {}
-        self.update_kwargs = {}
         self.init_kwargs['openpgp_env'] = self.openpgp_env
 
         if args.hashes is not None:
@@ -264,6 +256,27 @@ class UpdateCommand(BaseOpenPGPCommand):
                     args.profile)
         if args.sign is not None:
             self.init_kwargs['sign_openpgp'] = args.sign
+
+
+class UpdateCommand(BaseUpdateCommand):
+    name = 'update'
+    help = 'Update the Manifest entries for one or more directory trees'
+
+    __slots__ = ['paths', 'incremental']
+
+    def add_options(self, update):
+        super(UpdateCommand, self).add_options(update)
+
+        update.add_argument('paths', nargs='*', default=['.'],
+                help='Paths to update (defaults to "." if none specified)')
+        update.add_argument('-i', '--incremental', action='store_true',
+                help='Perform incremental update by comparing mtimes against TIMESTAMP')
+
+    def parse_args(self, args, argp):
+        super(UpdateCommand, self).parse_args(args, argp)
+
+        self.paths = args.paths
+        self.incremental = args.incremental
 
     def __call__(self):
         for p in self.paths:
@@ -287,6 +300,8 @@ class UpdateCommand(BaseOpenPGPCommand):
             if self.timestamp and relpath != '':
                 logging.error('Timestamp can only be updated if doing full-tree update')
                 return 1
+
+            update_kwargs = {}
             if self.incremental:
                 if relpath != '':
                     logging.error('Incremental works only for full-tree update')
@@ -295,12 +310,12 @@ class UpdateCommand(BaseOpenPGPCommand):
                 if last_ts is None:
                     loggng.error('Incremental specified but no timestamp in Manifest')
                     return 1
-                self.update_kwargs['last_mtime'] = last_ts.ts.timestamp()
+                update_kwargs['last_mtime'] = last_ts.ts.timestamp()
 
             logging.info('Updating Manifests in {}...'.format(p))
 
             start_ts = datetime.datetime.utcnow()
-            m.update_entries_for_directory(relpath, **self.update_kwargs)
+            m.update_entries_for_directory(relpath, **update_kwargs)
 
             # write TIMESTAMP if requested, or if already there
             if relpath != '':
@@ -321,72 +336,23 @@ class UpdateCommand(BaseOpenPGPCommand):
         return 0
 
 
-class CreateCommand(BaseOpenPGPCommand):
+class CreateCommand(BaseUpdateCommand):
     name = 'create'
     help = 'Create a Manifest tree starting at the specified file'
+
+    __slots__ = ['paths']
 
     def add_options(self, create):
         super(CreateCommand, self).add_options(create)
 
         create.add_argument('paths', nargs='*', default=['.'],
                 help='Paths to create Manifest in (defaults to "." if none specified)')
-        create.add_argument('-c', '--compress-watermark', type=int,
-                help='Minimum Manifest size for files to be compressed')
-        create.add_argument('-C', '--compress-format',
-                help='Format for compressed files (e.g. "gz", "bz2"...)')
-        create.add_argument('-f', '--force-rewrite', action='store_true',
-                help='Force rewriting all the Manifests, even if they did not change')
-        create.add_argument('-H', '--hashes',
-                help='Whitespace-separated list of hashes to use')
-        create.add_argument('-j', '--jobs', type=int,
-                help='Specify the maximum number of parallel jobs to use (default: {})'
-                    .format(multiprocessing.cpu_count()))
-        create.add_argument('-k', '--openpgp-id',
-                help='Use the specified OpenPGP key (by ID or user)')
-        create.add_argument('-p', '--profile',
-                help='Use the specified profile ("default", "ebuild", "old-ebuild"...)')
-        signgroup = create.add_mutually_exclusive_group()
-        signgroup.add_argument('-s', '--sign', action='store_true',
-                default=None,
-                help='Force signing the top-level Manifest')
-        signgroup.add_argument('-S', '--no-sign', action='store_false',
-                dest='sign',
-                help='Disable signing the top-level Manifest')
-        create.add_argument('-t', '--timestamp', action='store_true',
-                help='Include TIMESTAMP entry in Manifest')
 
     def parse_args(self, args, argp):
         super(CreateCommand, self).parse_args(args, argp)
 
-        self.paths = args.paths
-        self.timestamp = args.timestamp
-
-        self.init_kwargs = {}
-        self.save_kwargs = {}
         self.init_kwargs['allow_create'] = True
-        self.init_kwargs['openpgp_env'] = self.openpgp_env
-
-        if args.hashes is not None:
-            self.init_kwargs['hashes'] = args.hashes.split()
-        if args.compress_watermark is not None:
-            if args.compress_watermark < 0:
-                argp.error('--compress-watermark must not be negative!')
-            self.init_kwargs['compress_watermark'] = args.compress_watermark
-        if args.compress_format is not None:
-            self.init_kwargs['compress_format'] = args.compress_format
-        if args.force_rewrite:
-            self.save_kwargs['force'] = True
-        if args.jobs is not None:
-            if args.jobs < 1:
-                argp.error('--jobs must be positive')
-            self.init_kwargs['max_jobs'] = args.jobs
-        if args.openpgp_id is not None:
-            self.init_kwargs['openpgp_keyid'] = args.openpgp_id
-        if args.profile is not None:
-            self.init_kwargs['profile'] = gemato.profile.get_profile_by_name(
-                    args.profile)
-        if args.sign is not None:
-            self.init_kwargs['sign_openpgp'] = args.sign
+        self.paths = args.paths
 
     def __call__(self):
         for p in self.paths:
