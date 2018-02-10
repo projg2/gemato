@@ -329,7 +329,7 @@ class CreateCommand(BaseOpenPGPCommand):
         super(CreateCommand, self).add_options(create)
 
         create.add_argument('paths', nargs='*', default=['.'],
-                help='Paths to create (defaults to "Manifest" if none specified)')
+                help='Paths to create Manifest in (defaults to "." if none specified)')
         create.add_argument('-c', '--compress-watermark', type=int,
                 help='Minimum Manifest size for files to be compressed')
         create.add_argument('-C', '--compress-format',
