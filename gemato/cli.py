@@ -16,6 +16,8 @@ import timeit
 
 import gemato.exceptions
 import gemato.find_top_level
+import gemato.hash
+import gemato.manifest
 import gemato.openpgp
 import gemato.profile
 import gemato.recursiveloader
@@ -387,13 +389,51 @@ class CreateCommand(BaseUpdateCommand):
         return 0
 
 
+class HashCommand(GematoCommand):
+    name = 'hash'
+    help = 'Generate hashes for specified file(s) and/or stdin'
+
+    __slots__ = ['hashes', 'paths']
+
+    def add_options(self, subp):
+        subp.add_argument('paths', nargs='*', default=['-'],
+                help='Paths to hash (defaults to "-" (stdin) if not specified)')
+        subp.add_argument('-H', '--hashes', required=True,
+                help='Whitespace-separated list of hashes to use')
+
+    def parse_args(self, args, argp):
+        self.hashes = sorted(args.hashes.split())
+        self.paths = args.paths
+
+    def __call__(self):
+        hashlib_hashes = list(
+                gemato.manifest.manifest_hashes_to_hashlib(self.hashes))
+        hashlib_hashes.append('__size__')
+
+        for p in self.paths:
+            if p == '-':
+                if sys.hexversion >= 0x03000000:
+                    f = sys.stdin.buffer
+                else:
+                    f = sys.stdin
+                h = gemato.hash.hash_file(f, hashlib_hashes)
+            else:
+                h = gemato.hash.hash_path(p, hashlib_hashes)
+
+            sz = h.pop('__size__')
+            e = gemato.manifest.ManifestFileEntry(p, sz,
+                    dict((mh, h[hh]) for mh, hh in zip(self.hashes, hashlib_hashes)))
+            print(' '.join(e.to_list('DATA' if p != '-' else 'STDIN')))
+
+
 def main(argv):
     argp = argparse.ArgumentParser(
             prog=argv[0],
             description='Gentoo Manifest Tool')
     subp = argp.add_subparsers()
 
-    commands = [VerifyCommand, UpdateCommand, CreateCommand]
+    commands = [VerifyCommand, UpdateCommand, CreateCommand,
+                HashCommand]
     for cmdclass in commands:
         cmd = cmdclass()
         cmdp = subp.add_parser(cmd.name, help=cmd.help)
