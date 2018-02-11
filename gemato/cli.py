@@ -523,4 +523,8 @@ def main(argv):
 
 def setuptools_main():
     logging.getLogger().setLevel(logging.INFO)
-    sys.exit(main(sys.argv))
+    if sys.hexversion < 0x03000000:
+        argv = [x.decode(sys.getfilesystemencoding()) for x in sys.argv]
+    else:
+        argv = sys.argv
+    sys.exit(main(argv))
