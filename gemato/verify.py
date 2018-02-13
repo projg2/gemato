@@ -112,7 +112,8 @@ def get_file_metadata(path, hashes):
         hashes = list(gemato.manifest.manifest_hashes_to_hashlib(e_hashes))
         e_hashes.append('__size__')
         hashes.append('__size__')
-        checksums = gemato.hash.hash_file(f, hashes)
+        checksums = gemato.hash.hash_file(f, hashes,
+                                          _apparent_size=st.st_size)
 
         ret = {}
         for ek, k in zip(e_hashes, hashes):
