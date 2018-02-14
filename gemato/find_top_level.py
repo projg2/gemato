@@ -11,7 +11,7 @@ import gemato.compression
 import gemato.manifest
 
 
-def find_top_level_manifest(path='.', allow_xdev=False, allow_compressed=False):
+def find_top_level_manifest(path='.', allow_xdev=True, allow_compressed=False):
     """
     Find top-level Manifest file that covers @path (defaults
     to the current directory). Returns the path to the Manifest

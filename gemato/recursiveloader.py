@@ -181,7 +181,7 @@ class ManifestRecursiveLoader(object):
             hashes=None, allow_create=False, sort=None,
             compress_watermark=None, compress_format=None,
             profile=gemato.profile.DefaultProfile(),
-            max_jobs=None, allow_xdev=False):
+            max_jobs=None, allow_xdev=True):
         """
         Instantiate the loader for a Manifest tree starting at top-level
         Manifest @top_manifest_path.
