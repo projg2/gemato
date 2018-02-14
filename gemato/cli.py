@@ -146,6 +146,8 @@ class BaseManifestLoaderMixin(object):
         subp.add_argument('-j', '--jobs', type=int,
                 help='Specify the maximum number of parallel jobs to use (default: {})'
                     .format(multiprocessing.cpu_count()))
+        subp.add_argument('-x', '--one-file-system', action='store_true',
+                help='Do not cross filesystem boundaries (report an error instead)')
 
     def parse_args(self, args, argp):
         super(BaseManifestLoaderMixin, self).parse_args(args, argp)
@@ -155,6 +157,8 @@ class BaseManifestLoaderMixin(object):
             if args.jobs < 1:
                 argp.error('--jobs must be positive')
             self.init_kwargs['max_jobs'] = args.jobs
+        if args.one_file_system:
+            self.init_kwargs['allow_xdev'] = False
 
 
 class VerifyCommand(BaseManifestLoaderMixin, VerifyingOpenPGPMixin,
