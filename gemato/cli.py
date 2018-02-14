@@ -33,8 +33,6 @@ class GematoCommand(object):
     Base class for commands supported by gemato.
     """
 
-    __slots__ = []
-
     @property
     def name(self):
         """
@@ -80,8 +78,6 @@ class BaseOpenPGPMixin(object):
     A base mixin that adds logic to load and use OpenPGP keys.
     """
 
-    __slots__ = ['openpgp_env']
-
     def __init__(self):
         super(BaseOpenPGPMixin, self).__init__()
         self.openpgp_env = None
@@ -119,8 +115,6 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
     Verification-class OpenPGP mixin. Additionally refreshes keys.
     """
 
-    __slots__ = []
-
     def add_options(self, subp):
         super(VerifyingOpenPGPMixin, self).add_options(subp)
 
@@ -144,9 +138,6 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
 class VerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
     name = 'verify'
     help = 'Verify one or more directories against Manifests'
-
-    __slots__ = ['paths', 'require_signed_manifest',
-                 'init_kwargs', 'kwargs']
 
     def add_options(self, verify):
         super(VerifyCommand, self).add_options(verify)
@@ -231,8 +222,6 @@ class BaseUpdateMixin(BaseOpenPGPMixin):
     A mixin that adds common bits for update-class commands.
     """
 
-    __slots__ = ['timestamp', 'init_kwargs', 'save_kwargs']
-
     def add_options(self, update):
         super(BaseUpdateMixin, self).add_options(update)
 
@@ -296,8 +285,6 @@ class BaseUpdateMixin(BaseOpenPGPMixin):
 class UpdateCommand(BaseUpdateMixin, GematoCommand):
     name = 'update'
     help = 'Update the Manifest entries for one or more directory trees'
-
-    __slots__ = ['paths', 'incremental']
 
     def add_options(self, update):
         super(UpdateCommand, self).add_options(update)
@@ -377,8 +364,6 @@ class CreateCommand(BaseUpdateMixin, GematoCommand):
     name = 'create'
     help = 'Create a Manifest tree starting at the specified file'
 
-    __slots__ = ['paths']
-
     def add_options(self, create):
         super(CreateCommand, self).add_options(create)
 
@@ -425,8 +410,6 @@ class HashCommand(GematoCommand):
     name = 'hash'
     help = 'Generate hashes for specified file(s) and/or stdin'
 
-    __slots__ = ['hashes', 'paths']
-
     def add_options(self, subp):
         super(HashCommand, self).add_options(subp)
 
@@ -467,8 +450,6 @@ class HashCommand(GematoCommand):
 class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
     name = 'openpgp-verify'
     help = 'Verify OpenPGP signatures embedded in specified file(s) and/or stdin'
-
-    __slots__ = ['paths']
 
     def add_options(self, subp):
         super(OpenPGPVerifyCommand, self).add_options(subp)
