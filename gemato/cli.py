@@ -75,21 +75,26 @@ class GematoCommand(object):
         pass
 
 
-class BaseOpenPGPCommand(GematoCommand):
+class BaseOpenPGPMixin(object):
     """
-    A base class wrapper that adds logic to load and use OpenPGP keys.
+    A base mixin that adds logic to load and use OpenPGP keys.
     """
 
     __slots__ = ['openpgp_env']
 
     def __init__(self):
+        super(BaseOpenPGPMixin, self).__init__()
         self.openpgp_env = None
 
     def add_options(self, subp):
+        super(BaseOpenPGPMixin, self).add_options(subp)
+
         subp.add_argument('-K', '--openpgp-key',
                 help='Use only the OpenPGP key(s) from a specific file')
 
     def parse_args(self, args, argp):
+        super(BaseOpenPGPMixin, self).parse_args(args, argp)
+
         # use isolated environment if key is specified;
         # system environment otherwise
         if args.openpgp_key is not None:
@@ -103,19 +108,21 @@ class BaseOpenPGPCommand(GematoCommand):
                 self.openpgp_env.import_key(f)
 
     def cleanup(self):
+        super(BaseOpenPGPMixin, self).cleanup()
+
         if self.openpgp_env is not None:
             self.openpgp_env.close()
 
 
-class VerifyingOpenPGPCommand(BaseOpenPGPCommand):
+class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
     """
-    Verification-class OpenPGP command. Additionally refreshes keys.
+    Verification-class OpenPGP mixin. Additionally refreshes keys.
     """
 
     __slots__ = []
 
     def add_options(self, subp):
-        super(VerifyingOpenPGPCommand, self).add_options(subp)
+        super(VerifyingOpenPGPMixin, self).add_options(subp)
 
         subp.add_argument('-R', '--no-refresh-keys', action='store_false',
                 dest='refresh_keys',
@@ -123,7 +130,7 @@ class VerifyingOpenPGPCommand(BaseOpenPGPCommand):
                     +'applicable when using -K only)')
 
     def parse_args(self, args, argp):
-        super(VerifyingOpenPGPCommand, self).parse_args(args, argp)
+        super(VerifyingOpenPGPMixin, self).parse_args(args, argp)
 
         if args.openpgp_key is not None:
             # always refresh keys to check for revocation
@@ -134,7 +141,7 @@ class VerifyingOpenPGPCommand(BaseOpenPGPCommand):
                 logging.info('Keys refreshed.')
 
 
-class VerifyCommand(VerifyingOpenPGPCommand):
+class VerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
     name = 'verify'
     help = 'Verify one or more directories against Manifests'
 
@@ -176,6 +183,8 @@ class VerifyCommand(VerifyingOpenPGPCommand):
             self.init_kwargs['verify_openpgp'] = False
 
     def __call__(self):
+        super(VerifyCommand, self).__call__()
+
         ret = True
 
         for p in self.paths:
@@ -217,11 +226,15 @@ class VerifyCommand(VerifyingOpenPGPCommand):
         return 0 if ret else 1
 
 
-class BaseUpdateCommand(BaseOpenPGPCommand):
+class BaseUpdateMixin(BaseOpenPGPMixin):
+    """
+    A mixin that adds common bits for update-class commands.
+    """
+
     __slots__ = ['timestamp', 'init_kwargs', 'save_kwargs']
 
     def add_options(self, update):
-        super(BaseUpdateCommand, self).add_options(update)
+        super(BaseUpdateMixin, self).add_options(update)
 
         update.add_argument('-c', '--compress-watermark', type=int,
                 help='Minimum Manifest size for files to be compressed')
@@ -249,7 +262,7 @@ class BaseUpdateCommand(BaseOpenPGPCommand):
                 help='Include TIMESTAMP entry in Manifest')
 
     def parse_args(self, args, argp):
-        super(BaseUpdateCommand, self).parse_args(args, argp)
+        super(BaseUpdateMixin, self).parse_args(args, argp)
 
         self.timestamp = args.timestamp
 
@@ -280,7 +293,7 @@ class BaseUpdateCommand(BaseOpenPGPCommand):
             self.init_kwargs['sign_openpgp'] = args.sign
 
 
-class UpdateCommand(BaseUpdateCommand):
+class UpdateCommand(BaseUpdateMixin, GematoCommand):
     name = 'update'
     help = 'Update the Manifest entries for one or more directory trees'
 
@@ -301,6 +314,8 @@ class UpdateCommand(BaseUpdateCommand):
         self.incremental = args.incremental
 
     def __call__(self):
+        super(UpdateCommand, self).__call__()
+
         for p in self.paths:
             tlm = gemato.find_top_level.find_top_level_manifest(p)
             if tlm is None:
@@ -358,7 +373,7 @@ class UpdateCommand(BaseUpdateCommand):
         return 0
 
 
-class CreateCommand(BaseUpdateCommand):
+class CreateCommand(BaseUpdateMixin, GematoCommand):
     name = 'create'
     help = 'Create a Manifest tree starting at the specified file'
 
@@ -377,6 +392,8 @@ class CreateCommand(BaseUpdateCommand):
         self.paths = args.paths
 
     def __call__(self):
+        super(CreateCommand, self).__call__()
+
         for p in self.paths:
             start = timeit.default_timer()
             m = gemato.recursiveloader.ManifestRecursiveLoader(
@@ -411,16 +428,22 @@ class HashCommand(GematoCommand):
     __slots__ = ['hashes', 'paths']
 
     def add_options(self, subp):
+        super(HashCommand, self).add_options(subp)
+
         subp.add_argument('paths', nargs='*', default=['-'],
                 help='Paths to hash (defaults to "-" (stdin) if not specified)')
         subp.add_argument('-H', '--hashes', required=True,
                 help='Whitespace-separated list of hashes to use')
 
     def parse_args(self, args, argp):
+        super(HashCommand, self).parse_args(args, argp)
+
         self.hashes = sorted(args.hashes.split())
         self.paths = args.paths
 
     def __call__(self):
+        super(HashCommand, self).__call__()
+
         hashlib_hashes = list(
                 gemato.manifest.manifest_hashes_to_hashlib(self.hashes))
         hashlib_hashes.append('__size__')
@@ -441,7 +464,7 @@ class HashCommand(GematoCommand):
             print(' '.join(e.to_list('DATA' if p != '-' else 'STDIN')))
 
 
-class OpenPGPVerifyCommand(VerifyingOpenPGPCommand):
+class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
     name = 'openpgp-verify'
     help = 'Verify OpenPGP signatures embedded in specified file(s) and/or stdin'
 
@@ -459,6 +482,8 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPCommand):
         self.paths = args.paths
 
     def __call__(self):
+        super(OpenPGPVerifyCommand, self).__call__()
+
         ret = True
 
         for p in self.paths:
@@ -511,6 +536,8 @@ def main(argv):
     if not hasattr(vals, 'cmd'):
         argp.error('No function specified')
     try:
+        assert isinstance(vals.cmd, GematoCommand)
+
         try:
             vals.cmd.parse_args(vals, argp)
             return vals.cmd()
