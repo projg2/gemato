@@ -135,7 +135,30 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
                 logging.info('Keys refreshed.')
 
 
-class VerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
+class BaseManifestLoaderMixin(object):
+    """
+    Mixin for commands using RecursiveManifestLoader class.
+    """
+
+    def add_options(self, subp):
+        super(BaseManifestLoaderMixin, self).add_options(subp)
+
+        subp.add_argument('-j', '--jobs', type=int,
+                help='Specify the maximum number of parallel jobs to use (default: {})'
+                    .format(multiprocessing.cpu_count()))
+
+    def parse_args(self, args, argp):
+        super(BaseManifestLoaderMixin, self).parse_args(args, argp)
+
+        self.init_kwargs = {}
+        if args.jobs is not None:
+            if args.jobs < 1:
+                argp.error('--jobs must be positive')
+            self.init_kwargs['max_jobs'] = args.jobs
+
+
+class VerifyCommand(BaseManifestLoaderMixin, VerifyingOpenPGPMixin,
+                    GematoCommand):
     name = 'verify'
     help = 'Verify one or more directories against Manifests'
 
@@ -144,9 +167,6 @@ class VerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
 
         verify.add_argument('paths', nargs='*', default=['.'],
                 help='Paths to verify (defaults to "." if none specified)')
-        verify.add_argument('-j', '--jobs', type=int,
-                help='Specify the maximum number of parallel jobs to use (default: {})'
-                    .format(multiprocessing.cpu_count()))
         verify.add_argument('-k', '--keep-going', action='store_true',
                 help='Continue reporting errors rather than terminating on the first failure')
         verify.add_argument('-P', '--no-openpgp-verify', action='store_false',
@@ -160,14 +180,9 @@ class VerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
 
         self.paths = args.paths
         self.require_signed_manifest = args.require_signed_manifest
-        self.init_kwargs = {}
         self.kwargs = {}
         self.init_kwargs['openpgp_env'] = self.openpgp_env
 
-        if args.jobs is not None:
-            if args.jobs < 1:
-                argp.error('--jobs must be positive')
-            self.init_kwargs['max_jobs'] = args.jobs
         if args.keep_going:
             self.kwargs['fail_handler'] = verify_failure
         if not args.openpgp_verify:
@@ -217,7 +232,7 @@ class VerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
         return 0 if ret else 1
 
 
-class BaseUpdateMixin(BaseOpenPGPMixin):
+class BaseUpdateMixin(BaseManifestLoaderMixin, BaseOpenPGPMixin):
     """
     A mixin that adds common bits for update-class commands.
     """
@@ -233,9 +248,6 @@ class BaseUpdateMixin(BaseOpenPGPMixin):
                 help='Force rewriting all the Manifests, even if they did not change')
         update.add_argument('-H', '--hashes',
                 help='Whitespace-separated list of hashes to use')
-        update.add_argument('-j', '--jobs', type=int,
-                help='Specify the maximum number of parallel jobs to use (default: {})'
-                    .format(multiprocessing.cpu_count()))
         update.add_argument('-k', '--openpgp-id',
                 help='Use the specified OpenPGP key (by ID or user)')
         update.add_argument('-p', '--profile',
@@ -255,7 +267,6 @@ class BaseUpdateMixin(BaseOpenPGPMixin):
 
         self.timestamp = args.timestamp
 
-        self.init_kwargs = {}
         self.save_kwargs = {}
         self.init_kwargs['openpgp_env'] = self.openpgp_env
 
@@ -269,10 +280,6 @@ class BaseUpdateMixin(BaseOpenPGPMixin):
             self.init_kwargs['compress_format'] = args.compress_format
         if args.force_rewrite:
             self.save_kwargs['force'] = True
-        if args.jobs is not None:
-            if args.jobs < 1:
-                argp.error('--jobs must be positive')
-            self.init_kwargs['max_jobs'] = args.jobs
         if args.openpgp_id is not None:
             self.init_kwargs['openpgp_keyid'] = args.openpgp_id
         if args.profile is not None:
