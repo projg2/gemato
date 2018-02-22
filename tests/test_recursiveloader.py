@@ -1548,6 +1548,8 @@ DATA sub/version 0 MD5 d41d8cd98f00b204e9800998ecf8427e
     }
 
     def setUp(self):
+        if not os.path.ismount('/proc'):
+            raise unittest.SkipTest('/proc is not a mountpoint')
         super(CrossDeviceManifestTest, self).setUp()
         os.symlink('/proc', os.path.join(self.dir, 'sub'))
 
@@ -1593,6 +1595,8 @@ class CrossDeviceEmptyManifestTest(TempDirTestCase):
     }
 
     def setUp(self):
+        if not os.path.ismount('/proc'):
+            raise unittest.SkipTest('/proc is not a mountpoint')
         super(CrossDeviceEmptyManifestTest, self).setUp()
         os.symlink('/proc', os.path.join(self.dir, 'sub'))
 
@@ -1633,6 +1637,8 @@ IGNORE sub
     }
 
     def setUp(self):
+        if not os.path.ismount('/proc'):
+            raise unittest.SkipTest('/proc is not a mountpoint')
         super(CrossDeviceIgnoreManifestTest, self).setUp()
         os.symlink('/proc', os.path.join(self.dir, 'sub'))
 

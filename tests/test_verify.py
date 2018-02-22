@@ -278,6 +278,9 @@ class EmptyFileVerificationTest(unittest.TestCase):
                 (False, [('__exists__', False, True)]))
 
     def testCrossFilesystem(self):
+        if not os.path.ismount('/proc'):
+            raise unittest.SkipTest('/proc is not a mountpoint')
+
         try:
             st = os.stat('/proc')
         except OSError:
@@ -352,6 +355,9 @@ class EmptyFileVerificationTest(unittest.TestCase):
             })
 
     def test_update_cross_filesystem(self):
+        if not os.path.ismount('/proc'):
+            raise unittest.SkipTest('/proc is not a mountpoint')
+
         try:
             st = os.stat('/proc')
         except OSError:

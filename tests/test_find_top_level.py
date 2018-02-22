@@ -159,8 +159,8 @@ class TestCrossDevice(TempDirTestCase):
     }
 
     def setUp(self):
-        if not os.path.exists('/proc'):
-            raise unittest.SkipTest('/proc does not exist')
+        if not os.path.ismount('/proc'):
+            raise unittest.SkipTest('/proc is not a mountpoint')
         super(TestCrossDevice, self).setUp()
         os.symlink('/proc', os.path.join(self.dir, 'test'))
 
