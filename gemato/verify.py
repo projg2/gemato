@@ -42,8 +42,9 @@ def get_file_metadata(path, hashes):
         if err.errno == errno.ENOENT:
             exists = False
             opened = False
-        elif err.errno == errno.ENXIO:
-            # unconnected device or socket
+        elif err.errno in (errno.ENXIO, errno.EOPNOTSUPP):
+            # ENXIO = unconnected device or socket
+            # EOPNOTSUPP = opening UNIX socket on FreeBSD
             exists = True
             opened = False
         else:
