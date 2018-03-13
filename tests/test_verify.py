@@ -1,6 +1,6 @@
 # gemato: Verification tests
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import io
@@ -293,6 +293,9 @@ class EmptyFileVerificationTest(unittest.TestCase):
                 expected_dev=st.st_dev)
 
     def testCrossFilesystemAssert(self):
+        if not os.path.ismount('/proc'):
+            raise unittest.SkipTest('/proc is not a mountpoint')
+
         try:
             st = os.stat('/proc')
         except OSError:
