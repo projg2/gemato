@@ -4,7 +4,6 @@
 # Licensed under the terms of 2-clause BSD license
 
 import errno
-import multiprocessing
 import os.path
 import sys
 
@@ -382,9 +381,7 @@ class ManifestRecursiveLoader(object):
         unconditionally of whether they match parent checksums.
         """
 
-        pool = multiprocessing.Pool(processes=self.max_jobs)
-
-        try:
+        with gemato.util.MultiprocessingPoolWrapper(self.max_jobs) as pool:
             # TODO: figure out how to avoid confusing uses of 'recursive'
             while True:
                 to_load = []
@@ -409,11 +406,6 @@ class ManifestRecursiveLoader(object):
                 manifests = pool.imap_unordered(self.manifest_loader, to_load,
                                      chunksize=16)
                 self.loaded_manifests.update(manifests)
-
-            pool.close()
-            pool.join()
-        finally:
-            pool.terminate()
 
     def find_timestamp(self):
         """
@@ -657,9 +649,7 @@ class ManifestRecursiveLoader(object):
                 self.manifest_device,
                 fail_handler, last_mtime)
 
-        pool = multiprocessing.Pool(processes=self.max_jobs)
-
-        try:
+        with gemato.util.MultiprocessingPoolWrapper(self.max_jobs) as pool:
             # verify the directories in parallel
             if sys.hexversion >= 0x03050400:
                 ret = all(pool.imap_unordered(verifier, _walk_directory(it),
@@ -670,18 +660,12 @@ class ManifestRecursiveLoader(object):
                 ret = all(pool.map(verifier, _walk_directory(it),
                                    chunksize=64))
 
-            pool.close()
-
             # check for missing directories
             for relpath, dirdict in entry_dict.items():
                 for f, e in dirdict.items():
                     fpath = os.path.join(relpath, f)
                     syspath = os.path.join(self.root_directory, fpath)
                     ret &= verifier._verify_one_file(syspath, fpath, e)
-
-            pool.join()
-        finally:
-            pool.terminate()
 
         return ret
 
