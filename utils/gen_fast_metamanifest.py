@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim:fileencoding=utf-8
 # Ultra-optimized Meta-Manifest writing.
-# (c) 2017 Michał Górny
+# (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
@@ -28,10 +28,13 @@ def manifest_dir_generator(iter_n):
             for d in glob.glob(os.path.join(c, '*/')):
                 yield d
             # md5-cache for the category
-            yield os.path.join('metadata/md5-cache', c)
+            d = os.path.join('metadata/md5-cache', c)
+            if os.path.exists(d):
+                yield d
         elif iter_n == 2:
             # category directory
-            yield c
+            if os.path.exists(c):
+                yield c
 
     if iter_n == 1:
         # few special metadata subdirectories
