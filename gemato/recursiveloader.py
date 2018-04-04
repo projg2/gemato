@@ -5,7 +5,6 @@
 
 import errno
 import os.path
-import sys
 
 import gemato.compression
 import gemato.exceptions
@@ -651,14 +650,8 @@ class ManifestRecursiveLoader(object):
 
         with gemato.util.MultiprocessingPoolWrapper(self.max_jobs) as pool:
             # verify the directories in parallel
-            if sys.hexversion >= 0x03050400:
-                ret = all(pool.imap_unordered(verifier, _walk_directory(it),
-                                   chunksize=64))
-            else:
-                # in py<3.5.4 imap() swallows exceptions, so fall back
-                # to regular map() [it's only a little slower]
-                ret = all(pool.map(verifier, _walk_directory(it),
-                                   chunksize=64))
+            ret = all(pool.imap_unordered(verifier, _walk_directory(it),
+                               chunksize=64))
 
             # check for missing directories
             for relpath, dirdict in entry_dict.items():

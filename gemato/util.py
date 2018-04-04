@@ -4,6 +4,7 @@
 # Licensed under the terms of 2-clause BSD license
 
 import multiprocessing
+import sys
 
 
 class MultiprocessingPoolWrapper(object):
@@ -18,13 +19,28 @@ class MultiprocessingPoolWrapper(object):
         self.pool = multiprocessing.Pool(processes=processes)
 
     def __enter__(self):
-        return self.pool
+        return self
 
     def __exit__(self, exc_type, exc_value, exc_cb):
         if exc_type is None:
             self.pool.close()
             self.pool.join()
         self.pool.terminate()
+
+    def map(self, *args, **kwargs):
+        return self.pool.map(*args, **kwargs)
+
+    def imap_unordered(self, *args, **kwargs):
+        """
+        Use imap_unordered() if available and safe to use. Fall back
+        to regular map() otherwise.
+        """
+        if sys.hexversion >= 0x03050400:
+            return self.pool.imap_unordered(*args, **kwargs)
+        else:
+            # in py<3.5.4 imap() swallows exceptions, so fall back
+            # to regular map()
+            return self.pool.map(*args, **kwargs)
 
 
 def path_starts_with(path, prefix):
