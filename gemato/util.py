@@ -3,44 +3,37 @@
 # (c) 2017-2018 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
-import multiprocessing
-import sys
-
 
 class MultiprocessingPoolWrapper(object):
     """
     A portability wrapper for multiprocessing.Pool that supports
     context manager API (and any future hacks we might need).
+
+    Note: the multiprocessing behavior has been temporarily removed
+    due to unresolved deadlocks. It will be restored once the cause
+    of the issues is found and fixed or worked around.
     """
 
-    __slots__ = ['pool']
+    __slots__ = []
 
     def __init__(self, processes):
-        self.pool = multiprocessing.Pool(processes=processes)
+        pass
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_cb):
-        if exc_type is None:
-            self.pool.close()
-            self.pool.join()
-        self.pool.terminate()
+        pass
 
-    def map(self, *args, **kwargs):
-        return self.pool.map(*args, **kwargs)
+    def map(self, func, it, chunksize=None):
+        return map(func, it)
 
     def imap_unordered(self, *args, **kwargs):
         """
         Use imap_unordered() if available and safe to use. Fall back
         to regular map() otherwise.
         """
-        if sys.hexversion >= 0x03050400:
-            return self.pool.imap_unordered(*args, **kwargs)
-        else:
-            # in py<3.5.4 imap() swallows exceptions, so fall back
-            # to regular map()
-            return self.pool.map(*args, **kwargs)
+        return self.map(*args, **kwargs)
 
 
 def path_starts_with(path, prefix):
