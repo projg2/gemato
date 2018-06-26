@@ -40,7 +40,6 @@ def manifest_dir_generator(iter_n):
         # few special metadata subdirectories
         yield 'metadata/dtd'
         yield 'metadata/glsa'
-        yield 'metadata/md5-cache'
         yield 'metadata/news'
         yield 'metadata/xml-schema'
 
@@ -49,8 +48,14 @@ def manifest_dir_generator(iter_n):
         yield 'licenses'
         yield 'profiles'
     elif iter_n == 2:
-        # top-level dirs
+        # md5-cache depends on cache dirs from iter 1
+        yield 'metadata/md5-cache'
+    elif iter_n == 3:
+        # remaining top-level dir
         yield 'metadata'
+    elif iter_n == 4:
+        # finally, the top-level Manifest
+        yield '.'
 
 
 def make_toplevel(d, ts, pgp_key):
@@ -118,13 +123,12 @@ IGNORE packages
     make_toplevel('metadata/glsa', ts, pgp_key)
     make_toplevel('metadata/news', ts, pgp_key)
 
-    # 2nd batch (files depending on results of 1st batch)
-    # this one is fast to generate, so let's pass a list and let map()
-    # choose optimal chunksize
+    # remaining batches
+    # the lists are short, so let's pass them and let map() choose optimal
+    # chunksize
     p.map(gen_fast_manifest.gen_manifest, list(manifest_dir_generator(2)))
-
-    # finally, generate the top-level Manifest
-    gen_fast_manifest.gen_manifest('.')
+    p.map(gen_fast_manifest.gen_manifest, list(manifest_dir_generator(3)))
+    p.map(gen_fast_manifest.gen_manifest, list(manifest_dir_generator(4)))
 
     # final split
     ts = datetime.datetime.utcnow().strftime(
