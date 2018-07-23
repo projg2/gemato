@@ -56,7 +56,7 @@ class OpenPGPSystemEnvironment(object):
 
         raise NotImplementedError('import_key() is not implemented by this OpenPGP provider')
 
-    def refresh_keys(self, allow_wkd=True):
+    def refresh_keys(self, allow_wkd=True, keyserver=None):
         """
         Update the keys from their assigned keyservers. This should be called
         at start of every execution in order to ensure that revocations
@@ -65,6 +65,9 @@ class OpenPGPSystemEnvironment(object):
         @allow_wkd specifies whether WKD can be used to fetch keys. This is
         experimental but usually is more reliable than keyservers.  If WKD
         fails to fetch *all* keys, gemato falls back to keyservers.
+
+        @keyserver may be used to force an alternate keyserver. If its present,
+        it should specify a keyserver URL.
         """
 
         raise NotImplementedError('refresh_keys() is not implemented by this OpenPGP provider')
@@ -308,16 +311,20 @@ disable-scdaemon
 
         return True
 
-    def refresh_keys_keyserver(self):
-        exitst, out, err = self._spawn_gpg(['--refresh-keys'], '')
+    def refresh_keys_keyserver(self, keyserver=None):
+        ks_args = []
+        if keyserver is not None:
+            ks_args = ['--keyserver', keyserver]
+
+        exitst, out, err = self._spawn_gpg(ks_args + ['--refresh-keys'], '')
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
 
-    def refresh_keys(self, allow_wkd=True):
+    def refresh_keys(self, allow_wkd=True, keyserver=None):
         if allow_wkd and self.refresh_keys_wkd():
             return
 
-        self.refresh_keys_keyserver()
+        self.refresh_keys_keyserver(keyserver=keyserver)
 
     @property
     def home(self):

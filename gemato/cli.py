@@ -126,6 +126,8 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
                 dest='allow_wkd',
                 help='Do not attempt to use WKD to refetch keys (use '
                     +'keyservers only)')
+        subp.add_argument('--keyserver',
+                help='Force custom keyserver URL')
 
     def parse_args(self, args, argp):
         super(VerifyingOpenPGPMixin, self).parse_args(args, argp)
@@ -135,7 +137,8 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
             # (unless user specifically asked us not to)
             if args.refresh_keys:
                 logging.info('Refreshing keys...')
-                self.openpgp_env.refresh_keys(allow_wkd=args.allow_wkd)
+                self.openpgp_env.refresh_keys(allow_wkd=args.allow_wkd,
+                                              keyserver=args.keyserver)
                 logging.info('Keys refreshed.')
 
 
