@@ -122,6 +122,10 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
                 dest='refresh_keys',
                 help='Disable refreshing OpenPGP key (prevents network access, '
                     +'applicable when using -K only)')
+        subp.add_argument('-W', '--no-wkd', action='store_false',
+                dest='allow_wkd',
+                help='Do not attempt to use WKD to refetch keys (use '
+                    +'keyservers only)')
 
     def parse_args(self, args, argp):
         super(VerifyingOpenPGPMixin, self).parse_args(args, argp)
@@ -130,8 +134,8 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
             # always refresh keys to check for revocation
             # (unless user specifically asked us not to)
             if args.refresh_keys:
-                logging.info('Refreshing keys from keyserver...')
-                self.openpgp_env.refresh_keys()
+                logging.info('Refreshing keys...')
+                self.openpgp_env.refresh_keys(allow_wkd=args.allow_wkd)
                 logging.info('Keys refreshed.')
 
 

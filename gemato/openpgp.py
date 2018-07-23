@@ -4,6 +4,7 @@
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
+import email.utils
 import errno
 import os
 import os.path
@@ -55,11 +56,15 @@ class OpenPGPSystemEnvironment(object):
 
         raise NotImplementedError('import_key() is not implemented by this OpenPGP provider')
 
-    def refresh_keys(self):
+    def refresh_keys(self, allow_wkd=True):
         """
         Update the keys from their assigned keyservers. This should be called
         at start of every execution in order to ensure that revocations
         are respected. This action requires network access.
+
+        @allow_wkd specifies whether WKD can be used to fetch keys. This is
+        experimental but usually is more reliable than keyservers.  If WKD
+        fails to fetch *all* keys, gemato falls back to keyservers.
         """
 
         raise NotImplementedError('refresh_keys() is not implemented by this OpenPGP provider')
@@ -225,10 +230,94 @@ disable-scdaemon
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyImportError(err.decode('utf8'))
 
-    def refresh_keys(self):
+    def refresh_keys_wkd(self):
+        """
+        Attempt to fetch updated keys using WKD.  Returns true if *all*
+        keys were successfully found.  Otherwise, returns false.
+        """
+        # list all keys in the keyring
+        exitst, out, err = self._spawn_gpg(['--with-colons', '--list-keys'], '')
+        if exitst != 0:
+            raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
+
+        # find keys and UIDs
+        addrs = set()
+        addrs_key = set()
+        keys = set()
+        prev_pub = None
+        for l in out.splitlines():
+            # were we expecting a fingerprint?
+            if prev_pub is not None:
+                if l.startswith(b'fpr:'):
+                    fpr = l.split(b':')[9].decode('ASCII')
+                    assert fpr.endswith(prev_pub)
+                    keys.add(fpr)
+                    prev_pub = None
+                else:
+                    # old GnuPG doesn't give fingerprints by default
+                    # (but it doesn't support WKD either)
+                    return False
+            elif l.startswith(b'pub:'):
+                if keys:
+                    # every key must have at least one UID
+                    if not addrs_key:
+                        return False
+                    addrs.update(addrs_key)
+                    addrs_key = set()
+
+                # wait for the fingerprint
+                prev_pub = l.split(b':')[4].decode('ASCII')
+            elif l.startswith(b'uid:'):
+                uid = l.split(b':')[9]
+                name, addr = email.utils.parseaddr(uid.decode('utf8'))
+                if '@' in addr:
+                    addrs_key.add(addr)
+
+        # grab the final set (also aborts when there are no keys)
+        if not addrs_key:
+            return False
+        addrs.update(addrs_key)
+
+        # create another isolated environment to fetch keys cleanly
+        with OpenPGPEnvironment() as subenv:
+            # use --locate-keys to fetch keys via WKD
+            exitst, out, err = subenv._spawn_gpg(['--locate-keys']
+                    + list(addrs), '')
+            # if at least one fetch failed, gpg returns unsuccessfully
+            if exitst != 0:
+                return False
+
+            # otherwise, xfer the keys
+            exitst, out, err = subenv._spawn_gpg(['--status-fd', '2',
+                '--export'] + list(keys), '')
+            if exitst != 0:
+                return False
+            
+            # we need to explicitly ensure all keys were fetched
+            for l in err.splitlines():
+                if l.startswith(b'[GNUPG:] EXPORTED'):
+                    fpr = l.split(b' ')[2].decode('ASCII')
+                    keys.remove(fpr)
+            if keys:
+                return False
+
+            exitst, out2, err = self._spawn_gpg(['--import'], out)
+            if exitst != 0:
+                # there's no valid reason for import to fail here
+                raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
+
+        return True
+
+    def refresh_keys_keyserver(self):
         exitst, out, err = self._spawn_gpg(['--refresh-keys'], '')
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
+
+    def refresh_keys(self, allow_wkd=True):
+        if allow_wkd and self.refresh_keys_wkd():
+            return
+
+        self.refresh_keys_keyserver()
 
     @property
     def home(self):
