@@ -23,6 +23,8 @@ else:
     from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
     from urlparse import urlparse, parse_qs
 
+import gemato.openpgp
+
 
 class LoggingTestCase(unittest.TestCase):
     def setUp(self):
@@ -123,3 +125,32 @@ class HKPServerTestCase(unittest.TestCase):
         self.server.shutdown()
         self.server.server_close()
         self.server_thread.join()
+
+
+class MockedWKDOpenPGPEnvironment(gemato.openpgp.OpenPGPEnvironment):
+    """
+    A subclass of OpenPGPEnvironment that partially mocks spawning
+    OpenPGP in order to inject keys without having to implement
+    full HTTPS server with domain satisfactory to GnuPG.
+    """
+
+    def __init__(self, keys={}):
+        self.keys = keys
+        super(MockedWKDOpenPGPEnvironment, self).__init__()
+
+    def clone(self):
+        return MockedWKDOpenPGPEnvironment(self.keys)
+
+    def _spawn_gpg(self, args, stdin):
+        if '--locate-keys' in args:
+            args.remove('--locate-keys')
+            assert len(args) == 1
+            if args[0] in self.keys:
+                ret, sout, serr = super(MockedWKDOpenPGPEnvironment,
+                        self)._spawn_gpg(['--import'], self.keys[args[0]])
+            else:
+                ret = 2
+            return (ret, '', '')
+
+        return super(MockedWKDOpenPGPEnvironment, self)._spawn_gpg(
+                args, stdin)

@@ -17,7 +17,7 @@ import gemato.manifest
 import gemato.openpgp
 import gemato.recursiveloader
 
-from tests.testutil import HKPServerTestCase
+from tests.testutil import HKPServerTestCase, MockedWKDOpenPGPEnvironment
 
 
 PUBLIC_KEY = b'''
@@ -28,15 +28,16 @@ JQ6LLKmHowY/E1dl5FBbnJoRMxXP7/eScQ7HlhYj1gMPN5XiS2pkPwVkmJKBDV42
 DLwoytC+ot0frRTJvSdEPCX81BNMgFiBSpkeZfXqb9XmU03bh6mFnrdd4CsHpTQG
 csVXHK8QKhaxuqmHTALdpSzKCb/r0N/Z3sQExZhfLcBf/9UUVXj44Nwc6ooqZLRi
 zHydxwQdxNu0aOFGEBn9WTi8Slf7MfR/pF0dI8rs9w6zMzVEq0lhDPpKFGDveoGf
-g/+TpvBNXZ7DWH23GM4kID3pk4LLMc24U1PhABEBAAG0D2dlbWF0byB0ZXN0IGtl
-eYkBRgQTAQoAMBYhBIHhLBa9jc1gvhgIRRNogOcqexOEBQJZ8FyTAhsDBQsJCg0E
-AxUKCAIeAQIXgAAKCRATaIDnKnsThCnkB/0fhTH230idhlfZhFbVgTLxrj4rpsGg
-20K8HkMaWzChsONdKkqYaYuRcm2UQZ0Kg5rm9jQsGYuAnzH/7XwmOleY95ycVfBk
-je9aXF6BEoGick6C/AK5w77vd1kcBtJDrT4I7vwD4wRkyUdCkpVMVT4z4aZ7lHJ4
-ECrrrI/mg0b+sGRyHfXPvIPp7F2959L/dpbhBZDfMOFC0A9LBQBJldKFbQLg3xzX
-4tniz/BBrp7KjTOMKU0sufsedI50xc6cvCYCwJElqo86vv69klZHahE/k9nJaUAM
-jCvJNJ7pU8YnJSRTQDH0PZEupAdzDU/AhGSrBz5+Jr7N0pQIxq4duE/Q
-=r7JK
+g/+TpvBNXZ7DWH23GM4kID3pk4LLMc24U1PhABEBAAG0JGdlbWF0byB0ZXN0IGtl
+eSA8Z2VtYXRvQGV4YW1wbGUuY29tPokBTgQTAQgAOBYhBIHhLBa9jc1gvhgIRRNo
+gOcqexOEBQJbWNgpAhsDBQsJCAcCBhUKCQgLAgQWAgMBAh4BAheAAAoJEBNogOcq
+exOE4L8H/izuscjBb5UvK7NBoaW6njrI9/eeeUDRL4kSC9fT24nvUE2Q6RgXU3qh
+3I1+4/yhEE7LwU2eFRzLo3SUkCzaJ48L8IBfng7xWPogKNF4iKCl4TZHmncwJc+M
+Zq6tmJ63rokee0a96O7yesv8t9XTJr3OLt+utmnQuEbgD5iP1qYzaPKGxPOH5Zzf
+WsCAgSXqGYaQGamYN9t6IgO3G4/4NE00CyyejS/x5ptSO0AMedQI/ioAejak//cA
+ZBLN2OMMugHPQ0OZMMhC9UQkkGjz+h+h19Hj/nmwtSQymobj7KqwftZhF8kCYkT+
+LOBUpiYEANbKYNYY+tq1ddXZwD168lE=
+=vq5B
 -----END PGP PUBLIC KEY BLOCK-----
 '''
 
@@ -69,21 +70,21 @@ DLwoytC+ot0frRTJvSdEPCX81BNMgFiBSpkeZfXqb9XmU03bh6mFnrdd4CsHpTQG
 csVXHK8QKhaxuqmHTALdpSzKCb/r0N/Z3sQExZhfLcBf/9UUVXj44Nwc6ooqZLRi
 zHydxwQdxNu0aOFGEBn9WTi8Slf7MfR/pF0dI8rs9w6zMzVEq0lhDPpKFGDveoGf
 g/+TpvBNXZ7DWH23GM4kID3pk4LLMc24U1PhABEBAAGJATYEIAEIACAWIQSB4SwW
-vY3NYL4YCEUTaIDnKnsThAUCWl4LpQIdAAAKCRATaIDnKnsThCvQB/9gzrXiRv7g
-7UIzwRvTBMVXbKlbwjJpI0XnjdZmlYVis5y4ZWxh65z8j94lV4NmTtDtAdlMN8Xd
-OyTVWPGKN5cJMRLMzMRWb+aQV1fCEfwJgngE0hQe0w2dPwuVQQVP3Kv8CC+4f2lQ
-ummcgPW2LVEN3HihAwx9VWA91JSlrsX3luNSvTi2c63BM9YqGb64nJc1sAWqxzDy
-x157gzt0AHKAAQ+Hmwhqt0vnR8MyKJYo60PwNUkzWlUhOLaBpb7WvHAAmva14Rw+
-fCaldU4iFlC5oJrj0jE/yKvGG6SuSYZaS9O0H/UNI5vF8Y/HgGM0i8+NJxXu0hud
-NRH/MmEilKxUtA9nZW1hdG8gdGVzdCBrZXmJAUYEEwEKADAWIQSB4SwWvY3NYL4Y
-CEUTaIDnKnsThAUCWfBckwIbAwULCQoNBAMVCggCHgECF4AACgkQE2iA5yp7E4Qp
-5Af9H4Ux9t9InYZX2YRW1YEy8a4+K6bBoNtCvB5DGlswobDjXSpKmGmLkXJtlEGd
-CoOa5vY0LBmLgJ8x/+18JjpXmPecnFXwZI3vWlxegRKBonJOgvwCucO+73dZHAbS
-Q60+CO78A+MEZMlHQpKVTFU+M+Gme5RyeBAq66yP5oNG/rBkch31z7yD6exdvefS
-/3aW4QWQ3zDhQtAPSwUASZXShW0C4N8c1+LZ4s/wQa6eyo0zjClNLLn7HnSOdMXO
-nLwmAsCRJaqPOr7+vZJWR2oRP5PZyWlADIwryTSe6VPGJyUkU0Ax9D2RLqQHcw1P
-wIRkqwc+fia+zdKUCMauHbhP0A==
-=Zvmi
+vY3NYL4YCEUTaIDnKnsThAUCW1jgUAIdAgAKCRATaIDnKnsThC1wB/0ZwlXd0bJs
+0anD6DP5lh29xal28gppBqv2zvhb211bZWf0aVZipQCJ3/E4I94Lw+16aF7OVUJX
++OZAGt8zSbJvq1IWwWpCrZw2Z8hKxi3vGmFK/KReTTn6XQpxKv1ph1XxJBQqiYun
+nXiGYOEH8/Mi/2Bar+2BuU8czF/1lMhWSf2TbES/Wo5okIX8HOSBxq0NHbUGKxxf
+qmxC24QgNJ+p+BsfhWDcTWiq2giwyqOvWeug5qs+FdnflhuU3M31IaYR7U/Ahju6
+beMA9skwcCnmmDAg1tkNReJheFIQi9+nnEPgJciO7zsHmFixYu7j/2w3KEcs+awt
+My3r0Xp/UVMMtCRnZW1hdG8gdGVzdCBrZXkgPGdlbWF0b0BleGFtcGxlLmNvbT6J
+AU4EEwEIADgWIQSB4SwWvY3NYL4YCEUTaIDnKnsThAUCW1jYKQIbAwULCQgHAgYV
+CgkICwIEFgIDAQIeAQIXgAAKCRATaIDnKnsThOC/B/4s7rHIwW+VLyuzQaGlup46
+yPf3nnlA0S+JEgvX09uJ71BNkOkYF1N6odyNfuP8oRBOy8FNnhUcy6N0lJAs2ieP
+C/CAX54O8Vj6ICjReIigpeE2R5p3MCXPjGaurZiet66JHntGveju8nrL/LfV0ya9
+zi7frrZp0LhG4A+Yj9amM2jyhsTzh+Wc31rAgIEl6hmGkBmpmDfbeiIDtxuP+DRN
+NAssno0v8eabUjtADHnUCP4qAHo2pP/3AGQSzdjjDLoBz0NDmTDIQvVEJJBo8/of
+odfR4/55sLUkMpqG4+yqsH7WYRfJAmJE/izgVKYmBADWymDWGPratXXV2cA9evJR
+=8SkC
 -----END PGP PUBLIC KEY BLOCK-----
 '''
 
@@ -109,17 +110,17 @@ Vxq2UHtiGaO7T9Vk4Sr8MKS9EYrLNbK41Lyb+tjxk3jYjEyFqCDNEtWKIZR4ENdR
 jo5gYKBtuqv1AYYSkflOTeaRlv/kIo8D/jVcyjmO19tNJM8lQE1xCvhp5maXOoSk
 1UoUmDprsKA2Em47J83sVivrIwBySB2n9srQynnV+8I47mX7YzYtNQ6uXdL3p/5e
 FRW+yfqVCShhSfyQdOmJ978UyQEwY0+0hhK372KatmaL9KEkKSuXgsqshv3XiB9y
-u3Su1jw5y2IQNP20D2dlbWF0byB0ZXN0IGtleYkBRgQTAQoAMBYhBIHhLBa9jc1g
-vhgIRRNogOcqexOEBQJZ8FyTAhsDBQsJCg0EAxUKCAIeAQIXgAAKCRATaIDnKnsT
-hCnkB/0fhTH230idhlfZhFbVgTLxrj4rpsGg20K8HkMaWzChsONdKkqYaYuRcm2U
-QZ0Kg5rm9jQsGYuAnzH/7XwmOleY95ycVfBkje9aXF6BEoGick6C/AK5w77vd1kc
-BtJDrT4I7vwD4wRkyUdCkpVMVT4z4aZ7lHJ4ECrrrI/mg0b+sGRyHfXPvIPp7F29
-59L/dpbhBZDfMOFC0A9LBQBJldKFbQLg3xzX4tniz/BBrp7KjTOMKU0sufsedI50
-xc6cvCYCwJElqo86vv69klZHahE/k9nJaUAMjCvJNJ7pU8YnJSRTQDH0PZEupAdz
-DU/AhGSrBz5+Jr7N0pQIxq4duE/Q
-=wOFB
+u3Su1jw5y2IQNP20JGdlbWF0byB0ZXN0IGtleSA8Z2VtYXRvQGV4YW1wbGUuY29t
+PokBTgQTAQgAOBYhBIHhLBa9jc1gvhgIRRNogOcqexOEBQJbWNgpAhsDBQsJCAcC
+BhUKCQgLAgQWAgMBAh4BAheAAAoJEBNogOcqexOE4L8H/izuscjBb5UvK7NBoaW6
+njrI9/eeeUDRL4kSC9fT24nvUE2Q6RgXU3qh3I1+4/yhEE7LwU2eFRzLo3SUkCza
+J48L8IBfng7xWPogKNF4iKCl4TZHmncwJc+MZq6tmJ63rokee0a96O7yesv8t9XT
+Jr3OLt+utmnQuEbgD5iP1qYzaPKGxPOH5ZzfWsCAgSXqGYaQGamYN9t6IgO3G4/4
+NE00CyyejS/x5ptSO0AMedQI/ioAejak//cAZBLN2OMMugHPQ0OZMMhC9UQkkGjz
++h+h19Hj/nmwtSQymobj7KqwftZhF8kCYkT+LOBUpiYEANbKYNYY+tq1ddXZwD16
+8lE=
+=n4Bw
 -----END PGP PRIVATE KEY BLOCK-----
-
 '''
 
 PRIVATE_KEY_ID = b'0x136880E72A7B1384'
@@ -237,6 +238,7 @@ t5pTRGhLWgdLUrs7vRB7wf7F8h4sci/YBKJRFA==
 '''
 
 KEY_FINGERPRINT = '81E12C16BD8DCD60BE180845136880E72A7B1384'
+KEY_UID = 'gemato@example.com'
 SIG_TIMESTAMP = datetime.datetime(2017, 11, 8, 9, 1, 26)
 
 OTHER_PUBLIC_KEY = b'''
@@ -1187,6 +1189,225 @@ class OpenPGPFakeKeyRefreshTest(HKPServerTestCase):
         try:
             self.assertRaises(gemato.exceptions.OpenPGPKeyRefreshError,
                               self.env.refresh_keys, allow_wkd=False,
+                              keyserver=self.server_addr)
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
+
+
+class OpenPGPWKDRefreshTest(unittest.TestCase):
+    """
+    Test that WKD variant of refresh_keys() correctly handles
+    revocation.
+    """
+
+    KEYS = {
+        KEY_UID: REVOKED_PUBLIC_KEY,
+    }
+
+    def setUp(self):
+        self.env = MockedWKDOpenPGPEnvironment(self.KEYS)
+        try:
+            self.env.import_key(io.BytesIO(PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_refresh_keys(self):
+        try:
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                self.env.verify_file(f)
+
+            self.env.refresh_keys(allow_wkd=True)
+
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                self.assertRaises(gemato.exceptions.OpenPGPRevokedKeyFailure,
+                        self.env.verify_file, f)
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
+
+
+class OpenPGPWKDFallbackRefreshTest(HKPServerTestCase):
+    """
+    Test that WKD variant of refresh_keys() correctly falls back
+    to keyserver ops.
+    """
+
+    SERVER_KEYS = {
+        KEY_FINGERPRINT: REVOKED_PUBLIC_KEY,
+    }
+
+    def setUp(self):
+        self.env = MockedWKDOpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        super(OpenPGPWKDFallbackRefreshTest, self).setUp()
+
+    def tearDown(self):
+        self.env.close()
+        super(OpenPGPWKDFallbackRefreshTest, self).tearDown()
+
+    def test_refresh_keys(self):
+        try:
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                self.env.verify_file(f)
+
+            self.env.refresh_keys(allow_wkd=True,
+                                  keyserver=self.server_addr)
+
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                self.assertRaises(gemato.exceptions.OpenPGPRevokedKeyFailure,
+                        self.env.verify_file, f)
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
+
+
+class OpenPGPWKDFailRefreshTest(HKPServerTestCase):
+    """
+    Test that WKD variant of refresh_keys() correctly handles missing
+    key on server.
+
+    Note: we also run HKP server to handle failed WKD fallback.
+    """
+
+    SERVER_KEYS = {}
+
+    def setUp(self):
+        self.env = MockedWKDOpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        super(OpenPGPWKDFailRefreshTest, self).setUp()
+
+    def tearDown(self):
+        self.env.close()
+        super(OpenPGPWKDFailRefreshTest, self).tearDown()
+
+    def test_refresh_keys(self):
+        try:
+            self.assertRaises(gemato.exceptions.OpenPGPKeyRefreshError,
+                              self.env.refresh_keys, allow_wkd=True,
+                              keyserver=self.server_addr)
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
+
+
+class OpenPGPWKDUnrevokeRefreshTest(unittest.TestCase):
+    """
+    Test that WKD refresh_keys() does not ignore local revocation when
+    keyserver sends outdated (non-revoked) key.
+    """
+
+    KEYS = {
+        KEY_UID: PUBLIC_KEY,
+    }
+
+    def setUp(self):
+        self.env = MockedWKDOpenPGPEnvironment(self.KEYS)
+        try:
+            self.env.import_key(io.BytesIO(REVOKED_PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_refresh_keys(self):
+        try:
+            self.env.refresh_keys(allow_wkd=True)
+
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                self.assertRaises(gemato.exceptions.OpenPGPRevokedKeyFailure,
+                        self.env.verify_file, f)
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
+
+
+class OpenPGPWKDFakeKeyRefreshTest(unittest.TestCase):
+    """
+    Test that WKD refresh_keys() does not allow injecting another key.
+    """
+
+    KEYS = {
+        KEY_UID: OTHER_PUBLIC_KEY + PUBLIC_KEY,
+    }
+
+    def setUp(self):
+        self.env = MockedWKDOpenPGPEnvironment(self.KEYS)
+        try:
+            self.env.import_key(io.BytesIO(OTHER_PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_refresh_keys(self):
+        try:
+            self.env.refresh_keys(allow_wkd=True)
+
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                self.assertRaises(gemato.exceptions.OpenPGPVerificationFailure,
+                        self.env.verify_file, f)
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
+
+
+class OpenPGPWKDReplaceKeyRefreshTest(HKPServerTestCase):
+    """
+    Test that WKD refresh_keys() does not allow replacing the key with
+    another (of the same UID).
+    """
+
+    KEYS = {
+        KEY_UID: PUBLIC_KEY,
+    }
+    SERVER_KEYS = {}
+
+    def setUp(self):
+        self.env = MockedWKDOpenPGPEnvironment(self.KEYS)
+        try:
+            self.env.import_key(io.BytesIO(OTHER_PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        super(OpenPGPWKDReplaceKeyRefreshTest, self).setUp()
+
+    def tearDown(self):
+        self.env.close()
+        super(OpenPGPWKDReplaceKeyRefreshTest, self).tearDown()
+
+    def test_refresh_keys(self):
+        try:
+            self.assertRaises(gemato.exceptions.OpenPGPKeyRefreshError,
+                              self.env.refresh_keys, allow_wkd=True,
                               keyserver=self.server_addr)
         except gemato.exceptions.OpenPGPNoImplementation as e:
             raise unittest.SkipTest(str(e))

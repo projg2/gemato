@@ -215,6 +215,9 @@ disable-scdaemon
         if self._home is not None:
             self.close()
 
+    def clone(self):
+        return OpenPGPEnvironment()
+
     @staticmethod
     def _rmtree_error_handler(func, path, exc_info):
         # ignore ENOENT -- it probably means a race condition between
@@ -282,7 +285,7 @@ disable-scdaemon
         addrs.update(addrs_key)
 
         # create another isolated environment to fetch keys cleanly
-        with OpenPGPEnvironment() as subenv:
+        with self.clone() as subenv:
             # use --locate-keys to fetch keys via WKD
             exitst, out, err = subenv._spawn_gpg(['--locate-keys']
                     + list(addrs), '')
