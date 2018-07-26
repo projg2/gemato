@@ -296,23 +296,23 @@ disable-scdaemon
                 return False
 
             # otherwise, xfer the keys
-            exitst, out, err = subenv._spawn_gpg(['--status-fd', '2',
-                '--export'] + list(keys), '')
+            exitst, out, err = subenv._spawn_gpg(['--export'] + list(keys), '')
             if exitst != 0:
                 return False
             
-            # we need to explicitly ensure all keys were fetched
-            for l in err.splitlines():
-                if l.startswith(b'[GNUPG:] EXPORTED'):
-                    fpr = l.split(b' ')[2].decode('ASCII')
-                    keys.remove(fpr)
-            if keys:
-                return False
-
-            exitst, out2, err = self._spawn_gpg(['--import'], out)
+            exitst, out, err = self._spawn_gpg(['--import',
+                '--status-fd', '1'], out)
             if exitst != 0:
                 # there's no valid reason for import to fail here
                 raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
+
+            # we need to explicitly ensure all keys were fetched
+            for l in out.splitlines():
+                if l.startswith(b'[GNUPG:] IMPORT_OK'):
+                    fpr = l.split(b' ')[3].decode('ASCII')
+                    keys.remove(fpr)
+            if keys:
+                return False
 
         return True
 
