@@ -242,7 +242,9 @@ disable-scdaemon
         keys were successfully found.  Otherwise, returns false.
         """
         # list all keys in the keyring
-        exitst, out, err = self._spawn_gpg(['--with-colons', '--list-keys'], '')
+        # (--fingerprint --fixed-list-mode are necessary for GnuPG-1.4)
+        exitst, out, err = self._spawn_gpg(['--with-colons', '--list-keys',
+            '--fingerprint', '--fixed-list-mode'], '')
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
 
