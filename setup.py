@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # vim:fileencoding=utf-8
 # (C) 2017-2018 Michał Górny <mgorny@gentoo.org>
 # Licensed under the terms of 2-clause BSD license
