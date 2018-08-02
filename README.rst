@@ -77,7 +77,7 @@ of Python 2.7 and Python 3.4+. However, the support for Python 2
 is considered 'best effort' and has some known limitations. For example,
 non-ASCII paths on command-line do not work.
 
-gemato is currently tested against CPython 2.7, CPython 3.4 through 3.6,
+gemato is currently tested against CPython 2.7, CPython 3.4 through 3.7,
 PyPy and PyPy3.
 
 gemato depends only on standard Python library modules and their
