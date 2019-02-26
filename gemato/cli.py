@@ -1,6 +1,6 @@
 # gemato: CLI routines
 # vim:fileencoding=utf-8
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2019 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 from __future__ import print_function
@@ -51,14 +51,16 @@ class GematoCommand(object):
         """
         Add options specific to the command to subparser @subp.
         """
-        pass
+        subp.add_argument('--debug', action='store_true',
+                          help='Enable debugging output')
 
     def parse_args(self, args, argp):
         """
         Process command-line arguments @args. @argp is the argparse
         instance provided for error reporting.
         """
-        pass
+        if args.debug:
+            logging.getLogger().setLevel(logging.DEBUG)
 
     def __call__(self):
         """
