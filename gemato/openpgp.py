@@ -291,7 +291,7 @@ disable-scdaemon
                     addrs_key.add(addr)
                 else:
                     logging.debug('refresh_keys_wkd(): ignoring UID without mail: {}'
-                                  .format(uid))
+                                  .format(uid.decode('utf8')))
 
         # grab the final set (also aborts when there are no keys)
         if not addrs_key:
@@ -307,14 +307,14 @@ disable-scdaemon
             # if at least one fetch failed, gpg returns unsuccessfully
             if exitst != 0:
                 logging.debug('refresh_keys_wkd(): gpg --locate-keys failed: {}'
-                              .format(err))
+                              .format(err.decode('utf8')))
                 return False
 
             # otherwise, xfer the keys
             exitst, out, err = subenv._spawn_gpg(['--export'] + list(keys), '')
             if exitst != 0:
                 logging.debug('refresh_keys_wkd(): gpg --export failed: {}'
-                              .format(err))
+                              .format(err.decode('utf8')))
                 return False
             
             exitst, out, err = self._spawn_gpg(['--import',
