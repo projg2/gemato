@@ -223,13 +223,19 @@ disable-scdaemon
     def _rmtree_error_handler(func, path, exc_info):
         # ignore ENOENT -- it probably means a race condition between
         # us and gpg-agent cleaning up after itself
+        # also non-empty directory due to races:
+        # https://bugs.gentoo.org/684172
         if (not isinstance(exc_info[1], OSError)
-                or exc_info[1].errno != errno.ENOENT):
+                or exc_info[1].errno not in (errno.ENOENT,
+                                             errno.ENOTEMPTY,
+                                             errno.EEXIST)):
             raise exc_info[1]
 
     def close(self):
         if self._home is not None:
-            shutil.rmtree(self._home, onerror=self._rmtree_error_handler)
+            # we need to loop due to ENOTEMPTY potential
+            while os.path.isdir(self._home):
+                shutil.rmtree(self._home, onerror=self._rmtree_error_handler)
             self._home = None
 
     def import_key(self, keyfile):
