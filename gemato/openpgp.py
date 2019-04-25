@@ -223,12 +223,13 @@ disable-scdaemon
     def _rmtree_error_handler(func, path, exc_info):
         # ignore ENOENT -- it probably means a race condition between
         # us and gpg-agent cleaning up after itself
-        # also non-empty directory due to races:
+        # also non-empty directory due to races, and EBUSY for NFS:
         # https://bugs.gentoo.org/684172
         if (not isinstance(exc_info[1], OSError)
                 or exc_info[1].errno not in (errno.ENOENT,
                                              errno.ENOTEMPTY,
-                                             errno.EEXIST)):
+                                             errno.EEXIST,
+                                             errno.EBUSY)):
             raise exc_info[1]
 
     def close(self):
