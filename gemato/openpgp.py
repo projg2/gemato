@@ -1,11 +1,12 @@
 # gemato: OpenPGP verification support
 # vim:fileencoding=utf-8
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2019 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
 import email.utils
 import errno
+import logging
 import os
 import os.path
 import shutil
@@ -222,13 +223,20 @@ disable-scdaemon
     def _rmtree_error_handler(func, path, exc_info):
         # ignore ENOENT -- it probably means a race condition between
         # us and gpg-agent cleaning up after itself
+        # also non-empty directory due to races, and EBUSY for NFS:
+        # https://bugs.gentoo.org/684172
         if (not isinstance(exc_info[1], OSError)
-                or exc_info[1].errno != errno.ENOENT):
+                or exc_info[1].errno not in (errno.ENOENT,
+                                             errno.ENOTEMPTY,
+                                             errno.EEXIST,
+                                             errno.EBUSY)):
             raise exc_info[1]
 
     def close(self):
         if self._home is not None:
-            shutil.rmtree(self._home, onerror=self._rmtree_error_handler)
+            # we need to loop due to ENOTEMPTY potential
+            while os.path.isdir(self._home):
+                shutil.rmtree(self._home, onerror=self._rmtree_error_handler)
             self._home = None
 
     def import_key(self, keyfile):
@@ -259,30 +267,42 @@ disable-scdaemon
                 if l.startswith(b'fpr:'):
                     fpr = l.split(b':')[9].decode('ASCII')
                     assert fpr.endswith(prev_pub)
+                    logging.debug('refresh_keys_wkd(): fingerprint: {}'
+                                  .format(fpr))
                     keys.add(fpr)
                     prev_pub = None
                 else:
                     # old GnuPG doesn't give fingerprints by default
                     # (but it doesn't support WKD either)
+                    logging.debug('refresh_keys_wkd(): failing due to old gpg')
                     return False
             elif l.startswith(b'pub:'):
                 if keys:
                     # every key must have at least one UID
                     if not addrs_key:
+                        logging.debug('refresh_keys_wkd(): failing due to no UIDs')
                         return False
                     addrs.update(addrs_key)
                     addrs_key = set()
 
                 # wait for the fingerprint
                 prev_pub = l.split(b':')[4].decode('ASCII')
+                logging.debug('refresh_keys_wkd(): keyid: {}'
+                              .format(prev_pub))
             elif l.startswith(b'uid:'):
                 uid = l.split(b':')[9]
                 name, addr = email.utils.parseaddr(uid.decode('utf8'))
                 if '@' in addr:
+                    logging.debug('refresh_keys_wkd(): UID: {}'
+                                  .format(addr))
                     addrs_key.add(addr)
+                else:
+                    logging.debug('refresh_keys_wkd(): ignoring UID without mail: {}'
+                                  .format(uid.decode('utf8')))
 
         # grab the final set (also aborts when there are no keys)
         if not addrs_key:
+            logging.debug('refresh_keys_wkd(): failing due to no UIDs')
             return False
         addrs.update(addrs_key)
 
@@ -293,11 +313,15 @@ disable-scdaemon
                     + list(addrs), '')
             # if at least one fetch failed, gpg returns unsuccessfully
             if exitst != 0:
+                logging.debug('refresh_keys_wkd(): gpg --locate-keys failed: {}'
+                              .format(err.decode('utf8')))
                 return False
 
             # otherwise, xfer the keys
             exitst, out, err = subenv._spawn_gpg(['--export'] + list(keys), '')
             if exitst != 0:
+                logging.debug('refresh_keys_wkd(): gpg --export failed: {}'
+                              .format(err.decode('utf8')))
                 return False
             
             exitst, out, err = self._spawn_gpg(['--import',
@@ -310,8 +334,12 @@ disable-scdaemon
             for l in out.splitlines():
                 if l.startswith(b'[GNUPG:] IMPORT_OK'):
                     fpr = l.split(b' ')[3].decode('ASCII')
+                    logging.debug('refresh_keys_wkd(): import successful for key: {}'
+                                  .format(fpr))
                     keys.remove(fpr)
             if keys:
+                logging.debug('refresh_keys_wkd(): failing due to non-updated keys: {}'
+                              .format(keys))
                 return False
 
         return True
@@ -326,6 +354,9 @@ disable-scdaemon
             raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
 
     def refresh_keys(self, allow_wkd=True, keyserver=None):
+        logging.debug('refresh_keys(allow_wkd={}, keyserver={}) called'
+                      .format(allow_wkd, keyserver))
+
         if allow_wkd and self.refresh_keys_wkd():
             return
 

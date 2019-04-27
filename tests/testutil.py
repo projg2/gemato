@@ -150,7 +150,7 @@ class MockedWKDOpenPGPEnvironment(gemato.openpgp.OpenPGPEnvironment):
                         self)._spawn_gpg(['--import'], self.keys[args[0]])
             else:
                 ret = 2
-            return (ret, '', '')
+            return (ret, b'', b'')
 
         return super(MockedWKDOpenPGPEnvironment, self)._spawn_gpg(
                 args, stdin)
