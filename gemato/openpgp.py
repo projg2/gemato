@@ -212,8 +212,6 @@ debug-all
 trust-model always
 
 # enable debugging, in case we needed it
-log-file {debug_file}
-debug-level guru
 debug-all
 '''.format(debug_file=os.path.join(self._home, 'gpg.log')))
         with open(os.path.join(self._home, 'gpg-agent.conf'), 'w') as f:
