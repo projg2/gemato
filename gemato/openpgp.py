@@ -323,7 +323,7 @@ disable-scdaemon
                 logging.debug('refresh_keys_wkd(): gpg --export failed: {}'
                               .format(err.decode('utf8')))
                 return False
-            
+
             exitst, out, err = self._spawn_gpg(['--import',
                 '--status-fd', '1'], out)
             if exitst != 0:
