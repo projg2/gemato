@@ -117,8 +117,8 @@ class EbuildRepositoryProfile(DefaultProfile):
 
     def set_loader_options(self, loader):
         if loader.hashes is None:
-            # layout.conf as of 2017-11-02
-            loader.hashes = ['SHA256', 'SHA512', 'WHIRLPOOL']
+            # layout.conf as of 2017-11-21
+            loader.hashes = ['BLAKE2B', 'SHA512']
         if loader.sort is None:
             loader.sort = True
         if loader.compress_watermark is None:

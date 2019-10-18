@@ -99,7 +99,7 @@ class BaseOpenPGPMixin(object):
             env_class = gemato.openpgp.OpenPGPEnvironment
         else:
             env_class = gemato.openpgp.OpenPGPSystemEnvironment
-        self.openpgp_env = env_class()
+        self.openpgp_env = env_class(debug=args.debug)
 
         if args.openpgp_key is not None:
             with io.open(args.openpgp_key, 'rb') as f:
