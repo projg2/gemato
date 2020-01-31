@@ -11,7 +11,7 @@ gemato provides a reference implementation of the full-tree Manifest
 checks as specified in GLEP 74 [#GLEP74]_. Originally focused
 on verifying the integrity and authenticity of the Gentoo ebuild
 repository, the tool can be used as a generic checksumming tool
-for any directory trees.
+for directory trees.
 
 
 Usage
@@ -39,6 +39,17 @@ create`` command against the top directory of the new Manifest tree::
 
 Note that for the ``create`` command you always need to specify either
 a profile (via ``-p``) or at least a hash set (via ``-H``).
+
+Use the --timestamp option and a active gpg agent to create OpenPGP 
+signed Manifests:
+
+    gemato create --hashes "SHA256 SHA512" --timestamp /path/
+
+This will create a new Manifest file in /path/ with a clearsign
+OpenPGP signature.
+
+Note that files that start with a dot are not included in the Manifest
+and are therefore neigher signed nor verified.
 
 
 Updating existing Manifests
