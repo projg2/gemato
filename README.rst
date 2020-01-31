@@ -41,7 +41,7 @@ Note that for the ``create`` command you always need to specify either
 a profile (via ``-p``) or at least a hash set (via ``-H``).
 
 Use the --timestamp option and a active gpg agent to create OpenPGP 
-signed Manifests:
+signed Manifests::
 
     gemato create --hashes "SHA256 SHA512" --timestamp /path/
 
