@@ -141,7 +141,7 @@ class MockedWKDOpenPGPEnvironment(gemato.openpgp.OpenPGPEnvironment):
     def clone(self):
         return MockedWKDOpenPGPEnvironment(self.keys)
 
-    def _spawn_gpg(self, argv, stdin):
+    def _spawn_gpg(self, argv, stdin=''):
         if '--locate-keys' in argv:
             argv.remove('--locate-keys')
             assert len(argv) == 3

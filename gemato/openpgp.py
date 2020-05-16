@@ -150,7 +150,7 @@ class OpenPGPSystemEnvironment(object):
 
         outf.write(out.decode('utf8'))
 
-    def _spawn_gpg(self, argv, stdin, env_override={}):
+    def _spawn_gpg(self, argv, stdin='', env_override={}):
         env = os.environ.copy()
         env['TZ'] = 'UTC'
         env.update(env_override)
@@ -257,7 +257,7 @@ debug-level guru
         """
         # list all keys in the keyring
         exitst, out, err = self._spawn_gpg(
-            ['gpg', '--batch', '--with-colons', '--list-keys'], '')
+            ['gpg', '--batch', '--with-colons', '--list-keys'])
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
 
@@ -315,7 +315,7 @@ debug-level guru
         with self.clone() as subenv:
             # use --locate-keys to fetch keys via WKD
             exitst, out, err = subenv._spawn_gpg(
-                ['gpg', '--batch', '--locate-keys'] + list(addrs), '')
+                ['gpg', '--batch', '--locate-keys'] + list(addrs))
             # if at least one fetch failed, gpg returns unsuccessfully
             if exitst != 0:
                 logging.debug('refresh_keys_wkd(): gpg --locate-keys failed: {}'
@@ -324,7 +324,7 @@ debug-level guru
 
             # otherwise, xfer the keys
             exitst, out, err = subenv._spawn_gpg(
-                ['gpg', '--batch', '--export'] + list(keys), '')
+                ['gpg', '--batch', '--export'] + list(keys))
             if exitst != 0:
                 logging.debug('refresh_keys_wkd(): gpg --export failed: {}'
                               .format(err.decode('utf8')))
@@ -356,7 +356,7 @@ debug-level guru
             ks_args = ['--keyserver', keyserver]
 
         exitst, out, err = self._spawn_gpg(
-            ['gpg', '--batch', '--refresh-keys'] + ks_args, '')
+            ['gpg', '--batch', '--refresh-keys'] + ks_args)
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
 
@@ -374,7 +374,7 @@ debug-level guru
         assert self._home is not None
         return self._home
 
-    def _spawn_gpg(self, options, stdin):
+    def _spawn_gpg(self, options, stdin=''):
         env_override = {'GNUPGHOME': self.home}
         return (super(OpenPGPEnvironment, self)
                 ._spawn_gpg(options, stdin, env_override))
