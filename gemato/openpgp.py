@@ -34,11 +34,10 @@ class OpenPGPSystemEnvironment(object):
     (user's home directory or GNUPGHOME).
     """
 
-    __slots__ = ['debug', '_impl']
+    __slots__ = ['debug']
 
     def __init__(self, debug=False):
         self.debug = debug
-        self._impl = None
 
     def __enter__(self):
         return self
@@ -154,26 +153,16 @@ class OpenPGPSystemEnvironment(object):
         env['TZ'] = 'UTC'
         env.update(env_override)
 
-        impls = ['gpg2', 'gpg']
-        if self._impl is not None:
-            impls = [self._impl]
-
-        for impl in impls:
-            try:
-                p = subprocess.Popen([impl, '--batch'] + options,
-                                     stdin=subprocess.PIPE,
-                                     stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE,
-                                     env=env)
-            except OSError as e:
-                if e.errno != errno.ENOENT:
-                    raise
-            else:
-                break
-        else:
+        try:
+            p = subprocess.Popen(['gpg', '--batch'] + options,
+                                 stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE,
+                                 env=env)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
             raise gemato.exceptions.OpenPGPNoImplementation()
-
-        self._impl = impl
 
         out, err = p.communicate(stdin)
         return (p.wait(), out, err)
