@@ -1,6 +1,6 @@
 # gemato: Test utility functions
 # vim:fileencoding=utf-8
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
@@ -141,16 +141,19 @@ class MockedWKDOpenPGPEnvironment(gemato.openpgp.OpenPGPEnvironment):
     def clone(self):
         return MockedWKDOpenPGPEnvironment(self.keys)
 
-    def _spawn_gpg(self, args, stdin):
-        if '--locate-keys' in args:
-            args.remove('--locate-keys')
-            assert len(args) == 1
-            if args[0] in self.keys:
+    def _spawn_gpg(self, argv, stdin):
+        if '--locate-keys' in argv:
+            argv.remove('--locate-keys')
+            assert len(argv) == 3
+            assert argv[:2] == ['gpg', '--batch']
+            if argv[2] in self.keys:
                 ret, sout, serr = super(MockedWKDOpenPGPEnvironment,
-                        self)._spawn_gpg(['--import'], self.keys[args[0]])
+                    self)._spawn_gpg(
+                        ['gpg', '--batch', '--import'],
+                        self.keys[argv[2]])
             else:
                 ret = 2
             return (ret, b'', b'')
 
         return super(MockedWKDOpenPGPEnvironment, self)._spawn_gpg(
-                args, stdin)
+                argv, stdin)

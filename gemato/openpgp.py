@@ -1,6 +1,6 @@
 # gemato: OpenPGP verification support
 # vim:fileencoding=utf-8
-# (c) 2017-2019 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
@@ -96,8 +96,9 @@ class OpenPGPSystemEnvironment(object):
         fails.
         """
 
-        exitst, out, err = self._spawn_gpg(['--status-fd', '1', '--verify'],
-                                           f.read().encode('utf8'))
+        exitst, out, err = self._spawn_gpg(
+            ['gpg', '--batch', '--status-fd', '1', '--verify'],
+            f.read().encode('utf8'))
         if exitst != 0:
             raise gemato.exceptions.OpenPGPVerificationFailure(err.decode('utf8'))
 
@@ -141,20 +142,21 @@ class OpenPGPSystemEnvironment(object):
         args = []
         if keyid is not None:
             args += ['--local-user', keyid]
-        exitst, out, err = self._spawn_gpg(['--clearsign'] + args,
-                                           f.read().encode('utf8'))
+        exitst, out, err = self._spawn_gpg(
+            ['gpg', '--batch', '--clearsign'] + args,
+            f.read().encode('utf8'))
         if exitst != 0:
             raise gemato.exceptions.OpenPGPSigningFailure(err.decode('utf8'))
 
         outf.write(out.decode('utf8'))
 
-    def _spawn_gpg(self, options, stdin, env_override={}):
+    def _spawn_gpg(self, argv, stdin, env_override={}):
         env = os.environ.copy()
         env['TZ'] = 'UTC'
         env.update(env_override)
 
         try:
-            p = subprocess.Popen(['gpg', '--batch'] + options,
+            p = subprocess.Popen(argv,
                                  stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
@@ -243,7 +245,8 @@ debug-level guru
             self._home = None
 
     def import_key(self, keyfile):
-        exitst, out, err = self._spawn_gpg(['--import'], keyfile.read())
+        exitst, out, err = self._spawn_gpg(
+            ['gpg', '--batch', '--import'], keyfile.read())
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyImportError(err.decode('utf8'))
 
@@ -254,7 +257,7 @@ debug-level guru
         """
         # list all keys in the keyring
         exitst, out, err = self._spawn_gpg(
-            ['--with-colons', '--list-keys'], '')
+            ['gpg', '--batch', '--with-colons', '--list-keys'], '')
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
 
@@ -311,8 +314,8 @@ debug-level guru
         # create another isolated environment to fetch keys cleanly
         with self.clone() as subenv:
             # use --locate-keys to fetch keys via WKD
-            exitst, out, err = subenv._spawn_gpg(['--locate-keys']
-                    + list(addrs), '')
+            exitst, out, err = subenv._spawn_gpg(
+                ['gpg', '--batch', '--locate-keys'] + list(addrs), '')
             # if at least one fetch failed, gpg returns unsuccessfully
             if exitst != 0:
                 logging.debug('refresh_keys_wkd(): gpg --locate-keys failed: {}'
@@ -320,14 +323,15 @@ debug-level guru
                 return False
 
             # otherwise, xfer the keys
-            exitst, out, err = subenv._spawn_gpg(['--export'] + list(keys), '')
+            exitst, out, err = subenv._spawn_gpg(
+                ['gpg', '--batch', '--export'] + list(keys), '')
             if exitst != 0:
                 logging.debug('refresh_keys_wkd(): gpg --export failed: {}'
                               .format(err.decode('utf8')))
                 return False
 
-            exitst, out, err = self._spawn_gpg(['--import',
-                '--status-fd', '1'], out)
+            exitst, out, err = self._spawn_gpg(
+                ['gpg', '--batch', '--import', '--status-fd', '1'], out)
             if exitst != 0:
                 # there's no valid reason for import to fail here
                 raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
@@ -351,7 +355,8 @@ debug-level guru
         if keyserver is not None:
             ks_args = ['--keyserver', keyserver]
 
-        exitst, out, err = self._spawn_gpg(ks_args + ['--refresh-keys'], '')
+        exitst, out, err = self._spawn_gpg(
+            ['gpg', '--batch', '--refresh-keys'] + ks_args, '')
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
 
