@@ -234,8 +234,12 @@ debug-level guru
 
     def close(self):
         if self._home is not None:
+            ret, sout, serr = self._spawn_gpg(
+                ['gpgconf', '--kill', 'all'])
+            if ret != 0:
+                logging.warning('gpgconf --kill failed: {}'
+                                .format(serr))
             if not self.debug:
-                self._spawn_gpg(['gpgconf', '--kill'])
                 # we need to loop due to ENOTEMPTY potential
                 while os.path.isdir(self._home):
                     shutil.rmtree(self._home,
