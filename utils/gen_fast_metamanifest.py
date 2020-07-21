@@ -72,7 +72,8 @@ def make_toplevel(d, ts, pgp_key):
 
             if pgp_key is not None:
                 cmd = []
-                p = subprocess.Popen(['gpg', '--batch', '-u', pgp_key,
+                gpg = os.environ.get('GNUPG', 'gpg')
+                p = subprocess.Popen([gpg, '--batch', '-u', pgp_key,
                                       '--armor', '--clearsign'],
                                      stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE,
