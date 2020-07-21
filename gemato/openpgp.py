@@ -155,6 +155,10 @@ class OpenPGPSystemEnvironment(object):
         env['TZ'] = 'UTC'
         env.update(env_override)
 
+        # Allow to override default 'gpg' client
+        if env.get('GNUPG', None):
+            argv[0] = env['GNUPG']
+
         try:
             p = subprocess.Popen(argv,
                                  stdin=subprocess.PIPE,
