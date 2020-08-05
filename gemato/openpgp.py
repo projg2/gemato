@@ -190,10 +190,10 @@ class OpenPGPEnvironment(OpenPGPSystemEnvironment):
     def __init__(self, debug=False):
         super(OpenPGPEnvironment, self).__init__(debug=debug)
         self._home = tempfile.mkdtemp()
-        self._env = {}
+        self._env = {'GNUPGHOME': self._home}
 
         for key in ENVIRON_WHITELIST:
-            if os.environ.get(key, None):
+            if key in os.environ:
                 self._env[key] = os.environ.get(key)
 
         with open(os.path.join(self._home, 'dirmngr.conf'), 'w') as f:
@@ -385,16 +385,10 @@ debug-level guru
 
         self.refresh_keys_keyserver(keyserver=keyserver)
 
-    @property
-    def home(self):
-        assert self._home is not None
-        return self._home
-
     def update_env(self, key, value):
         if key in ENVIRON_WHITELIST:
             self._env[key] = value
 
     def _spawn_gpg(self, options, stdin=''):
-        self._env['GNUPGHOME'] = self.home
         return (super(OpenPGPEnvironment, self)
                 ._spawn_gpg(options, stdin, self._env))
