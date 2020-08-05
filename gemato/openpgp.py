@@ -19,7 +19,7 @@ import gemato.exceptions
 GNUPG = os.environ.get('GNUPG', 'gpg')
 GNUPGCONF = os.environ.get('GNUPGCONF', 'gpgconf')
 
-ENVIRON_WHITELIST = ['GNUPGHOME', 'http_proxy', 'https_proxy']
+ENVIRON_WHITELIST = ['http_proxy', 'https_proxy']
 
 
 class OpenPGPSignatureData(object):
