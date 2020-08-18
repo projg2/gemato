@@ -89,6 +89,8 @@ class BaseOpenPGPMixin(object):
 
         subp.add_argument('-K', '--openpgp-key',
                 help='Use only the OpenPGP key(s) from a specific file')
+        subp.add_argument('--proxy',
+                help='Use HTTP proxy')
 
     def parse_args(self, args, argp):
         super(BaseOpenPGPMixin, self).parse_args(args, argp)
@@ -99,7 +101,8 @@ class BaseOpenPGPMixin(object):
             env_class = gemato.openpgp.OpenPGPEnvironment
         else:
             env_class = gemato.openpgp.OpenPGPSystemEnvironment
-        self.openpgp_env = env_class(debug=args.debug)
+        self.openpgp_env = env_class(debug=args.debug,
+                                     proxy=args.proxy)
 
         if args.openpgp_key is not None:
             with io.open(args.openpgp_key, 'rb') as f:

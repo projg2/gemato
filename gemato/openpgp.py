@@ -40,7 +40,7 @@ class OpenPGPSystemEnvironment(object):
 
     __slots__ = ['debug']
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, proxy=None):
         self.debug = debug
 
     def __enter__(self):
@@ -183,10 +183,11 @@ class OpenPGPEnvironment(OpenPGPSystemEnvironment):
     or use as a context manager (via 'with').
     """
 
-    __slots__ = ['_home']
+    __slots__ = ['_home', 'proxy']
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, proxy=None):
         super(OpenPGPEnvironment, self).__init__(debug=debug)
+        self.proxy = proxy
         self._home = tempfile.mkdtemp(prefix='gemato.')
 
         with open(os.path.join(self._home, 'dirmngr.conf'), 'w') as f:
@@ -221,7 +222,7 @@ debug-level guru
             self.close()
 
     def clone(self):
-        return OpenPGPEnvironment(debug=self.debug)
+        return OpenPGPEnvironment(debug=self.debug, proxy=self.proxy)
 
     @staticmethod
     def _rmtree_error_handler(func, path, exc_info):
@@ -385,5 +386,7 @@ debug-level guru
 
     def _spawn_gpg(self, options, stdin=''):
         env_override = {'GNUPGHOME': self.home}
+        if self.proxy is not None:
+            env_override['http_proxy'] = self.proxy
         return (super(OpenPGPEnvironment, self)
                 ._spawn_gpg(options, stdin, env_override))
