@@ -221,7 +221,7 @@ debug-level guru
             self.close()
 
     def clone(self):
-        return OpenPGPEnvironment()
+        return OpenPGPEnvironment(debug=self.debug)
 
     @staticmethod
     def _rmtree_error_handler(func, path, exc_info):
