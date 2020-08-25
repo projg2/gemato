@@ -87,8 +87,10 @@ class HKPServerRequestHandler(BaseHTTPRequestHandler):
             return
 
         self.send_response(200, "OK")
-        self.send_header("Content-type", "text/plain")
+        self.send_header("Content-type", "application/pgp-keys")
         self.end_headers()
+        # note: technically we should be using ASCII armor here
+        # but GnuPG seems happy with the binary form too
         self.wfile.write(self.keys[key])
         self.wfile.flush()
 
