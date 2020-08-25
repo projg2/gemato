@@ -1,13 +1,12 @@
 # gemato: Manifest file objects
 # vim:fileencoding=utf-8
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
 import io
 import os.path
 import re
-import sys
 
 import gemato.exceptions
 import gemato.util
@@ -49,10 +48,6 @@ class ManifestEntryTIMESTAMP(object):
                 or (self.tag == other.tag and self.ts < other.ts))
 
 
-if sys.hexversion >= 0x03000000:
-    unichr = chr
-
-
 class ManifestPathEntry(object):
     """
     Base class for entries using a path.
@@ -71,7 +66,7 @@ class ManifestPathEntry(object):
         if val is None:
             raise gemato.exceptions.ManifestSyntaxError(
                     'Invalid escape sequence at pos {} of: {}'.format(m.start(), m.string))
-        return unichr(int(val[1:], base=16))
+        return chr(int(val[1:], base=16))
 
     @classmethod
     def process_path(cls, l):

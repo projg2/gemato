@@ -1,6 +1,6 @@
 # gemato: CLI routines
 # vim:fileencoding=utf-8
-# (c) 2017-2019 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 from __future__ import print_function
@@ -456,11 +456,8 @@ class HashCommand(GematoCommand):
 
         for p in self.paths:
             if p == '-':
-                if sys.hexversion >= 0x03000000:
-                    f = sys.stdin.buffer
-                else:
-                    f = sys.stdin
-                h = gemato.hash.hash_file(f, hashlib_hashes)
+                h = gemato.hash.hash_file(sys.stdin.buffer,
+                                          hashlib_hashes)
             else:
                 h = gemato.hash.hash_path(p, hashlib_hashes)
 
@@ -492,10 +489,7 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
 
         for p in self.paths:
             if p == '-':
-                if sys.hexversion >= 0x03000000:
-                    f = sys.stdin
-                else:
-                    f = io.open(sys.stdin.fileno(), 'r')
+                f = sys.stdin
             else:
                 f = io.open(p, 'r')
 
@@ -554,8 +548,4 @@ def main(argv):
 
 def setuptools_main():
     logging.getLogger().setLevel(logging.INFO)
-    if sys.hexversion < 0x03000000:
-        argv = [x.decode(sys.getfilesystemencoding()) for x in sys.argv]
-    else:
-        argv = sys.argv
-    sys.exit(main(argv))
+    sys.exit(main(sys.argv))

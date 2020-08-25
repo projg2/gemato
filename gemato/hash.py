@@ -42,28 +42,6 @@ def get_hash_by_name(name):
 	if name in hashlib.algorithms_available:
 		return hashlib.new(name)
 
-	# fallback support
-	if name.startswith('sha3_'):
-		try:
-			import sha3
-		except ImportError:
-			pass
-		else:
-			try:
-				return getattr(sha3, name)()
-			except AttributeError:
-				pass
-	elif name.startswith('blake2'):
-		try:
-			import pyblake2
-		except ImportError:
-			pass
-		else:
-			try:
-				return getattr(pyblake2, name)()
-			except AttributeError:
-				pass
-
 	raise gemato.exceptions.UnsupportedHash(name)
 
 

@@ -11,27 +11,19 @@ import os
 import os.path
 import random
 import shutil
-import sys
 import tempfile
 import threading
 import unittest
 
-if sys.hexversion >= 0x03000000:
-    from http.server import HTTPServer, BaseHTTPRequestHandler
-    from urllib.parse import urlparse, parse_qs
-else:
-    from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-    from urlparse import urlparse, parse_qs
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
 
 import gemato.openpgp
 
 
 class LoggingTestCase(unittest.TestCase):
     def setUp(self):
-        if sys.hexversion < 0x03000000:
-            self.log = io.BytesIO()
-        else:
-            self.log = io.StringIO()
+        self.log = io.StringIO()
         self.log_handler = logging.getLogger().addHandler(
                 logging.StreamHandler(self.log))
 

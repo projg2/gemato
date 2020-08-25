@@ -1,33 +1,13 @@
 # gemato: compressed file support
 # vim:fileencoding=utf-8
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import bz2
 import gzip
 import io
+import lzma
 import os.path
-import sys
-
-if sys.hexversion >= 0x03030000:
-    import bz2
-else:
-    # older bz2 module versions do not handle multiple streams correctly
-    # so use the backport instead
-    try:
-        import bz2file as bz2
-    except ImportError:
-        bz2 = None
-
-# Python 3.3+ has a built-in lzma module. Older versions may have
-# an incompatible external module of the same name, so explicitly
-# force using the backport there.
-if sys.hexversion >= 0x03030000:
-    import lzma
-else:
-    try:
-        import backports.lzma as lzma
-    except ImportError:
-        lzma = None
 
 import gemato.exceptions
 
@@ -46,15 +26,6 @@ def open_compressed_file(suffix, f, mode='rb'):
     """
 
     if suffix == "gz":
-        # work-around the deficiency in GzipFile class in py<3.3 causing
-        # it to break with TextIOWrapper
-        if sys.hexversion < 0x03030000:
-            class FixedGzipFile(gzip.GzipFile):
-                def read1(self, *args, **kwargs):
-                    return self.read(*args, **kwargs)
-
-            return FixedGzipFile(fileobj=f, mode=mode, filename='', mtime=0)
-
         return gzip.GzipFile(fileobj=f, mode=mode, filename='', mtime=0)
     elif suffix == "bz2" and bz2 is not None:
         return bz2.BZ2File(f, mode=mode)
