@@ -39,7 +39,7 @@ ALGORITHMS = {
                functools.partial(ExternalToolHash, 'sha384sum')],
     'sha512': [hashlib.sha512,
                functools.partial(ExternalToolHash, 'sha512sum')],
-    'blake2b': [hashlib.blake2b, pyblake2.blake2b,
+    'blake2b': [hashlib.blake2b, hashlib.blake2b,
                 functools.partial(ExternalToolHash, 'b2sum')],
 }
 

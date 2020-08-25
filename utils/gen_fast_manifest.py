@@ -13,12 +13,10 @@ import os
 import os.path
 import sys
 
-import pyblake2
-
 
 def get_manifest_entry(t, path, relpath):
     sha512 = hashlib.sha512()
-    blake2 = pyblake2.blake2b()
+    blake2 = hashlib.blake2b()
 
     with io.open(path, 'rb') as f:
         buf = f.read()
