@@ -17,9 +17,9 @@ import gemato.openpgp
 import gemato.recursiveloader
 
 from tests.keydata import (
-    PUBLIC_KEY, SECRET_KEY,
+    PUBLIC_KEY, SECRET_KEY, PUBLIC_SUBKEY,
     UID, EXPIRED_KEY_UID,
-    PUBLIC_KEY_SIG, EXPIRED_KEY_SIG, REVOCATION_SIG,
+    PUBLIC_KEY_SIG, PUBLIC_SUBKEY_SIG, EXPIRED_KEY_SIG, REVOCATION_SIG,
     OTHER_PUBLIC_KEY, OTHER_PUBLIC_KEY_UID, OTHER_PUBLIC_KEY_SIG,
     )
 from tests.testutil import HKPServerTestCase, MockedWKDOpenPGPEnvironment
@@ -151,6 +151,31 @@ SIG_TIMESTAMP = datetime.datetime(2017, 11, 8, 9, 1, 26)
 OTHER_VALID_PUBLIC_KEY = (OTHER_PUBLIC_KEY + OTHER_PUBLIC_KEY_UID +
                           OTHER_PUBLIC_KEY_SIG)
 OTHER_KEY_FINGERPRINT = '4B8349B90C56EE7F054D52871822F5424EB6DA81'
+
+VALID_KEY_SUBKEY = (PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY +
+                    PUBLIC_SUBKEY_SIG)
+SUBKEY_FINGERPRINT = '7E9DDE3CBE47E437418DF74038B9D2F76CC833CC'
+SUBKEY_SIG_TIMESTAMP = datetime.datetime(2020, 8, 25, 12, 40, 12)
+
+SUBKEY_SIGNED_MANIFEST = u'''
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+TIMESTAMP 2017-10-22T18:06:41Z
+MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+IGNORE local
+DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+-----BEGIN PGP SIGNATURE-----
+
+iLMEAQEIAB0WIQR+nd48vkfkN0GN90A4udL3bMgzzAUCX0UGrAAKCRA4udL3bMgz
+zH8MA/93/oNkXaA8+ZX7s8umhNMHiovdLJMna7Bl2C/tEdLfOoyp9o3lChhnB49v
+g7VRUc//lz5sDUShdUUlTYjCPGLaYf2rBZHqd5POGJOsbzu1Tmtd8uhWFWnl8Kip
+n4XmpdPvu+UdAHpQIGzKoNOEDJpZ5CzPLhYa5KgZiJhpYsDXgg==
+=lpJi
+-----END PGP SIGNATURE-----
+'''
 
 
 def strip_openpgp(text):
@@ -1292,3 +1317,31 @@ class OpenPGPWKDReplaceKeyRefreshTest(HKPServerTestCase):
                               keyserver=self.server_addr)
         except gemato.exceptions.OpenPGPNoImplementation as e:
             raise unittest.SkipTest(str(e))
+
+
+class OpenPGPSubKeyTest(unittest.TestCase):
+    """
+    Tests that a signature made using a subkey works.
+    """
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(VALID_KEY_SUBKEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_verify_manifest(self):
+        with io.StringIO(SUBKEY_SIGNED_MANIFEST) as f:
+            sig = self.env.verify_file(f)
+            self.assertEqual(sig.fingerprint, SUBKEY_FINGERPRINT)
+            self.assertEqual(sig.timestamp, SUBKEY_SIG_TIMESTAMP)
+            self.assertIsNone(sig.expire_timestamp)
+            self.assertEqual(sig.primary_key_fingerprint, KEY_FINGERPRINT)
