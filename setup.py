@@ -16,13 +16,6 @@ setup(
     license='BSD',
     url='http://github.com/mgorny/gemato',
 
-    extras_require={
-        'blake2': ['pyblake2;python_version<"3.6"'],
-        'bz2': ['bz2file;python_version<"3.0"'],
-        'lzma': ['backports.lzma;python_version<"3.0"'],
-        'sha3': ['pysha3;python_version<"3.6"'],
-    },
-
     packages=['gemato'],
     entry_points={
         'console_scripts': [
