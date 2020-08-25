@@ -1514,3 +1514,19 @@ class OpenPGPForgedUnexpireRefreshTest(HKPServerTestCase):
                         self.env.verify_file, f)
         except gemato.exceptions.OpenPGPNoImplementation as e:
             raise unittest.SkipTest(str(e))
+
+
+class WKDUrlTests(unittest.TestCase):
+    """Tests for get_wkd_url() helper"""
+
+    def test_get_wkd_url(self):
+        self.assertEqual(
+            gemato.openpgp.OpenPGPEnvironment.get_wkd_url(
+                'gemato@example.com'),
+            'https://example.com/.well-known/openpgpkey/hu/'
+            '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato')
+        self.assertEqual(
+            gemato.openpgp.OpenPGPEnvironment.get_wkd_url(
+                'Joe.Doe@Example.ORG'),
+            'https://example.org/.well-known/openpgpkey/hu/'
+            'iy9q119eutrkn8s1mk4r39qejnbu3n5q?l=Joe.Doe')

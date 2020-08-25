@@ -3,15 +3,18 @@
 # (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import base64
 import datetime
 import email.utils
 import errno
+import hashlib
 import logging
 import os
 import os.path
 import shutil
 import subprocess
 import tempfile
+import urllib.parse
 
 import gemato.exceptions
 
@@ -259,6 +262,21 @@ debug-level guru
             [GNUPG, '--batch', '--import'], keyfile.read())
         if exitst != 0:
             raise gemato.exceptions.OpenPGPKeyImportError(err.decode('utf8'))
+
+    zbase32_translate = bytes.maketrans(
+        b'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
+        b'ybndrfg8ejkmcpqxot1uwisza345h769')
+
+    @classmethod
+    def get_wkd_url(cls, email):
+        localname, domain = email.encode('utf8').split(b'@', 1)
+        b32 = (base64.b32encode(
+                hashlib.sha1(localname.lower()).digest())
+            .translate(cls.zbase32_translate).decode())
+        uenc = urllib.parse.quote(localname)
+        ldomain = domain.lower().decode('utf8')
+        return (f'https://{ldomain}/.well-known/openpgpkey/hu/'
+                f'{b32}?l={uenc}')
 
     def refresh_keys_wkd(self):
         """
