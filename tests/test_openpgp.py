@@ -178,6 +178,16 @@ n4XmpdPvu+UdAHpQIGzKoNOEDJpZ5CzPLhYa5KgZiJhpYsDXgg==
 '''
 
 
+def break_sig(sig):
+    """Return signature packet mangled to mismatch the signed key"""
+    return sig[:-1] + bytes((sig[-1] ^ 0x55,))
+
+
+FORGED_PUBLIC_KEY = PUBLIC_KEY + UID + break_sig(PUBLIC_KEY_SIG)
+FORGED_SUBKEY = (PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY +
+                 break_sig(PUBLIC_SUBKEY_SIG))
+
+
 def strip_openpgp(text):
     lines = text.lstrip().splitlines()
     start = lines.index('')
@@ -708,6 +718,15 @@ class OpenPGPContextManagerTest(unittest.TestCase):
                 self.assertRaises(gemato.exceptions.OpenPGPKeyImportError,
                         env.import_key,
                         io.BytesIO(b''))
+            except gemato.exceptions.OpenPGPNoImplementation as e:
+                raise unittest.SkipTest(str(e))
+
+    def test_import_forged_key(self):
+        with gemato.openpgp.OpenPGPEnvironment() as env:
+            try:
+                self.assertRaises(gemato.exceptions.OpenPGPKeyImportError,
+                        env.import_key,
+                        io.BytesIO(FORGED_PUBLIC_KEY))
             except gemato.exceptions.OpenPGPNoImplementation as e:
                 raise unittest.SkipTest(str(e))
 
@@ -1345,3 +1364,29 @@ class OpenPGPSubKeyTest(unittest.TestCase):
             self.assertEqual(sig.timestamp, SUBKEY_SIG_TIMESTAMP)
             self.assertIsNone(sig.expire_timestamp)
             self.assertEqual(sig.primary_key_fingerprint, KEY_FINGERPRINT)
+
+
+class OpenPGPForgedSubKeyTest(unittest.TestCase):
+    """
+    Tests that a subkey is not used if its signature is wrong.
+    """
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(FORGED_SUBKEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_verify_manifest(self):
+        with io.StringIO(SUBKEY_SIGNED_MANIFEST) as f:
+            self.assertRaises(
+                gemato.exceptions.OpenPGPVerificationFailure,
+                self.env.verify_file, f)
