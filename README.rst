@@ -73,19 +73,9 @@ behavior. Those are:
 Requirements
 ============
 gemato is written in Python and compatible with implementations
-of Python 3.4+. gemato is currently tested against CPython 3.4
-through 3.7 and PyPy3.
-
-gemato depends only on standard Python library modules and their
-backports. The exact runtime dependencies depend on the standard library
-version used. Those are:
-
-Python 3.6+
-  none -- only standard modules are used
-
-Python 3.4, 3.5
-  - pyblake2 -- for BLAKE2 family of hashes [#pyblake2]_
-  - pysha3 -- for SHA3 (Keccak) family of hashes [#pysha3]_
+of Python 3.6+. gemato is currently tested against CPython 3.6
+through 3.7 and PyPy3.  gemato depends only on standard Python library
+modules.
 
 Additionally, gemato calls the GnuPG executable to work with OpenPGP
 signatures. Both GnuPG 1.4.21 and 2.2+ are tested.
@@ -95,11 +85,3 @@ References and footnotes
 ========================
 .. [#GLEP74] GLEP 74: Full-tree verification using Manifest files
    (https://www.gentoo.org/glep/glep-0074.html)
-
-.. [#pyblake2] BLAKE2 hash function extension module
-   (https://pypi.python.org/pypi/pyblake2)
-   (https://github.com/dchest/pyblake2)
-
-.. [#pysha3] SHA-3 (Keccak) for Python 2.7 - 3.5
-   (https://pypi.python.org/pypi/pysha3)
-   (https://github.com/tiran/pysha3)
