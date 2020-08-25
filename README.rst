@@ -73,12 +73,8 @@ behavior. Those are:
 Requirements
 ============
 gemato is written in Python and compatible with implementations
-of Python 2.7 and Python 3.4+. However, the support for Python 2
-is considered 'best effort' and has some known limitations. For example,
-non-ASCII paths on command-line do not work.
-
-gemato is currently tested against CPython 2.7, CPython 3.4 through 3.7,
-PyPy and PyPy3.
+of Python 3.4+. gemato is currently tested against CPython 3.4
+through 3.7 and PyPy3.
 
 gemato depends only on standard Python library modules and their
 backports. The exact runtime dependencies depend on the standard library
@@ -90,12 +86,6 @@ Python 3.6+
 Python 3.4, 3.5
   - pyblake2 -- for BLAKE2 family of hashes [#pyblake2]_
   - pysha3 -- for SHA3 (Keccak) family of hashes [#pysha3]_
-
-Python 2.7
-  the above, plus:
-
-  - bz2file -- for BZip2 compression support [#bz2file]_ [#bz2py2]_
-  - backports.lzma -- for LZMA/XZ compressed file support [#lzma]_
 
 Additionally, gemato calls the GnuPG executable to work with OpenPGP
 signatures. Both GnuPG 1.4.21 and 2.2+ are tested.
@@ -113,17 +103,3 @@ References and footnotes
 .. [#pysha3] SHA-3 (Keccak) for Python 2.7 - 3.5
    (https://pypi.python.org/pypi/pysha3)
    (https://github.com/tiran/pysha3)
-
-.. [#bz2file] Read and write bzip2-compressed files
-   (https://pypi.python.org/pypi/bz2file)
-   (https://github.com/nvawda/bz2file)
-
-.. [#bz2py2] Strictly speaking, Python 2.7 has a ``bz2`` module.
-   However, this old module version does not support working on open
-   files nor multiple streams inside a single file. For this reason,
-   the external module is unconditionally required.
-
-.. [#lzma] Backport of Python 3.3's 'lzma' module for XZ/LZMA compressed
-   files
-   (https://pypi.python.org/pypi/backports.lzma)
-   (https://github.com/peterjc/backports.lzma)
