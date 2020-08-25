@@ -74,14 +74,17 @@ Requirements
 ============
 gemato is written in Python and compatible with implementations
 of Python 3.6+. gemato is currently tested against CPython 3.6
-through 3.7 and PyPy3.  gemato depends only on standard Python library
-modules.
+through 3.7 and PyPy3.  gemato core depends only on standard Python
+library modules.
 
-Additionally, gemato calls the GnuPG executable to work with OpenPGP
-signatures. Both GnuPG 1.4.21 and 2.2+ are tested.
+Additionally, OpenPGP requires system install of GnuPG 2.2+
+and requests_ Python module.  Tests require responses_ for mocking.
 
 
 References and footnotes
 ========================
 .. [#GLEP74] GLEP 74: Full-tree verification using Manifest files
    (https://www.gentoo.org/glep/glep-0074.html)
+
+.. _requests: https://2.python-requests.org/en/master/
+.. _responses: https://github.com/getsentry/responses

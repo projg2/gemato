@@ -18,6 +18,11 @@ import urllib.parse
 
 import gemato.exceptions
 
+try:
+    import requests
+except ImportError:
+    requests = None
+
 
 GNUPG = os.environ.get('GNUPG', 'gpg')
 GNUPGCONF = os.environ.get('GNUPGCONF', 'gpgconf')
@@ -283,6 +288,10 @@ debug-level guru
         Attempt to fetch updated keys using WKD.  Returns true if *all*
         keys were successfully found.  Otherwise, returns false.
         """
+        if requests is None:
+            raise gemato.exceptions.OpenPGPKeyRefreshError(
+                'WKD updates require requests Python module')
+
         # list all keys in the keyring
         exitst, out, err = self._spawn_gpg(
             [GNUPG, '--batch', '--with-colons', '--list-keys'])
@@ -339,42 +348,47 @@ debug-level guru
             return False
         addrs.update(addrs_key)
 
-        # create another isolated environment to fetch keys cleanly
-        with self.clone() as subenv:
-            # use --locate-keys to fetch keys via WKD
-            exitst, out, err = subenv._spawn_gpg(
-                [GNUPG, '--batch', '--locate-keys'] + list(addrs))
-            # if at least one fetch failed, gpg returns unsuccessfully
-            if exitst != 0:
-                logging.debug('refresh_keys_wkd(): {} --locate-keys failed: {}'
-                              .format(GNUPG, err.decode('utf8')))
+        data = b''
+        proxies = {}
+        if self.proxy is not None:
+            proxies = {
+                'http': self.proxy,
+                'https': self.proxy,
+            }
+        for a in addrs:
+            url = self.get_wkd_url(a)
+            resp = requests.get(url, proxies=proxies)
+            if resp.status_code != 200:
+                logging.debug(f'refresh_keys_wkd(): failing due to failed'
+                              f'request for {url}: {resp}')
                 return False
+            data += resp.content
 
-            # otherwise, xfer the keys
-            exitst, out, err = subenv._spawn_gpg(
-                [GNUPG, '--batch', '--export'] + list(keys))
-            if exitst != 0:
-                logging.debug('refresh_keys_wkd(): {} --export failed: {}'
-                              .format(GNUPG, err.decode('utf8')))
-                return False
+        exitst, out, err = self._spawn_gpg(
+            [GNUPG, '--batch', '--import', '--status-fd', '1'], data)
+        if exitst != 0:
+            # there's no valid reason for import to fail here
+            raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
 
-            exitst, out, err = self._spawn_gpg(
-                [GNUPG, '--batch', '--import', '--status-fd', '1'], out)
-            if exitst != 0:
-                # there's no valid reason for import to fail here
-                raise gemato.exceptions.OpenPGPKeyRefreshError(err.decode('utf8'))
-
-            # we need to explicitly ensure all keys were fetched
-            for l in out.splitlines():
-                if l.startswith(b'[GNUPG:] IMPORT_OK'):
-                    fpr = l.split(b' ')[3].decode('ASCII')
-                    logging.debug('refresh_keys_wkd(): import successful for key: {}'
-                                  .format(fpr))
+        # we need to explicitly ensure all keys were fetched
+        for l in out.splitlines():
+            if l.startswith(b'[GNUPG:] IMPORT_OK'):
+                fpr = l.split(b' ')[3].decode('ASCII')
+                logging.debug('refresh_keys_wkd(): import successful for key: {}'
+                              .format(fpr))
+                if fpr in keys:
                     keys.remove(fpr)
-            if keys:
-                logging.debug('refresh_keys_wkd(): failing due to non-updated keys: {}'
-                              .format(keys))
-                return False
+                else:
+                    # we need to delete unexpected keys
+                    exitst, out, err = self._spawn_gpg(
+                        [GNUPG, '--batch', '--delete-keys', fpr])
+                    if exitst != 0:
+                        raise gemato.exceptions.OpenPGPKeyRefreshError(
+                            err.decode('utf8'))
+        if keys:
+            logging.debug('refresh_keys_wkd(): failing due to non-updated keys: {}'
+                          .format(keys))
+            return False
 
         return True
 
