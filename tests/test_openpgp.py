@@ -21,6 +21,7 @@ from tests.keydata import (
     UID, EXPIRED_KEY_UID,
     PUBLIC_KEY_SIG, PUBLIC_SUBKEY_SIG, EXPIRED_KEY_SIG, REVOCATION_SIG,
     OTHER_PUBLIC_KEY, OTHER_PUBLIC_KEY_UID, OTHER_PUBLIC_KEY_SIG,
+    UNEXPIRE_SIG,
     )
 from tests.testutil import HKPServerTestCase, MockedWKDOpenPGPEnvironment
 
@@ -28,6 +29,7 @@ from tests.testutil import HKPServerTestCase, MockedWKDOpenPGPEnvironment
 VALID_PUBLIC_KEY = PUBLIC_KEY + UID + PUBLIC_KEY_SIG
 EXPIRED_PUBLIC_KEY = PUBLIC_KEY + EXPIRED_KEY_UID + EXPIRED_KEY_SIG
 REVOKED_PUBLIC_KEY = PUBLIC_KEY + REVOCATION_SIG + UID + PUBLIC_KEY_SIG
+UNEXPIRE_PUBLIC_KEY = PUBLIC_KEY + EXPIRED_KEY_UID + UNEXPIRE_SIG
 
 PRIVATE_KEY = SECRET_KEY + UID + PUBLIC_KEY_SIG
 PRIVATE_KEY_ID = b'0x136880E72A7B1384'
@@ -180,12 +182,14 @@ n4XmpdPvu+UdAHpQIGzKoNOEDJpZ5CzPLhYa5KgZiJhpYsDXgg==
 
 def break_sig(sig):
     """Return signature packet mangled to mismatch the signed key"""
-    return sig[:-1] + bytes((sig[-1] ^ 0x55,))
+    return sig[:-1] + b'\x55'
 
 
 FORGED_PUBLIC_KEY = PUBLIC_KEY + UID + break_sig(PUBLIC_KEY_SIG)
 FORGED_SUBKEY = (PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY +
                  break_sig(PUBLIC_SUBKEY_SIG))
+FORGED_UNEXPIRE_KEY = (PUBLIC_KEY + EXPIRED_KEY_UID + EXPIRED_KEY_SIG +
+                       break_sig(UNEXPIRE_SIG))
 
 
 def strip_openpgp(text):
@@ -1390,3 +1394,123 @@ class OpenPGPForgedSubKeyTest(unittest.TestCase):
             self.assertRaises(
                 gemato.exceptions.OpenPGPVerificationFailure,
                 self.env.verify_file, f)
+
+
+class OpenPGPForgedSubKeyKeyserverTest(HKPServerTestCase):
+    """
+    Tests that a forged subkey can not be injected via keyserver.
+    """
+
+    SERVER_KEYS = {
+        KEY_FINGERPRINT: FORGED_SUBKEY,
+    }
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(VALID_PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        super(OpenPGPForgedSubKeyKeyserverTest, self).setUp()
+
+    def tearDown(self):
+        self.env.close()
+        super(OpenPGPForgedSubKeyKeyserverTest, self).tearDown()
+
+    def test_verify_manifest(self):
+        self.env.refresh_keys(allow_wkd=True,
+                              keyserver=self.server_addr)
+
+        with io.StringIO(SUBKEY_SIGNED_MANIFEST) as f:
+            self.assertRaises(
+                gemato.exceptions.OpenPGPVerificationFailure,
+                self.env.verify_file, f)
+
+
+class OpenPGPUnexpireRefreshTest(HKPServerTestCase):
+    """
+    Test that refresh_keys() correctly unexpires keys.
+    """
+
+    SERVER_KEYS = {
+        KEY_FINGERPRINT: UNEXPIRE_PUBLIC_KEY,
+    }
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(EXPIRED_PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        super(OpenPGPUnexpireRefreshTest, self).setUp()
+
+    def tearDown(self):
+        self.env.close()
+        super(OpenPGPUnexpireRefreshTest, self).tearDown()
+
+    def test_refresh_keys(self):
+        try:
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                self.assertRaises(gemato.exceptions.OpenPGPExpiredKeyFailure,
+                        self.env.verify_file, f)
+
+            self.env.refresh_keys(allow_wkd=False,
+                                  keyserver=self.server_addr)
+
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                sig = self.env.verify_file(f)
+                self.assertEqual(sig.fingerprint, KEY_FINGERPRINT)
+                self.assertEqual(sig.timestamp, SIG_TIMESTAMP)
+                self.assertIsNone(sig.expire_timestamp)
+                self.assertEqual(sig.primary_key_fingerprint, KEY_FINGERPRINT)
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
+
+
+class OpenPGPForgedUnexpireRefreshTest(HKPServerTestCase):
+    """
+    Test that a forged signature can not be used to unexpire key.
+    """
+
+    SERVER_KEYS = {
+        KEY_FINGERPRINT: FORGED_UNEXPIRE_KEY,
+    }
+
+    def setUp(self):
+        self.env = gemato.openpgp.OpenPGPEnvironment()
+        try:
+            self.env.import_key(io.BytesIO(EXPIRED_PUBLIC_KEY))
+        except gemato.exceptions.OpenPGPRuntimeError as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            self.env.close()
+            raise unittest.SkipTest(str(e))
+        super(OpenPGPForgedUnexpireRefreshTest, self).setUp()
+
+    def tearDown(self):
+        self.env.close()
+        super(OpenPGPForgedUnexpireRefreshTest, self).tearDown()
+
+    def test_refresh_keys(self):
+        try:
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                self.assertRaises(gemato.exceptions.OpenPGPExpiredKeyFailure,
+                        self.env.verify_file, f)
+
+            self.env.refresh_keys(allow_wkd=False,
+                                  keyserver=self.server_addr)
+
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                self.assertRaises(gemato.exceptions.OpenPGPExpiredKeyFailure,
+                        self.env.verify_file, f)
+        except gemato.exceptions.OpenPGPNoImplementation as e:
+            raise unittest.SkipTest(str(e))
