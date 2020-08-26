@@ -78,7 +78,8 @@ through 3.7 and PyPy3.  gemato core depends only on standard Python
 library modules.
 
 Additionally, OpenPGP requires system install of GnuPG 2.2+
-and requests_ Python module.  Tests require responses_ for mocking.
+and requests_ Python module.  Tests require pytest_, and responses_
+for mocking.
 
 
 References and footnotes
@@ -87,4 +88,5 @@ References and footnotes
    (https://www.gentoo.org/glep/glep-0074.html)
 
 .. _requests: https://2.python-requests.org/en/master/
+.. _pytest: https://docs.pytest.org/en/stable/
 .. _responses: https://github.com/getsentry/responses
