@@ -442,14 +442,17 @@ def test_cli(tmp_path, caplog, manifest_var, key_var, expected):
     with open(tmp_path / 'metadata.xml', 'wb'):
         pass
 
-    eexit = 0 if expected is None else 1
-    assert eexit == gemato.cli.main(['gemato', 'verify',
-                                     '--openpgp-key',
-                                     str(tmp_path / '.key.bin'),
-                                     '--no-refresh-keys',
-                                     '--require-signed-manifest',
-                                     str(tmp_path)])
+    retval = gemato.cli.main(['gemato', 'verify',
+                              '--openpgp-key',
+                              str(tmp_path / '.key.bin'),
+                              '--no-refresh-keys',
+                              '--require-signed-manifest',
+                              str(tmp_path)])
+    if str(gemato.exceptions.OpenPGPNoImplementation('')) in caplog.text:
+        pytest.skip('OpenPGP implementation missing')
 
+    eexit = 0 if expected is None else 1
+    assert retval == eexit
     if expected is not None:
         assert str(expected('')) in caplog.text
 
