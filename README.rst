@@ -77,9 +77,13 @@ of Python 3.6+. gemato is currently tested against CPython 3.6
 through 3.7 and PyPy3.  gemato core depends only on standard Python
 library modules.
 
-Additionally, OpenPGP requires system install of GnuPG 2.2+
-and requests_ Python module.  Tests require pytest_, and responses_
-for mocking.
+OpenPGP support can work in two modes.  It can either use user's GnuPG
+keyring or keys from a specific file.  In the former mode (used when
+``-K`` is not specified), GnuPG_ needs to be installed and the user's
+keyring must contain and trust the key used to create the signature.
+In the latter mode, PGPy_ and requests_ need to be installed.
+
+Tests require pytest_, and responses_ for mocking.
 
 
 References and footnotes
@@ -90,3 +94,5 @@ References and footnotes
 .. _requests: https://2.python-requests.org/en/master/
 .. _pytest: https://docs.pytest.org/en/stable/
 .. _responses: https://github.com/getsentry/responses
+.. _GnuPG: https://gnupg.org/
+.. _PGPy: https://github.com/SecurityInnovation/PGPy

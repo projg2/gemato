@@ -198,8 +198,14 @@ class OpenPGPNoImplementation(GematoException):
     is available.
     """
 
+    __slots__ = ['detail']
+
+    def __init__(self, detail):
+        super().__init__(detail)
+        self.detail = detail
+
     def __str__(self):
-        return u"No supported OpenPGP implementation found (install gnupg)"
+        return "OpenPGP implementation not found: {}".format(self.detail)
 
 
 class ManifestInvalidPath(GematoException):
