@@ -10,10 +10,21 @@ import os
 import pytest
 
 import gemato.cli
-import gemato.compression
-import gemato.manifest
-import gemato.openpgp
-import gemato.recursiveloader
+from gemato.compression import open_potentially_compressed_path
+from gemato.exceptions import (
+    ManifestUnsignedData,
+    ManifestSyntaxError,
+    OpenPGPNoImplementation,
+    OpenPGPVerificationFailure,
+    OpenPGPExpiredKeyFailure,
+    OpenPGPRevokedKeyFailure,
+    OpenPGPKeyImportError,
+    OpenPGPKeyRefreshError,
+    OpenPGPRuntimeError,
+    )
+from gemato.manifest import ManifestFile
+from gemato.openpgp import OpenPGPEnvironment
+from gemato.recursiveloader import ManifestRecursiveLoader
 
 from tests.keydata import (
     PUBLIC_KEY, SECRET_KEY, PUBLIC_SUBKEY,
@@ -62,11 +73,15 @@ SIGNED_MANIFEST = u'''
 Hash: SHA256
 
 TIMESTAMP 2017-10-22T18:06:41Z
-MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
-DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 -----BEGIN PGP SIGNATURE-----
 
 iQEzBAEBCAAdFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAloCx+YACgkQE2iA5yp7
@@ -85,11 +100,15 @@ DASH_ESCAPED_SIGNED_MANIFEST = u'''
 Hash: SHA256
 
 - TIMESTAMP 2017-10-22T18:06:41Z
-- MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+- MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
-- DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-- DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+- DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+- DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 -----BEGIN PGP SIGNATURE-----
 
 iQEzBAEBCAAdFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAloCx+YACgkQE2iA5yp7
@@ -108,11 +127,14 @@ MODIFIED_SIGNED_MANIFEST = u'''
 Hash: SHA256
 
 TIMESTAMP 2017-10-22T18:06:41Z
-MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
 DATA myebuild-0.ebuild 32
-MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 -----BEGIN PGP SIGNATURE-----
 
 iQEzBAEBCAAdFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAloCx+YACgkQE2iA5yp7
@@ -131,11 +153,15 @@ EXPIRED_SIGNED_MANIFEST = u'''
 Hash: SHA256
 
 TIMESTAMP 2017-10-22T18:06:41Z
-MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
-DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 -----BEGIN PGP SIGNATURE-----
 
 iQE5BAEBCAAjFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAlnxCXcFgwABUYAACgkQ
@@ -166,11 +192,15 @@ SUBKEY_SIGNED_MANIFEST = u'''
 Hash: SHA256
 
 TIMESTAMP 2017-10-22T18:06:41Z
-MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
-DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 -----BEGIN PGP SIGNATURE-----
 
 iLMEAQEIAB0WIQR+nd48vkfkN0GN90A4udL3bMgzzAUCX0UGrAAKCRA4udL3bMgz
@@ -219,7 +249,7 @@ MANIFESTS_BAD_SIG = [
                          MANIFESTS_GOOD_SIG + MANIFESTS_BAD_SIG)
 def test_noverify_goodish_manifest_load(manifest_var):
     """Test Manifest files that should succeed (OpenPGP disabled)"""
-    m = gemato.manifest.ManifestFile()
+    m = ManifestFile()
     with io.StringIO(globals()[manifest_var]) as f:
         m.load(f, verify_openpgp=False)
     assert m.find_timestamp() is not None
@@ -240,19 +270,19 @@ SIGNED_MANIFEST_CUT_BEFORE_END = '\n'.join(
 
 @pytest.mark.parametrize('manifest_var,expected',
                          [('SIGNED_MANIFEST_JUNK_BEFORE',
-                           gemato.exceptions.ManifestUnsignedData),
+                           ManifestUnsignedData),
                           ('SIGNED_MANIFEST_JUNK_AFTER',
-                           gemato.exceptions.ManifestUnsignedData),
+                           ManifestUnsignedData),
                           ('SIGNED_MANIFEST_CUT_BEFORE_DATA',
-                           gemato.exceptions.ManifestSyntaxError),
+                           ManifestSyntaxError),
                           ('SIGNED_MANIFEST_CUT_BEFORE_SIGNATURE',
-                           gemato.exceptions.ManifestSyntaxError),
+                           ManifestSyntaxError),
                           ('SIGNED_MANIFEST_CUT_BEFORE_END',
-                           gemato.exceptions.ManifestSyntaxError),
+                           ManifestSyntaxError),
                           ])
 def test_noverify_bad_manifest_load(manifest_var, expected):
     """Test Manifest files that should fail"""
-    m = gemato.manifest.ManifestFile()
+    m = ManifestFile()
     with io.StringIO(globals()[manifest_var]) as f:
         with pytest.raises(expected):
             m.load(f, verify_openpgp=False)
@@ -264,9 +294,8 @@ def test_noverify_recursive_manifest_loader(tmp_path, write_back):
     with open(tmp_path / 'Manifest', 'w') as f:
         f.write(MODIFIED_SIGNED_MANIFEST)
 
-    m = gemato.recursiveloader.ManifestRecursiveLoader(
-            tmp_path / 'Manifest',
-            verify_openpgp=False)
+    m = ManifestRecursiveLoader(tmp_path / 'Manifest',
+                                verify_openpgp=False)
     assert not m.openpgp_signed
     assert m.openpgp_signature is None
 
@@ -295,7 +324,7 @@ def test_noverify_load_cli(tmp_path):
 @pytest.fixture
 def openpgp_env():
     """OpenPGP environment fixture"""
-    env = gemato.openpgp.OpenPGPEnvironment()
+    env = OpenPGPEnvironment()
     yield env
     env.close()
 
@@ -305,7 +334,7 @@ def openpgp_env_valid_key(openpgp_env):
     """OpenPGP environment with good key loaded"""
     try:
         openpgp_env.import_key(io.BytesIO(VALID_PUBLIC_KEY))
-    except gemato.exceptions.OpenPGPNoImplementation as e:
+    except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
     yield openpgp_env
 
@@ -320,16 +349,16 @@ MANIFEST_VARIANTS = [
     ('SIGNED_MANIFEST', 'PRIVATE_KEY', None),
     # == bad manifests ==
     ('MODIFIED_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY',
-     gemato.exceptions.OpenPGPVerificationFailure),
+     OpenPGPVerificationFailure),
     ('EXPIRED_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY',
-     gemato.exceptions.OpenPGPVerificationFailure),
+     OpenPGPVerificationFailure),
     # == bad keys ==
     ('SIGNED_MANIFEST', None,
-     gemato.exceptions.OpenPGPVerificationFailure),
+     OpenPGPVerificationFailure),
     ('SIGNED_MANIFEST', 'EXPIRED_PUBLIC_KEY',
-     gemato.exceptions.OpenPGPExpiredKeyFailure),
+     OpenPGPExpiredKeyFailure),
     ('SIGNED_MANIFEST', 'REVOKED_PUBLIC_KEY',
-     gemato.exceptions.OpenPGPRevokedKeyFailure),
+     OpenPGPRevokedKeyFailure),
 ]
 
 
@@ -363,7 +392,7 @@ def test_verify_manifest(openpgp_env, manifest_var, key_var, expected):
             else:
                 with pytest.raises(expected):
                     openpgp_env.verify_file(f)
-    except gemato.exceptions.OpenPGPNoImplementation as e:
+    except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
 
@@ -376,7 +405,7 @@ def test_manifest_load(openpgp_env, manifest_var, key_var, expected):
             with io.BytesIO(globals()[key_var]) as f:
                 openpgp_env.import_key(f)
 
-        m = gemato.manifest.ManifestFile()
+        m = ManifestFile()
         with io.StringIO(globals()[manifest_var]) as f:
             if expected is None:
                 m.load(f, openpgp_env=openpgp_env)
@@ -391,7 +420,7 @@ def test_manifest_load(openpgp_env, manifest_var, key_var, expected):
         # Manifest entries should be loaded even if verification failed
         assert m.find_timestamp() is not None
         assert m.find_path_entry('myebuild-0.ebuild') is not None
-    except gemato.exceptions.OpenPGPNoImplementation as e:
+    except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
 
@@ -406,24 +435,21 @@ def test_recursive_manifest_loader(tmp_path, openpgp_env, filename,
             with io.BytesIO(globals()[key_var]) as f:
                 openpgp_env.import_key(f)
 
-        with gemato.compression.open_potentially_compressed_path(
-                tmp_path / filename, 'w') as cf:
+        with open_potentially_compressed_path(tmp_path / filename, 'w') as cf:
             cf.write(globals()[manifest_var])
 
         if expected is None:
-            m = gemato.recursiveloader.ManifestRecursiveLoader(
-                tmp_path / filename,
-                verify_openpgp=True,
-                openpgp_env=openpgp_env)
+            m = ManifestRecursiveLoader(tmp_path / filename,
+                                        verify_openpgp=True,
+                                        openpgp_env=openpgp_env)
             assert m.openpgp_signed
             assert_signature(m.openpgp_signature, manifest_var)
         else:
             with pytest.raises(expected):
-                gemato.recursiveloader.ManifestRecursiveLoader(
-                    tmp_path / filename,
-                    verify_openpgp=True,
-                    openpgp_env=openpgp_env)
-    except gemato.exceptions.OpenPGPNoImplementation as e:
+                ManifestRecursiveLoader(tmp_path / filename,
+                                        verify_openpgp=True,
+                                        openpgp_env=openpgp_env)
+    except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
 
@@ -451,7 +477,7 @@ def test_cli(tmp_path, caplog, manifest_var, key_var, expected):
                               '--no-refresh-keys',
                               '--require-signed-manifest',
                               str(tmp_path)])
-    if str(gemato.exceptions.OpenPGPNoImplementation('')) in caplog.text:
+    if str(OpenPGPNoImplementation('')) in caplog.text:
         pytest.skip('OpenPGP implementation missing')
 
     eexit = 0 if expected is None else 1
@@ -474,21 +500,21 @@ def test_env_import_key(openpgp_env, key_var, success):
         if success:
             openpgp_env.import_key(io.BytesIO(globals()[key_var]))
         else:
-            with pytest.raises(gemato.exceptions.OpenPGPKeyImportError):
+            with pytest.raises(OpenPGPKeyImportError):
                 openpgp_env.import_key(io.BytesIO(globals()[key_var]))
-    except gemato.exceptions.OpenPGPNoImplementation as e:
+    except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
 
 def test_env_double_close():
     """Test that env can be closed multiple times"""
-    with gemato.openpgp.OpenPGPEnvironment() as env:
+    with OpenPGPEnvironment() as env:
         env.close()
 
 
 def test_env_home_after_close():
     """Test that .home can not be referenced after closing"""
-    with gemato.openpgp.OpenPGPEnvironment() as env:
+    with OpenPGPEnvironment() as env:
         env.close()
         with pytest.raises(AssertionError):
             env.home
@@ -499,7 +525,7 @@ def privkey_env(openpgp_env):
     """Environment with private key loaded"""
     try:
         openpgp_env.import_key(io.BytesIO(PRIVATE_KEY))
-    except gemato.exceptions.OpenPGPNoImplementation as e:
+    except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
     return openpgp_env
 
@@ -521,7 +547,7 @@ def test_sign_data(privkey_env, keyid):
 @pytest.mark.parametrize('sign', [None, False, True])
 def test_dump_signed_manifest(privkey_env, keyid, sign):
     """Test dumping a signed Manifest"""
-    m = gemato.manifest.ManifestFile()
+    m = ManifestFile()
     verify = True if sign is None else False
     with io.StringIO(SIGNED_MANIFEST) as f:
         m.load(f, verify_openpgp=verify, openpgp_env=privkey_env)
@@ -545,22 +571,19 @@ def test_dump_signed_manifest(privkey_env, keyid, sign):
 def test_recursive_manifest_loader_save_manifest(tmp_path, privkey_env,
                                                  filename, sign):
     """Test signing Manifests via ManifestRecursiveLoader"""
-    with gemato.compression.open_potentially_compressed_path(
-            tmp_path / filename, 'w') as cf:
+    with open_potentially_compressed_path(tmp_path / filename, 'w') as cf:
         cf.write(SIGNED_MANIFEST)
 
     verify = not sign
-    m = gemato.recursiveloader.ManifestRecursiveLoader(
-        tmp_path / filename,
-        verify_openpgp=verify,
-        sign_openpgp=sign,
-        openpgp_env=privkey_env)
+    m = ManifestRecursiveLoader(tmp_path / filename,
+                                verify_openpgp=verify,
+                                sign_openpgp=sign,
+                                openpgp_env=privkey_env)
     assert m.openpgp_signed == verify
 
     m.save_manifest(filename)
-    m2 = gemato.manifest.ManifestFile()
-    with gemato.compression.open_potentially_compressed_path(
-            tmp_path / filename, 'r') as cf:
+    m2 = ManifestFile()
+    with open_potentially_compressed_path(tmp_path / filename, 'r') as cf:
         m2.load(cf, openpgp_env=privkey_env)
     assert m2.openpgp_signed
     assert m2.openpgp_signature is not None
@@ -574,18 +597,17 @@ def test_recursive_manifest_loader_save_submanifest(tmp_path, privkey_env):
     with open(tmp_path / 'eclass' / 'Manifest', 'w'):
         pass
 
-    m = gemato.recursiveloader.ManifestRecursiveLoader(
-        tmp_path / 'Manifest',
-        verify_openpgp=False,
-        sign_openpgp=True,
-        openpgp_env=privkey_env)
+    m = ManifestRecursiveLoader(tmp_path / 'Manifest',
+                                verify_openpgp=False,
+                                sign_openpgp=True,
+                                openpgp_env=privkey_env)
     assert not m.openpgp_signed
     assert m.openpgp_signature is None
 
     m.load_manifest('eclass/Manifest')
     m.save_manifest('eclass/Manifest')
 
-    m2 = gemato.manifest.ManifestFile()
+    m2 = ManifestFile()
     with open(tmp_path / 'eclass' / 'Manifest', 'r') as f:
         m2.load(f, openpgp_env=privkey_env)
     assert not m2.openpgp_signed
@@ -600,31 +622,31 @@ REFRESH_VARIANTS = [
     ('SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
      'VALID_PUBLIC_KEY', None),
     ('SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
-     'REVOKED_PUBLIC_KEY', gemato.exceptions.OpenPGPRevokedKeyFailure),
+     'REVOKED_PUBLIC_KEY', OpenPGPRevokedKeyFailure),
     # test fetching subkey for primary key
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
      'VALID_KEY_SUBKEY', None),
     # refresh should fail if key is not on server
     ('SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', None, None,
-     gemato.exceptions.OpenPGPKeyRefreshError),
+     OpenPGPKeyRefreshError),
     # unrevocation should not be possible
     ('SIGNED_MANIFEST', 'REVOKED_PUBLIC_KEY', KEY_FINGERPRINT,
-     'VALID_PUBLIC_KEY', gemato.exceptions.OpenPGPRevokedKeyFailure),
+     'VALID_PUBLIC_KEY', OpenPGPRevokedKeyFailure),
     # unexpiration should be possible
     ('SIGNED_MANIFEST', 'EXPIRED_PUBLIC_KEY', KEY_FINGERPRINT,
      'UNEXPIRE_PUBLIC_KEY', None),
     # make sure server can't malicously inject or replace key
     ('SIGNED_MANIFEST', 'OTHER_VALID_PUBLIC_KEY', OTHER_KEY_FINGERPRINT,
-     'VALID_PUBLIC_KEY', gemato.exceptions.OpenPGPKeyRefreshError),
+     'VALID_PUBLIC_KEY', OpenPGPKeyRefreshError),
     ('SIGNED_MANIFEST', 'OTHER_VALID_PUBLIC_KEY', OTHER_KEY_FINGERPRINT,
-     'COMBINED_PUBLIC_KEYS', gemato.exceptions.OpenPGPRuntimeError),
+     'COMBINED_PUBLIC_KEYS', OpenPGPRuntimeError),
     # test that forged keys are rejected
     ('SIGNED_MANIFEST', 'EXPIRED_PUBLIC_KEY', KEY_FINGERPRINT,
-     'FORGED_UNEXPIRE_KEY', gemato.exceptions.OpenPGPExpiredKeyFailure),
+     'FORGED_UNEXPIRE_KEY', OpenPGPExpiredKeyFailure),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
-     'FORGED_SUBKEY', gemato.exceptions.OpenPGPVerificationFailure),
+     'FORGED_SUBKEY', OpenPGPVerificationFailure),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
-     'UNSIGNED_SUBKEY', gemato.exceptions.OpenPGPVerificationFailure),
+     'UNSIGNED_SUBKEY', OpenPGPVerificationFailure),
 ]
 
 
@@ -652,8 +674,8 @@ def test_refresh_hkp(openpgp_env, hkp_server, manifest_var, key_var,
                 openpgp_env.refresh_keys(allow_wkd=False,
                                          keyserver=hkp_server.addr)
                 with io.StringIO(globals()[manifest_var]) as f:
-                        openpgp_env.verify_file(f)
-    except gemato.exceptions.OpenPGPNoImplementation as e:
+                    openpgp_env.verify_file(f)
+    except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
 
@@ -696,8 +718,8 @@ def test_refresh_wkd(openpgp_env, manifest_var, key_var, server_key_fpr,
                     openpgp_env.refresh_keys(allow_wkd=True,
                                              keyserver='hkps://block.invalid/')
                     with io.StringIO(globals()[manifest_var]) as f:
-                            openpgp_env.verify_file(f)
-        except gemato.exceptions.OpenPGPNoImplementation as e:
+                        openpgp_env.verify_file(f)
+        except OpenPGPNoImplementation as e:
             pytest.skip(str(e))
 
 
@@ -715,10 +737,10 @@ def test_refresh_wkd_fallback_to_hkp(openpgp_env_valid_key, hkp_server):
             openpgp_env_valid_key.refresh_keys(allow_wkd=True,
                                                keyserver=hkp_server.addr)
 
-            with pytest.raises(gemato.exceptions.OpenPGPRevokedKeyFailure):
+            with pytest.raises(OpenPGPRevokedKeyFailure):
                 with io.StringIO(SIGNED_MANIFEST) as f:
-                        openpgp_env_valid_key.verify_file(f)
-        except gemato.exceptions.OpenPGPNoImplementation as e:
+                    openpgp_env_valid_key.verify_file(f)
+        except OpenPGPNoImplementation as e:
             pytest.skip(str(e))
 
 
@@ -732,5 +754,4 @@ def test_refresh_wkd_fallback_to_hkp(openpgp_env_valid_key, hkp_server):
       'iy9q119eutrkn8s1mk4r39qejnbu3n5q?l=Joe.Doe'),
      ])
 def test_get_wkd_url(email, expected):
-    assert (gemato.openpgp.OpenPGPEnvironment.get_wkd_url(email) ==
-            expected)
+    assert OpenPGPEnvironment.get_wkd_url(email) == expected

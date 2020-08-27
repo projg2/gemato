@@ -8,7 +8,12 @@ import io
 
 import pytest
 
-import gemato.compression
+from gemato.compression import (
+    open_compressed_file,
+    open_potentially_compressed_path,
+    get_potential_compressed_names,
+    get_compressed_suffix_from_filename,
+    )
 
 
 TEST_STRING = b'The quick brown fox jumps over the lazy dog'
@@ -74,19 +79,19 @@ IG92ZXIgdGhlIGxhenkgZG9nAADjZCTmHjHqggABLxeBCEmxH7bzfQEAAAAABFla
 def test_decompress(suffix, data_group):
     data = COMPRESSION_DATA[data_group]
     with io.BytesIO(base64.b64decode(data[suffix])) as f:
-        with gemato.compression.open_compressed_file(suffix, f, "rb") as z:
+        with open_compressed_file(suffix, f, "rb") as z:
             assert z.read() == data[None]
 
 
 @pytest.mark.parametrize('suffix', COMPRESSION_ALGOS)
 def test_round_trip(suffix):
     with io.BytesIO() as f:
-        with gemato.compression.open_compressed_file(suffix, f, 'wb') as z:
+        with open_compressed_file(suffix, f, 'wb') as z:
             z.write(TEST_STRING)
 
         f.seek(0)
 
-        with gemato.compression.open_compressed_file(suffix, f, 'rb') as z:
+        with open_compressed_file(suffix, f, 'rb') as z:
             assert z.read() == TEST_STRING
 
 
@@ -101,30 +106,28 @@ def test_open_potentially_compressed_path(test_file, data_group):
     with open(test_file, 'wb') as wf:
         wf.write(base64.b64decode(COMPRESSION_DATA[data_group][suffix]))
 
-    with gemato.compression.open_potentially_compressed_path(
-            test_file, 'rb') as cf:
+    with open_potentially_compressed_path(test_file, 'rb') as cf:
         assert cf.read() == COMPRESSION_DATA[data_group][None]
 
 
 def test_open_potentially_compressed_path_write(test_file):
-    with gemato.compression.open_potentially_compressed_path(
-            test_file, 'wb') as cf:
+    with open_potentially_compressed_path(test_file, 'wb') as cf:
         cf.write(TEST_STRING)
 
     suffix = test_file.suffix.lstrip('.')
     with open(test_file, 'rb') as rf:
-        with gemato.compression.open_compressed_file(suffix, rf, 'rb') as z:
+        with open_compressed_file(suffix, rf, 'rb') as z:
             assert z.read() == TEST_STRING
 
 
 def test_open_potentially_compressed_path_with_encoding(test_file):
     suffix = test_file.suffix.lstrip('.')
     with open(test_file, 'wb') as wf:
-        with gemato.compression.open_compressed_file(suffix, wf, 'wb') as z:
+        with open_compressed_file(suffix, wf, 'wb') as z:
             z.write(UTF16_TEST_STRING)
 
-    with gemato.compression.open_potentially_compressed_path(
-            test_file, 'r', encoding='utf_16_be') as cf:
+    with open_potentially_compressed_path(test_file, 'r',
+                                          encoding='utf_16_be') as cf:
         assert cf.read() == TEST_STRING.decode('utf8')
 
 
@@ -137,36 +140,35 @@ def test_open_potentially_compressed_path_write_with_unicode(
     kwargs = {}
     if encoding is not None:
         kwargs['encoding'] = encoding
-    with gemato.compression.open_potentially_compressed_path(
-            test_file, 'w', **kwargs) as cf:
+    with open_potentially_compressed_path(test_file, 'w', **kwargs) as cf:
         cf.write(TEST_STRING.decode('utf8'))
 
     suffix = test_file.suffix.lstrip('.')
     with open(test_file, 'rb') as rf:
-        with gemato.compression.open_compressed_file(suffix, rf, 'rb') as z:
+        with open_compressed_file(suffix, rf, 'rb') as z:
             assert z.read() == globals()[out_var]
 
 
 def test_open_potentially_compressed_path_with_encoding_line_api(test_file):
     suffix = test_file.suffix.lstrip('.')
     with open(test_file, 'wb') as wf:
-        with gemato.compression.open_compressed_file(suffix, wf, 'wb') as z:
+        with open_compressed_file(suffix, wf, 'wb') as z:
             z.write(UTF16_TEST_STRING)
 
-    with gemato.compression.open_potentially_compressed_path(
-            test_file, 'r', encoding='utf_16_be') as cf:
+    with open_potentially_compressed_path(test_file, 'r',
+                                          encoding='utf_16_be') as cf:
         assert [x for x in cf] == [TEST_STRING.decode('utf8')]
 
 
 def test_open_potentially_compressed_path_fileno_passthrough(test_file):
-    fs1 = gemato.compression.open_potentially_compressed_path(
-            test_file, 'w', encoding='utf_16_be')
+    fs1 = open_potentially_compressed_path(test_file, 'w',
+                                           encoding='utf_16_be')
     with fs1 as cf:
         assert ([f.fileno() for f in fs1.files] ==
                 [cf.fileno() for f in fs1.files])
 
-    fs2 = gemato.compression.open_potentially_compressed_path(
-            test_file, 'r', encoding='utf_16_be')
+    fs2 = open_potentially_compressed_path(test_file, 'r',
+                                           encoding='utf_16_be')
     with fs2 as cf:
         assert ([f.fileno() for f in fs2.files] ==
                 [cf.fileno() for f in fs2.files])
@@ -174,13 +176,11 @@ def test_open_potentially_compressed_path_fileno_passthrough(test_file):
 
 def test_get_potential_compressed_names():
     assert (
-        frozenset(
-            gemato.compression .get_potential_compressed_names('test')) ==
+        frozenset(get_potential_compressed_names('test')) ==
         frozenset(['test'] + [f'test.{sfx}' for sfx in COMPRESSION_ALGOS]))
 
 
 @pytest.mark.parametrize('suffix', COMPRESSION_ALGOS)
 def test_get_compressed_suffix_from_filename(suffix):
     assert (
-        gemato.compression.get_compressed_suffix_from_filename(
-            f'test.{suffix}') == suffix)
+        get_compressed_suffix_from_filename(f'test.{suffix}') == suffix)
