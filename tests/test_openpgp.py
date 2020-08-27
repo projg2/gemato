@@ -193,6 +193,9 @@ FORGED_SUBKEY = (PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY +
 FORGED_UNEXPIRE_KEY = (PUBLIC_KEY + EXPIRED_KEY_UID + EXPIRED_KEY_SIG +
                        break_sig(UNEXPIRE_SIG))
 
+UNSIGNED_PUBLIC_KEY = PUBLIC_KEY + UID
+UNSIGNED_SUBKEY = PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY
+
 
 def strip_openpgp(text):
     lines = text.lstrip().splitlines()
@@ -463,7 +466,8 @@ EMPTY_DATA = b''
 @pytest.mark.parametrize('key_var,success', [('VALID_PUBLIC_KEY', True),
                                              ('MALFORMED_PUBLIC_KEY', False),
                                              ('EMPTY_DATA', False),
-                                             ('FORGED_PUBLIC_KEY', False)])
+                                             ('FORGED_PUBLIC_KEY', False),
+                                             ('UNSIGNED_PUBLIC_KEY', False)])
 def test_env_import_key(openpgp_env, key_var, success):
     """Test importing valid and invalid keys"""
     try:
@@ -619,6 +623,8 @@ REFRESH_VARIANTS = [
      'FORGED_UNEXPIRE_KEY', gemato.exceptions.OpenPGPExpiredKeyFailure),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
      'FORGED_SUBKEY', gemato.exceptions.OpenPGPVerificationFailure),
+    ('SUBKEY_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
+     'UNSIGNED_SUBKEY', gemato.exceptions.OpenPGPVerificationFailure),
 ]
 
 
