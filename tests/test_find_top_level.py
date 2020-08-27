@@ -1,274 +1,132 @@
 # gemato: Top-level Manifest finding tests
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import gzip
 import os
 import os.path
-import unittest
 
-import gemato.find_top_level
+import pytest
 
-from tests.testutil import TempDirTestCase
-
-
-class TestCurrentDirectory(TempDirTestCase):
-    """
-    Test for finding top-level Manifest in a plain tree.
-    """
-
-    DIRS = ['suba', 'subb', 'subc', 'subc/sub']
-    FILES = {
-        'Manifest': u'',
-        'subb/Manifest': u'',
-        'subc/sub/Manifest': u'',
-    }
-
-    def test_find_top_level_manifest(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(self.dir),
-                    self.dir),
-                'Manifest')
-
-    def test_find_top_level_manifest_from_empty_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'suba')),
-                    self.dir),
-                'Manifest')
-
-    def test_find_top_level_manifest_from_manifest_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subb')),
-                    self.dir),
-                'Manifest')
-
-    def test_find_top_level_manifest_from_deep_manifest_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subc', 'sub')),
-                    self.dir),
-                'Manifest')
+from gemato.find_top_level import find_top_level_manifest
 
 
-class TestUnreadableManifest(TempDirTestCase):
-    """
-    Test whether the function fails correctly when it can not read
-    a Manifest file.
-    """
-
-    FILES = {
-        'Manifest': u'',
-    }
-
-    def setUp(self):
-        super(TestUnreadableManifest, self).setUp()
-        os.chmod(os.path.join(self.dir, 'Manifest'), 0)
-
-    def test_find_top_level_manifest(self):
-        self.assertRaises(IOError,
-                gemato.find_top_level.find_top_level_manifest, self.dir)
-
-
-class TestIgnoredSubdir(TempDirTestCase):
-    """
-    Test for ignoring irrelevant Manifest.
-    """
-
-    DIRS = ['sub', 'sub/sub', 'subb', 'subempty']
-    FILES = {
-        'Manifest': u'''
-IGNORE sub
-IGNORE subempty
-''',
-        'sub/Manifest': u'',
-    }
-
-    def test_find_top_level_manifest(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(self.dir),
-                    self.dir),
-                'Manifest')
-
-    def test_find_top_level_manifest_from_ignored_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'sub')),
-                    self.dir),
-                'sub/Manifest')
-
-    def test_find_top_level_manifest_from_sub_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'sub/sub')),
-                    self.dir),
-                'sub/Manifest')
-
-    def test_find_top_level_manifest_from_non_ignored_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subb')),
-                    self.dir),
-                'Manifest')
-
-    def test_find_top_level_manifest_from_ignored_empty_subdir(self):
-        self.assertIsNone(
-                gemato.find_top_level.find_top_level_manifest(
-                    os.path.join(self.dir, 'subempty')))
-
-
-class TestEmptyTree(TempDirTestCase):
-    """
-    Test for finding top-level Manifest in a tree without a Manifest
-    """
-
-    def test_find_top_level_manifest(self):
-        self.assertIsNone(
-                gemato.find_top_level.find_top_level_manifest(self.dir))
-
-
-class TestRootDirectory(unittest.TestCase):
-    """
-    Test behavior when run on the system root directory.
-    """
-
-    def test_find_top_level_manifest(self):
-        if os.path.exists('/Manifest'):
-            raise unittest.SkipTest('/Manifest is present')
-        self.assertIsNone(
-                gemato.find_top_level.find_top_level_manifest('/'))
-
-
-class TestCrossDevice(TempDirTestCase):
-    """
-    Test behavior when attempting to cross device boundary.
-    """
-
-    FILES = {
-        'Manifest': u'',
-    }
-
-    def setUp(self):
-        if not os.path.ismount('/proc'):
-            raise unittest.SkipTest('/proc is not a mountpoint')
-        super(TestCrossDevice, self).setUp()
-        os.symlink('/proc', os.path.join(self.dir, 'test'))
-
-    def test_find_top_level_manifest(self):
-        self.assertIsNone(
-                gemato.find_top_level.find_top_level_manifest(
-                    os.path.join(self.dir, 'test')))
-
-
-class TestCompressedManifest(TempDirTestCase):
-    """
-    Test for finding compressed Manifest in a plain tree.
-    """
-
-    DIRS = ['suba', 'subb', 'subc', 'subc/sub']
-    FILES = {
-        'subb/Manifest': u'',
-    }
-
-    def setUp(self):
-        super(TestCompressedManifest, self).setUp()
-        with gzip.GzipFile(os.path.join(self.dir, 'Manifest.gz'), 'wb'):
+@pytest.fixture
+def plain_tree(tmp_path):
+    for d in ('empty-subdir',
+              'manifest-subdir',
+              'deep/manifest-subdir',
+              'ignored-dir',
+              'ignored-dir/subdir',
+              'ignored-dir-not',
+              'ignored-empty-dir'):
+        os.makedirs(tmp_path / d)
+    with open(tmp_path / 'Manifest', 'w') as f:
+        f.write('''
+IGNORE ignored-dir
+IGNORE ignored-empty-dir
+''')
+    for f in ('manifest-subdir/Manifest',
+              'deep/manifest-subdir/Manifest',
+              'ignored-dir/Manifest'):
+        with open(tmp_path / f, 'w'):
             pass
-        with gzip.GzipFile(os.path.join(self.dir, 'subc/sub/Manifest.gz'), 'wb'):
+    yield tmp_path
+
+
+@pytest.mark.parametrize(
+    'start_dir,expected',
+    [('.', 'Manifest'),
+     ('empty-subdir', 'Manifest'),
+     ('manifest-subdir', 'Manifest'),
+     ('deep/manifest-subdir', 'Manifest'),
+     ('ignored-dir', 'ignored-dir/Manifest'),
+     ('ignored-dir/subdir', 'ignored-dir/Manifest'),
+     ('ignored-dir-not', 'Manifest'),
+     ('ignored-empty-dir', None),
+     ])
+def test_find_top_level_manifest(plain_tree, start_dir, expected):
+    """Test finding top-level Manifest from plain directory tree"""
+    mpath = find_top_level_manifest(plain_tree / start_dir)
+    if mpath is not None:
+        mpath = os.path.relpath(mpath, plain_tree)
+    assert mpath == expected
+
+
+def test_unreadable_manifest(tmp_path):
+    """Test failure when one of Manifest files is not readable"""
+    with open(tmp_path / 'Manifest', 'w') as f:
+        os.fchmod(f.fileno(), 0)
+    with pytest.raises(IOError):
+        find_top_level_manifest(tmp_path)
+
+
+def test_empty_tree(tmp_path):
+    """Test working on empty tree without a Manifest file"""
+    assert find_top_level_manifest(tmp_path) is None
+
+
+def test_root_directory(tmp_path):
+    """Test that things do not explode when running on /"""
+    if os.path.exists('/Manifest'):
+        pytest.skip('Manifest is present in system root ("/")')
+    assert find_top_level_manifest('/') is None
+
+
+def test_cross_device(tmp_path):
+    """Test that device boundaries are not crossed"""
+    if not os.path.ismount('/proc'):
+        pytest.skip('/proc is not a mount point')
+    with open(tmp_path / 'Manifest', 'w'):
+        pass
+    os.symlink('/proc', tmp_path / 'test')
+    assert find_top_level_manifest(tmp_path / 'test') is None
+
+
+@pytest.fixture
+def compressed_manifest_tree(tmp_path):
+    for d in ('empty-subdir',
+              'manifest-subdir',
+              'deep/manifest-subdir',
+              'ignored-dir',
+              'ignored-dir/subdir',
+              'ignored-dir-not',
+              'ignored-empty-dir'):
+        os.makedirs(tmp_path / d)
+    with gzip.GzipFile(tmp_path / 'Manifest.gz', 'wb') as f:
+        f.write(b'''
+IGNORE ignored-dir
+IGNORE ignored-empty-dir
+''')
+    with open(tmp_path / 'manifest-subdir/Manifest', 'wb'):
+        pass
+    for f in ('deep/manifest-subdir/Manifest.gz',
+              'ignored-dir/Manifest.gz'):
+        with gzip.GzipFile(tmp_path / f, 'w'):
             pass
-
-    def test_find_top_level_manifest_no_allow_compressed(self):
-        self.assertIsNone(
-                gemato.find_top_level.find_top_level_manifest(self.dir))
-
-    def test_find_top_level_manifest(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        self.dir, allow_compressed=True),
-                    self.dir),
-                'Manifest.gz')
-
-    def test_find_top_level_manifest_from_empty_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'suba'),
-                        allow_compressed=True),
-                    self.dir),
-                'Manifest.gz')
-
-    def test_find_top_level_manifest_from_manifest_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subb'),
-                        allow_compressed=True),
-                    self.dir),
-                'Manifest.gz')
-
-    def test_find_top_level_manifest_from_deep_manifest_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subc', 'sub'),
-                        allow_compressed=True),
-                    self.dir),
-                'Manifest.gz')
+    yield tmp_path
 
 
-class TestCompressedManifestWithIgnore(TempDirTestCase):
-    DIRS = ['suba', 'subb', 'subc', 'subc/sub']
-    FILES = {
-        'subb/Manifest': u'',
-    }
-
-    def setUp(self):
-        super(TestCompressedManifestWithIgnore, self).setUp()
-        with gzip.GzipFile(os.path.join(self.dir, 'Manifest.gz'), 'wb') as f:
-            f.write(b'IGNORE suba\n')
-            f.write(b'IGNORE subc\n')
-        with gzip.GzipFile(os.path.join(self.dir, 'subc/sub/Manifest.gz'), 'wb'):
-            pass
-
-    def test_find_top_level_manifest(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        self.dir, allow_compressed=True),
-                    self.dir),
-                'Manifest.gz')
-
-    def test_find_top_level_manifest_from_ignored_empty_subdir(self):
-        self.assertIsNone(
-                gemato.find_top_level.find_top_level_manifest(
-                    os.path.join(self.dir, 'suba'),
-                    allow_compressed=True))
-
-    def test_find_top_level_manifest_from_manifest_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subb'),
-                        allow_compressed=True),
-                    self.dir),
-                'Manifest.gz')
-
-    def test_find_top_level_manifest_from_deep_ignored_subdir(self):
-        self.assertEqual(
-                os.path.relpath(
-                    gemato.find_top_level.find_top_level_manifest(
-                        os.path.join(self.dir, 'subc', 'sub'),
-                        allow_compressed=True),
-                    self.dir),
-                'subc/sub/Manifest.gz')
+@pytest.mark.parametrize(
+    'start_dir,allow_compressed,expected',
+    [('.', False, None),
+     ('.', True, 'Manifest.gz'),
+     ('empty-subdir', True, 'Manifest.gz'),
+     ('manifest-subdir', True, 'Manifest.gz'),
+     ('deep/manifest-subdir', True, 'Manifest.gz'),
+     ('ignored-dir', True, 'ignored-dir/Manifest.gz'),
+     ('ignored-dir/subdir', True, 'ignored-dir/Manifest.gz'),
+     ('ignored-dir-not', True, 'Manifest.gz'),
+     ('ignored-empty-dir', True, None),
+     ])
+def test_find_compressed_top_level_manifest(compressed_manifest_tree,
+                                            start_dir,
+                                            allow_compressed,
+                                            expected):
+    """Test finding compressed top-level Manifest """
+    mpath = find_top_level_manifest(compressed_manifest_tree / start_dir,
+                                    allow_compressed=allow_compressed)
+    if mpath is not None:
+        mpath = os.path.relpath(mpath, compressed_manifest_tree)
+    assert mpath == expected
