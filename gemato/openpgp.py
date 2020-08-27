@@ -289,8 +289,9 @@ debug-level guru
         keys were successfully found.  Otherwise, returns false.
         """
         if requests is None:
-            raise gemato.exceptions.OpenPGPKeyRefreshError(
-                'WKD updates require requests Python module')
+            logging.debug('refresh_keys_wkd(): failing because requests'
+                          'module is missing')
+            return False
 
         # list all keys in the keyring
         exitst, out, err = self._spawn_gpg(
