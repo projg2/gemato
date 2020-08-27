@@ -27,8 +27,7 @@ from gemato.openpgp import OpenPGPEnvironment
 from gemato.recursiveloader import ManifestRecursiveLoader
 
 from tests.keydata import (
-    PUBLIC_KEY, SECRET_KEY, PUBLIC_SUBKEY,
-    UID, EXPIRED_KEY_UID,
+    PUBLIC_KEY, SECRET_KEY, PUBLIC_SUBKEY, UID,
     PUBLIC_KEY_SIG, PUBLIC_SUBKEY_SIG, EXPIRED_KEY_SIG, REVOCATION_SIG,
     OTHER_PUBLIC_KEY, OTHER_PUBLIC_KEY_UID, OTHER_PUBLIC_KEY_SIG,
     UNEXPIRE_SIG,
@@ -41,9 +40,10 @@ hkp_server = hkp_server
 
 
 VALID_PUBLIC_KEY = PUBLIC_KEY + UID + PUBLIC_KEY_SIG
-EXPIRED_PUBLIC_KEY = PUBLIC_KEY + EXPIRED_KEY_UID + EXPIRED_KEY_SIG
+EXPIRED_PUBLIC_KEY = PUBLIC_KEY + UID + EXPIRED_KEY_SIG
 REVOKED_PUBLIC_KEY = PUBLIC_KEY + REVOCATION_SIG + UID + PUBLIC_KEY_SIG
-UNEXPIRE_PUBLIC_KEY = PUBLIC_KEY + EXPIRED_KEY_UID + UNEXPIRE_SIG
+OLD_UNEXPIRE_PUBLIC_KEY = PUBLIC_KEY + UID + PUBLIC_KEY_SIG
+UNEXPIRE_PUBLIC_KEY = PUBLIC_KEY + UID + UNEXPIRE_SIG
 
 PRIVATE_KEY = SECRET_KEY + UID + PUBLIC_KEY_SIG
 PRIVATE_KEY_ID = b'0x136880E72A7B1384'
@@ -220,7 +220,7 @@ def break_sig(sig):
 FORGED_PUBLIC_KEY = PUBLIC_KEY + UID + break_sig(PUBLIC_KEY_SIG)
 FORGED_SUBKEY = (PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY +
                  break_sig(PUBLIC_SUBKEY_SIG))
-FORGED_UNEXPIRE_KEY = (PUBLIC_KEY + EXPIRED_KEY_UID + EXPIRED_KEY_SIG +
+FORGED_UNEXPIRE_KEY = (PUBLIC_KEY + UID + EXPIRED_KEY_SIG +
                        break_sig(UNEXPIRE_SIG))
 
 UNSIGNED_PUBLIC_KEY = PUBLIC_KEY + UID
@@ -635,6 +635,9 @@ REFRESH_VARIANTS = [
     # unexpiration should be possible
     ('SIGNED_MANIFEST', 'EXPIRED_PUBLIC_KEY', KEY_FINGERPRINT,
      'UNEXPIRE_PUBLIC_KEY', None),
+    # ...but only with a new signature
+    ('SIGNED_MANIFEST', 'EXPIRED_PUBLIC_KEY', KEY_FINGERPRINT,
+     'OLD_UNEXPIRE_PUBLIC_KEY', OpenPGPExpiredKeyFailure),
     # make sure server can't malicously inject or replace key
     ('SIGNED_MANIFEST', 'OTHER_VALID_PUBLIC_KEY', OTHER_KEY_FINGERPRINT,
      'VALID_PUBLIC_KEY', OpenPGPKeyRefreshError),
@@ -685,9 +688,6 @@ def test_refresh_hkp(openpgp_env, hkp_server, manifest_var, key_var,
 def test_refresh_wkd(openpgp_env, manifest_var, key_var, server_key_fpr,
                      server_key_var, expected):
     """Test refreshing against WKD"""
-    if key_var == 'EXPIRED_PUBLIC_KEY':
-        pytest.skip('TODO: expired public key lacks UID with email')
-
     with pytest.importorskip('responses').RequestsMock() as responses:
         try:
             if key_var is not None:
