@@ -1,609 +1,416 @@
 # gemato: Manifest file support tests
 # vim:fileencoding=utf-8
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
 import io
-import unittest
 
-import gemato.exceptions
-import gemato.manifest
+import pytest
+
+from gemato.exceptions import (
+    ManifestSyntaxError,
+    )
+from gemato.manifest import (
+    ManifestFile,
+    ManifestEntryTIMESTAMP,
+    ManifestEntryMANIFEST,
+    ManifestEntryIGNORE,
+    ManifestEntryDATA,
+    ManifestEntryMISC,
+    ManifestEntryDIST,
+    ManifestEntryEBUILD,
+    ManifestEntryAUX,
+    manifest_hashes_to_hashlib,
+    new_manifest_entry,
+    )
 
 
-TEST_MANIFEST = u'''
+TEST_MANIFEST = '''
 TIMESTAMP 2017-10-22T18:06:41Z
-MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
-DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 DATA foo.txt 0
 '''
 
-TEST_DEPRECATED_MANIFEST = u'''
-EBUILD myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-AUX test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+TEST_DEPRECATED_MANIFEST = '''
+EBUILD myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+AUX test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 '''
 
+EMPTY_MANIFEST = ''
 
-class ManifestTest(unittest.TestCase):
-    """
-    Basic tests for Manifest processing.
-    """
 
-    def test_load(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_MANIFEST))
+@pytest.mark.parametrize('manifest_var', ['TEST_MANIFEST',
+                                          'TEST_DEPRECATED_MANIFEST',
+                                          'EMPTY_MANIFEST'])
+def test_load(manifest_var):
+    with io.StringIO(globals()[manifest_var]) as f:
+        m = ManifestFile()
+        m.load(f)
 
-    def test_load_deprecated(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
 
-    def test_load_via_ctor(self):
-        gemato.manifest.ManifestFile(io.StringIO(TEST_MANIFEST))
+@pytest.mark.parametrize('manifest_var', ['TEST_MANIFEST',
+                                          'TEST_DEPRECATED_MANIFEST',
+                                          'EMPTY_MANIFEST'])
+def test_load_via_ctor(manifest_var):
+    with io.StringIO(globals()[manifest_var]) as f:
+        ManifestFile(f)
 
-    def test_load_and_dump(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_MANIFEST))
-        outf = io.StringIO()
+
+@pytest.mark.parametrize('manifest_var', ['TEST_MANIFEST',
+                                          'TEST_DEPRECATED_MANIFEST',
+                                          'EMPTY_MANIFEST'])
+def test_load_and_dump(manifest_var):
+    m = ManifestFile()
+    with io.StringIO(globals()[manifest_var]) as f:
+        m.load(f)
+    with io.StringIO() as outf:
         m.dump(outf)
-        self.assertEqual(outf.getvalue().strip(), TEST_MANIFEST.strip())
+        assert outf.getvalue().strip() == globals()[manifest_var].strip()
 
-    def test_load_and_dump_deprecated(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
-        outf = io.StringIO()
+
+@pytest.mark.parametrize(
+    'manifest_var,expected',
+    [('TEST_MANIFEST', datetime.datetime(2017, 10, 22, 18, 6, 41)),
+     ('TEST_DEPRECATED_MANIFEST', None),
+     ('EMPTY_MANIFEST', None),
+     ])
+def test_find_timestamp(manifest_var, expected):
+    m = ManifestFile()
+    with io.StringIO(globals()[manifest_var]) as f:
+        m.load(f)
+    if expected is None:
+        assert m.find_timestamp() is None
+    else:
+        assert m.find_timestamp().ts == expected
+
+
+@pytest.fixture
+def test_manifest():
+    m = ManifestFile()
+    with io.StringIO(TEST_MANIFEST) as f:
+        m.load(f)
+    yield m
+
+
+@pytest.fixture
+def deprecated_manifest():
+    m = ManifestFile()
+    with io.StringIO(TEST_DEPRECATED_MANIFEST) as f:
+        m.load(f)
+    yield m
+
+
+@pytest.mark.parametrize(
+    'path,expected',
+    [('2017-10-22T18:06:41Z', None),
+     ('eclass/Manifest', 'eclass/Manifest'),
+     ('eclass', None),
+     ('local', 'local'),
+     ('local/foo', 'local'),
+     ('locale', None),
+     ('myebuild-0.ebuild', 'myebuild-0.ebuild'),
+     ('metadata.xml', 'metadata.xml'),
+     ('mydistfile.tar.gz', None),
+     ])
+def test_find_path_entry(test_manifest, path, expected):
+    pe = test_manifest.find_path_entry(path)
+    if expected is None:
+        assert pe is None
+    else:
+        assert pe.path == expected
+
+
+@pytest.mark.parametrize(
+    'path,expected',
+    [('test.patch', None),
+     ('files/test.patch', 'test.patch'),
+     ])
+def test_find_path_entry_aux(deprecated_manifest, path, expected):
+    pe = deprecated_manifest.find_path_entry(path)
+    if expected is None:
+        assert pe is None
+    else:
+        assert pe.aux_path == expected
+
+
+@pytest.mark.parametrize(
+    'filename,expected',
+    [('myebuild-0.ebuild', None),
+     ('mydistfile.tar.gz', 'mydistfile.tar.gz'),
+     ])
+def test_find_dist_entry(test_manifest, filename, expected):
+    pe = test_manifest.find_dist_entry(filename)
+    if expected is None:
+        assert pe is None
+    else:
+        assert pe.path == expected
+
+
+@pytest.mark.parametrize(
+    'path,expected',
+    [('foo', []),
+     ('eclass', []),
+     ('eclass/foo.eclass', ['eclass/Manifest']),
+     ])
+def test_find_manifests_for_path(test_manifest, path, expected):
+    assert [x.path for x
+            in test_manifest.find_manifests_for_path(path)] == expected
+
+
+def test_multiple_load():
+    """Test that load() overwrites previously loaded data."""
+    m = ManifestFile()
+    with io.StringIO(TEST_MANIFEST) as f:
+        m.load(f)
+    with io.StringIO(TEST_DEPRECATED_MANIFEST) as f:
+        m.load(f)
+    with io.StringIO() as outf:
         m.dump(outf)
-        self.assertEqual(outf.getvalue().strip(), TEST_DEPRECATED_MANIFEST.strip())
+        assert outf.getvalue().strip() == TEST_DEPRECATED_MANIFEST.strip()
 
-    def test_find_timestamp(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_MANIFEST))
-        self.assertEqual(m.find_timestamp().ts,
-                datetime.datetime(2017, 10, 22, 18, 6, 41))
 
-    def test_find_timestamp_none(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(u''))
-        self.assertIsNone(m.find_timestamp())
-
-    def test_find_path_entry(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_MANIFEST))
-        self.assertIsNone(m.find_path_entry('2017-10-22T18:06:41Z'))
-        self.assertEqual(m.find_path_entry('eclass/Manifest').path, 'eclass/Manifest')
-        self.assertIsNone(m.find_path_entry('eclass'))
-        self.assertEqual(m.find_path_entry('local').path, 'local')
-        self.assertEqual(m.find_path_entry('local/foo').path, 'local')
-        self.assertIsNone(m.find_path_entry('locale'))
-        self.assertEqual(m.find_path_entry('myebuild-0.ebuild').path, 'myebuild-0.ebuild')
-        self.assertEqual(m.find_path_entry('metadata.xml').path, 'metadata.xml')
-        self.assertIsNone(m.find_path_entry('mydistfile.tar.gz'))
-
-    def test_find_path_entry_AUX(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
-        self.assertIsNone(m.find_path_entry('test.patch'))
-        self.assertEqual(m.find_path_entry('files/test.patch').aux_path, 'test.patch')
-
-    def test_find_dist_entry(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_MANIFEST))
-        self.assertIsNone(m.find_dist_entry('myebuild-0.ebuild'))
-        self.assertEqual(m.find_dist_entry('mydistfile.tar.gz').path, 'mydistfile.tar.gz')
-
-    def test_find_manifests_for_path(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_MANIFEST))
-        self.assertListEqual(list(m.find_manifests_for_path('foo')), [])
-        self.assertListEqual(list(m.find_manifests_for_path('eclass')), [])
-        self.assertListEqual(list(m.find_manifests_for_path('eclass/foo.eclass')),
-                [m.find_path_entry('eclass/Manifest')])
-
-    def test_multiple_load(self):
-        """
-        Test that calling load() multiple times overwrites previously
-        loaded data.
-        """
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_MANIFEST))
-        m.load(io.StringIO(TEST_DEPRECATED_MANIFEST))
-        self.assertIsNone(m.find_timestamp())
-        self.assertIsNone(m.find_path_entry('eclass/Manifest'))
-
-    def test_sorted(self):
-        m = gemato.manifest.ManifestFile()
-        m.load(io.StringIO(TEST_MANIFEST))
-        with io.StringIO() as f:
-            m.dump(f, sort=True)
-            self.assertEqual(f.getvalue(), u'''
+def test_sort():
+    m = ManifestFile()
+    with io.StringIO(TEST_MANIFEST) as f:
+        m.load(f)
+    with io.StringIO() as outf:
+        m.dump(outf, sort=True)
+        assert outf.getvalue().strip() == '''
 DATA foo.txt 0
-DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DATA myebuild-0.ebuild 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+DIST mydistfile.tar.gz 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 IGNORE local
-MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
-MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MANIFEST eclass/Manifest 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
+MISC metadata.xml 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709
 TIMESTAMP 2017-10-22T18:06:41Z
-'''.lstrip())
+'''.strip()
 
 
-class ManifestEntryTest(unittest.TestCase):
-    """
-    Basic tests for Manifest entries.
-    """
-
-    file_vals = ('test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e',
-            'SHA1', 'da39a3ee5e6b4b0d3255bfef95601890afd80709')
-    exp_cksums = {
-        'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
-        'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
-    }
-
-    def test_TIMESTAMP(self):
-        self.assertEqual(gemato.manifest.ManifestEntryTIMESTAMP.from_list(
-                    ('TIMESTAMP', '2010-01-01T11:12:13Z')).ts,
-                datetime.datetime(2010, 1, 1, 11, 12, 13))
-        self.assertListEqual(list(gemato.manifest.ManifestEntryTIMESTAMP(
-                    datetime.datetime(2010, 1, 1, 11, 12, 13)).to_list()),
-                ['TIMESTAMP', '2010-01-01T11:12:13Z'])
-
-    def test_MANIFEST(self):
-        m = gemato.manifest.ManifestEntryMANIFEST.from_list(
-                ('MANIFEST',) + self.file_vals)
-        self.assertEqual(m.path, 'test')
-        self.assertEqual(m.size, 0)
-        self.assertDictEqual(m.checksums, self.exp_cksums)
-        self.assertListEqual(list(m.to_list()),
-                ['MANIFEST'] + list(self.file_vals))
-
-    def test_IGNORE(self):
-        self.assertEqual(gemato.manifest.ManifestEntryIGNORE.from_list(
-                    ('IGNORE', 'test')).path,
-                'test')
-        self.assertListEqual(list(gemato.manifest.ManifestEntryIGNORE('test').to_list()),
-                ['IGNORE', 'test'])
-
-    def test_DATA(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(
-                ('DATA',) + self.file_vals)
-        self.assertEqual(m.path, 'test')
-        self.assertEqual(m.size, 0)
-        self.assertDictEqual(m.checksums, self.exp_cksums)
-        self.assertListEqual(list(m.to_list()),
-                ['DATA'] + list(self.file_vals))
-
-    def test_MISC(self):
-        m = gemato.manifest.ManifestEntryMISC.from_list(
-                ('MISC',) + self.file_vals)
-        self.assertEqual(m.path, 'test')
-        self.assertEqual(m.size, 0)
-        self.assertDictEqual(m.checksums, self.exp_cksums)
-        self.assertListEqual(list(m.to_list()),
-                ['MISC'] + list(self.file_vals))
-
-    def test_DIST(self):
-        m = gemato.manifest.ManifestEntryDIST.from_list(
-                ('DIST',) + self.file_vals)
-        self.assertEqual(m.path, 'test')
-        self.assertEqual(m.size, 0)
-        self.assertDictEqual(m.checksums, self.exp_cksums)
-        self.assertListEqual(list(m.to_list()),
-                ['DIST'] + list(self.file_vals))
-
-    def test_EBUILD(self):
-        m = gemato.manifest.ManifestEntryEBUILD.from_list(
-                ('EBUILD',) + self.file_vals)
-        self.assertEqual(m.path, 'test')
-        self.assertEqual(m.size, 0)
-        self.assertDictEqual(m.checksums, self.exp_cksums)
-        self.assertListEqual(list(m.to_list()),
-                ['EBUILD'] + list(self.file_vals))
-
-    def test_AUX(self):
-        m = gemato.manifest.ManifestEntryAUX.from_list(
-                ('AUX',) + self.file_vals)
-        self.assertEqual(m.aux_path, 'test')
-        self.assertEqual(m.path, 'files/test')
-        self.assertEqual(m.size, 0)
-        self.assertDictEqual(m.checksums, self.exp_cksums)
-        self.assertListEqual(list(m.to_list()),
-                ['AUX'] + list(self.file_vals))
-
-    def test_timestamp_invalid(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', ''))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '2017-10-22T18:06:41+02:00'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '2017-10-22T18:06:41'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '2017-10-22', '18:06:41Z'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryTIMESTAMP.from_list, ('TIMESTAMP', '20171022T180641Z'))
-
-    def test_path_invalid(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST', '', '0'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST', '/foo', '0'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryIGNORE.from_list, ('IGNORE', '',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryIGNORE.from_list, ('IGNORE', '/foo',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list, ('DATA', '',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list, ('DATA', '/foo',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMISC.from_list, ('MISC', '',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMISC.from_list, ('MISC', '/foo',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list, ('DIST', '',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list, ('DIST', '/foo',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list, ('DIST', 'foo/bar.gz',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD', '',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD', '/foo',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryAUX.from_list, ('AUX', '',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryAUX.from_list, ('AUX', '/foo',))
-
-    def test_size_invalid(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST', 'foo', 'asdf'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST', 'foo', '5ds'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST', 'foo', '-5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list, ('DATA', 'foo', 'asdf'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list, ('DATA', 'foo', '5ds'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list, ('DATA', 'foo', '-5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMISC.from_list, ('MISC', 'foo', 'asdf'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMISC.from_list, ('MISC', 'foo', '5ds'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMISC.from_list, ('MISC', 'foo', '-5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list, ('DIST', 'foo', 'asdf'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list, ('DIST', 'foo', '5ds'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list, ('DIST', 'foo', '-5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD', 'foo', 'asdf'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD', 'foo', '5ds'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD', 'foo', '-5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryAUX.from_list, ('AUX', 'foo', 'asdf'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryAUX.from_list, ('AUX', 'foo', '5ds'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryAUX.from_list, ('AUX', 'foo', '-5'))
-
-    def test_checksum_short(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST', 'foo', '0', 'md5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMANIFEST.from_list,
-                ('MANIFEST', 'foo', '0', 'md5', 'd41d8cd98f00b204e9800998ecf8427e', 'sha1'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list, ('DATA', 'foo', '0', 'md5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ('DATA', 'foo', '0', 'md5', 'd41d8cd98f00b204e9800998ecf8427e', 'sha1'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMISC.from_list, ('MISC', 'foo', '0', 'md5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMISC.from_list,
-                ('MISC', 'foo', '0', 'md5', 'd41d8cd98f00b204e9800998ecf8427e', 'sha1'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list, ('DIST', 'foo', '0', 'md5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list,
-                ('DIST', 'foo', '0', 'md5', 'd41d8cd98f00b204e9800998ecf8427e', 'sha1'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD', 'foo', '0', 'md5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryEBUILD.from_list,
-                ('EBUILD', 'foo', '0', 'md5', 'd41d8cd98f00b204e9800998ecf8427e', 'sha1'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryAUX.from_list, ('AUX', 'foo', '0', 'md5'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryAUX.from_list,
-                ('AUX', 'foo', '0', 'md5', 'd41d8cd98f00b204e9800998ecf8427e', 'sha1'))
-
-    def test_invalid_value_count(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMANIFEST.from_list, ('MANIFEST', 'foo'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryIGNORE.from_list, ('IGNORE',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryIGNORE.from_list, ('IGNORE', 'foo', 'bar'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list, ('DATA',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list, ('DATA', 'foo'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMISC.from_list, ('MISC',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryMISC.from_list, ('MISC', 'foo'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list, ('DIST',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDIST.from_list, ('DIST', 'foo'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryEBUILD.from_list, ('EBUILD', 'foo'))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryAUX.from_list, ('AUX',))
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryAUX.from_list, ('AUX', 'foo'))
+TEST_FILE_DATA = [('path', 'test'),
+                  ('size', 0),
+                  ('checksums', {'MD5': 'd41d8cd98f00b204'
+                                        'e9800998ecf8427e',
+                                 'SHA1': 'da39a3ee5e6b4b0d3255'
+                                         'bfef95601890afd80709',
+                                 }),
+                  ]
+TEST_FILE_LIST = ['test', '0', 'MD5', 'd41d8cd98f00b204e9800998ecf8427e',
+                  'SHA1', 'da39a3ee5e6b4b0d3255bfef95601890afd80709']
 
 
-class ManifestUtilityTest(unittest.TestCase):
-    def test_manifest_hashes_to_hashlib(self):
-        self.assertListEqual(list(
-                gemato.manifest.manifest_hashes_to_hashlib(['MD5', 'SHA1'])),
-            ['md5', 'sha1'])
-        self.assertListEqual(list(
-                gemato.manifest.manifest_hashes_to_hashlib(['RMD160'])),
-            ['ripemd160'])
-        self.assertListEqual(list(
-                gemato.manifest.manifest_hashes_to_hashlib(['SHA3_256', 'SHA256'])),
-            ['sha3_256', 'sha256'])
+ENTRY_TEST_DATA = [
+    (ManifestEntryTIMESTAMP,
+     ['TIMESTAMP', '2010-01-01T11:12:13Z'],
+     [('ts', datetime.datetime(2010, 1, 1, 11, 12, 13)),
+      ]),
+    (ManifestEntryMANIFEST,
+     ['MANIFEST'] + TEST_FILE_LIST,
+     TEST_FILE_DATA),
+    (ManifestEntryIGNORE,
+     ['IGNORE', 'test'],
+     [('path', 'test'),
+      ]),
+    (ManifestEntryDATA,
+     ['DATA'] + TEST_FILE_LIST,
+     TEST_FILE_DATA),
+    (ManifestEntryIGNORE,
+     ['IGNORE', 'test'],
+     [('path', 'test'),
+      ]),
+    (ManifestEntryMISC,
+     ['MISC'] + TEST_FILE_LIST,
+     TEST_FILE_DATA),
+    (ManifestEntryDIST,
+     ['DIST'] + TEST_FILE_LIST,
+     TEST_FILE_DATA),
+    (ManifestEntryEBUILD,
+     ['EBUILD'] + TEST_FILE_LIST,
+     TEST_FILE_DATA),
+    (ManifestEntryAUX,
+     ['AUX'] + TEST_FILE_LIST,
+     TEST_FILE_DATA),
+]
 
 
-class NewManifestEntryTest(unittest.TestCase):
-    """
-    Tests for new_manifest_entry().
-    """
-
-    def test_TIMESTAMP(self):
-        self.assertIsInstance(
-                gemato.manifest.new_manifest_entry('TIMESTAMP',
-                    datetime.datetime(2000, 1, 1, 0, 0, 0)),
-                gemato.manifest.ManifestEntryTIMESTAMP)
-
-    def test_MANIFEST(self):
-        self.assertIsInstance(
-                gemato.manifest.new_manifest_entry('MANIFEST',
-                    'test', 32, {}),
-                gemato.manifest.ManifestEntryMANIFEST)
-
-    def test_IGNORE(self):
-        self.assertIsInstance(
-                gemato.manifest.new_manifest_entry('IGNORE', 'test'),
-                gemato.manifest.ManifestEntryIGNORE)
-
-    def test_DATA(self):
-        self.assertIsInstance(
-                gemato.manifest.new_manifest_entry('DATA',
-                    'test', 32, {}),
-                gemato.manifest.ManifestEntryDATA)
-
-    def test_MISC(self):
-        self.assertIsInstance(
-                gemato.manifest.new_manifest_entry('MISC',
-                    'test', 32, {}),
-                gemato.manifest.ManifestEntryMISC)
-
-    def test_DIST(self):
-        self.assertIsInstance(
-                gemato.manifest.new_manifest_entry('DIST',
-                    'test', 32, {}),
-                gemato.manifest.ManifestEntryDIST)
-
-    def test_EBUILD(self):
-        self.assertIsInstance(
-                gemato.manifest.new_manifest_entry('EBUILD',
-                    'test', 32, {}),
-                gemato.manifest.ManifestEntryEBUILD)
-
-    def test_AUX(self):
-        self.assertIsInstance(
-                gemato.manifest.new_manifest_entry('AUX',
-                    'test', 32, {}),
-                gemato.manifest.ManifestEntryAUX)
+@pytest.mark.parametrize('cls,as_list,vals', ENTRY_TEST_DATA)
+def test_entry_from_list(cls, as_list, vals):
+    entry = cls.from_list(as_list)
+    for k, v in vals:
+        if cls is ManifestEntryAUX and k == 'path':
+            assert entry.aux_path == v
+            v = 'files/' + v
+        assert getattr(entry, k) == v
 
 
-class ManifestPathEncodingTest(unittest.TestCase):
-    """
-    Tests for path encoding.
-    """
+@pytest.mark.parametrize('cls,as_list,vals', ENTRY_TEST_DATA)
+def test_entry_to_list(cls, as_list, vals):
+    entry = cls(*(v for k, v in vals))
+    assert list(entry.to_list()) == as_list
 
-    def test_encode_space_in_filename(self):
-        m = gemato.manifest.new_manifest_entry('DATA',
-            'tes t', 32, {})
-        self.assertEqual(m.path, 'tes t')
-        self.assertListEqual(list(m.to_list()),
-                ['DATA', 'tes\\x20t', '32'])
 
-    def test_encode_tab_in_filename(self):
-        m = gemato.manifest.new_manifest_entry('DATA',
-            'tes\tt', 32, {})
-        self.assertEqual(m.path, 'tes\tt')
-        self.assertListEqual(list(m.to_list()),
-                ['DATA', 'tes\\x09t', '32'])
+@pytest.mark.parametrize('cls,as_list,vals', ENTRY_TEST_DATA)
+def test_new_manifest_entry(cls, as_list, vals):
+    entry = new_manifest_entry(as_list[0], *(v for k, v in vals))
+    assert isinstance(entry, cls)
+    assert list(entry.to_list()) == as_list
 
-    def test_encode_nbsp_in_filename(self):
-        m = gemato.manifest.new_manifest_entry('DATA',
-            u'tes\u00a0t', 32, {})
-        self.assertEqual(m.path, u'tes\u00a0t')
-        self.assertListEqual(list(m.to_list()),
-                ['DATA', 'tes\\u00A0t', '32'])
 
-    def test_encode_en_quad_in_filename(self):
-        m = gemato.manifest.new_manifest_entry('DATA',
-            u'tes\u2000t', 32, {})
-        self.assertEqual(m.path, u'tes\u2000t')
-        self.assertListEqual(list(m.to_list()),
-                ['DATA', 'tes\\u2000t', '32'])
+ENTRY_INVALID_DATA = [
+    (ManifestEntryTIMESTAMP, ('TIMESTAMP',)),
+    (ManifestEntryTIMESTAMP, ('TIMESTAMP', '')),
+    (ManifestEntryTIMESTAMP, ('TIMESTAMP', '2017-10-22T18:06:41+02:00')),
+    (ManifestEntryTIMESTAMP, ('TIMESTAMP', '2017-10-22T18:06:41')),
+    (ManifestEntryTIMESTAMP, ('TIMESTAMP', '2017-10-22', '18:06:41Z')),
+    (ManifestEntryTIMESTAMP, ('TIMESTAMP', '20171022T180641Z')),
+    (ManifestEntryMANIFEST, ('MANIFEST', '', '0')),
+    (ManifestEntryMANIFEST, ('MANIFEST', '/foo', '0')),
+    (ManifestEntryIGNORE, ('IGNORE', '',)),
+    (ManifestEntryIGNORE, ('IGNORE', '/foo',)),
+    (ManifestEntryDATA, ('DATA', '',)),
+    (ManifestEntryDATA, ('DATA', '/foo',)),
+    (ManifestEntryMISC, ('MISC', '',)),
+    (ManifestEntryMISC, ('MISC', '/foo',)),
+    (ManifestEntryDIST, ('DIST', '',)),
+    (ManifestEntryDIST, ('DIST', '/foo',)),
+    (ManifestEntryDIST, ('DIST', 'foo/bar.gz',)),
+    (ManifestEntryEBUILD, ('EBUILD', '',)),
+    (ManifestEntryEBUILD, ('EBUILD', '/foo',)),
+    (ManifestEntryAUX, ('AUX', '',)),
+    (ManifestEntryAUX, ('AUX', '/foo',)),
+    (ManifestEntryMANIFEST, ('MANIFEST', 'foo', 'asdf')),
+    (ManifestEntryMANIFEST, ('MANIFEST', 'foo', '5ds')),
+    (ManifestEntryMANIFEST, ('MANIFEST', 'foo', '-5')),
+    (ManifestEntryDATA, ('DATA', 'foo', 'asdf')),
+    (ManifestEntryDATA, ('DATA', 'foo', '5ds')),
+    (ManifestEntryDATA, ('DATA', 'foo', '-5')),
+    (ManifestEntryMISC, ('MISC', 'foo', 'asdf')),
+    (ManifestEntryMISC, ('MISC', 'foo', '5ds')),
+    (ManifestEntryMISC, ('MISC', 'foo', '-5')),
+    (ManifestEntryDIST, ('DIST', 'foo', 'asdf')),
+    (ManifestEntryDIST, ('DIST', 'foo', '5ds')),
+    (ManifestEntryDIST, ('DIST', 'foo', '-5')),
+    (ManifestEntryEBUILD, ('EBUILD', 'foo', 'asdf')),
+    (ManifestEntryEBUILD, ('EBUILD', 'foo', '5ds')),
+    (ManifestEntryEBUILD, ('EBUILD', 'foo', '-5')),
+    (ManifestEntryAUX, ('AUX', 'foo', 'asdf')),
+    (ManifestEntryAUX, ('AUX', 'foo', '5ds')),
+    (ManifestEntryAUX, ('AUX', 'foo', '-5')),
+    (ManifestEntryMANIFEST, ('MANIFEST', 'foo', '0', 'md5')),
+    (ManifestEntryMANIFEST, ('MANIFEST', 'foo', '0', 'md5',
+                             'd41d8cd98f00b204e9800998ecf8427e', 'sha1')),
+    (ManifestEntryDATA, ('DATA', 'foo', '0', 'md5')),
+    (ManifestEntryDATA, ('DATA', 'foo', '0', 'md5',
+                         'd41d8cd98f00b204e9800998ecf8427e', 'sha1')),
+    (ManifestEntryMISC, ('MISC', 'foo', '0', 'md5')),
+    (ManifestEntryMISC, ('MISC', 'foo', '0', 'md5',
+                         'd41d8cd98f00b204e9800998ecf8427e', 'sha1')),
+    (ManifestEntryDIST, ('DIST', 'foo', '0', 'md5')),
+    (ManifestEntryDIST, ('DIST', 'foo', '0', 'md5',
+                         'd41d8cd98f00b204e9800998ecf8427e', 'sha1')),
+    (ManifestEntryEBUILD, ('EBUILD', 'foo', '0', 'md5')),
+    (ManifestEntryEBUILD, ('EBUILD', 'foo', '0', 'md5',
+                           'd41d8cd98f00b204e9800998ecf8427e', 'sha1')),
+    (ManifestEntryAUX, ('AUX', 'foo', '0', 'md5')),
+    (ManifestEntryAUX, ('AUX', 'foo', '0', 'md5',
+                        'd41d8cd98f00b204e9800998ecf8427e', 'sha1')),
+    (ManifestEntryMANIFEST, ('MANIFEST',)),
+    (ManifestEntryMANIFEST, ('MANIFEST', 'foo')),
+    (ManifestEntryIGNORE, ('IGNORE',)),
+    (ManifestEntryIGNORE, ('IGNORE', 'foo', 'bar')),
+    (ManifestEntryDATA, ('DATA',)),
+    (ManifestEntryDATA, ('DATA', 'foo')),
+    (ManifestEntryMISC, ('MISC',)),
+    (ManifestEntryMISC, ('MISC', 'foo')),
+    (ManifestEntryDIST, ('DIST',)),
+    (ManifestEntryDIST, ('DIST', 'foo')),
+    (ManifestEntryEBUILD, ('EBUILD',)),
+    (ManifestEntryEBUILD, ('EBUILD', 'foo')),
+    (ManifestEntryAUX, ('AUX',)),
+    (ManifestEntryAUX, ('AUX', 'foo')),
+]
 
-    def test_encode_null_in_filename(self):
-        m = gemato.manifest.new_manifest_entry('DATA',
-            'tes\x00t', 32, {})
-        self.assertEqual(m.path, 'tes\x00t')
-        self.assertListEqual(list(m.to_list()),
-                ['DATA', 'tes\\x00t', '32'])
 
-    def test_encode_bell_in_filename(self):
-        m = gemato.manifest.new_manifest_entry('DATA',
-            'tes\at', 32, {})
-        self.assertEqual(m.path, 'tes\at')
-        self.assertListEqual(list(m.to_list()),
-                ['DATA', 'tes\\x07t', '32'])
+@pytest.mark.parametrize('cls,as_list', ENTRY_INVALID_DATA)
+def test_manifest_entry_invalid(cls, as_list):
+    with pytest.raises(ManifestSyntaxError):
+        cls.from_list(as_list)
 
-    def test_encode_del_in_filename(self):
-        m = gemato.manifest.new_manifest_entry('DATA',
-            'tes\x7Ft', 32, {})
-        self.assertEqual(m.path, 'tes\x7Ft')
-        self.assertListEqual(list(m.to_list()),
-                ['DATA', 'tes\\x7Ft', '32'])
 
-    def test_encode_pad_in_filename(self):
-        m = gemato.manifest.new_manifest_entry('DATA',
-            u'tes\u0080t', 32, {})
-        self.assertEqual(m.path, u'tes\u0080t')
-        self.assertListEqual(list(m.to_list()),
-                ['DATA', 'tes\\u0080t', '32'])
+@pytest.mark.parametrize('mhash,hlibhash',
+                         [('MD5 SHA1', 'md5 sha1'),
+                          ('RMD160', 'ripemd160'),
+                          ('SHA3_256 SHA256', 'sha3_256 sha256'),
+                          ])
+def test_manifest_hashes_to_hashlib(mhash, hlibhash):
+    assert (list(manifest_hashes_to_hashlib(mhash.split())) ==
+            hlibhash.split())
 
-    def test_encode_backslash_in_filename(self):
-        m = gemato.manifest.new_manifest_entry('DATA',
-            'tes\\t', 32, {})
-        self.assertEqual(m.path, 'tes\\t')
-        self.assertListEqual(list(m.to_list()),
-                ['DATA', 'tes\\x5Ct', '32'])
 
-    def test_decode_space_in_filename(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\x20t', 32])
-        self.assertEqual(m.path, 'tes t')
+PATH_ENCODING_DATA = [
+    ('tes t', 'tes\\x20t'),
+    ('tes\tt', 'tes\\x09t'),
+    ('tes\u00a0t', 'tes\\u00A0t'),
+    ('tes\u2000t', 'tes\\u2000t'),
+    ('tes\x00t', 'tes\\x00t'),
+    ('tes\at', 'tes\\x07t'),
+    ('tes\x7ft', 'tes\\x7Ft'),
+    ('tes\u0080t', 'tes\\u0080t'),
+    ('tes\\t', 'tes\\x5Ct'),
+]
+PATH_ENCODING_NC_DATA = [
+    ('tes t', 'tes\\u0020t'),
+    ('tes t', 'tes\\U00000020t'),
+    ('tes\u00a0t', 'tes\\u00a0t'),
+    ('tes\x7ft', 'tes\\x7ft'),
+    ('tes\\t', 'tes\\x5ct'),
+]
+PATH_ENCODING_INVALID_DATA = [
+    'tes\\t',
+    'tes\\\\t',
+    'tes\\',
+    'tes\\xt',
+    'tes\\x5t',
+    'tes\\ut',
+    'tes\\u345t',
+    'tes\\Ut',
+    'tes\\U0000345t',
+]
 
-    def test_decode_space_in_filename_u(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\u0020t', 32])
-        self.assertEqual(m.path, 'tes t')
 
-    def test_decode_space_in_filename_lu(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\U00000020t', 32])
-        self.assertEqual(m.path, 'tes t')
+@pytest.mark.parametrize('path,enc', PATH_ENCODING_DATA)
+def test_path_encode(path, enc):
+    m = new_manifest_entry('DATA', path, 32, {})
+    assert m.path == path
+    assert m.to_list() == ['DATA', enc, '32']
 
-    def test_decode_tab_in_filename(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\x09t', 32])
-        self.assertEqual(m.path, 'tes\tt')
 
-    def test_decode_nbsp_in_filename(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\u00A0t', 32])
-        self.assertEqual(m.path, u'tes\u00a0t')
+@pytest.mark.parametrize('path,enc',
+                         PATH_ENCODING_DATA + PATH_ENCODING_NC_DATA)
+def test_path_decode(path, enc):
+    m = ManifestEntryDATA.from_list(['DATA', enc, 32])
+    assert m.path == path
 
-    def test_decode_nbsp_in_filename_lc(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\u00a0t', 32])
-        self.assertEqual(m.path, u'tes\u00a0t')
 
-    def test_decode_en_quad_in_filename(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\u2000t', 32])
-        self.assertEqual(m.path, u'tes\u2000t')
-
-    def test_decode_null_in_filename(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\x00t', 32])
-        self.assertEqual(m.path, 'tes\x00t')
-
-    def test_decode_bell_in_filename(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\x07t', 32])
-        self.assertEqual(m.path, 'tes\at')
-
-    def test_decode_del_in_filename(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\x7Ft', 32])
-        self.assertEqual(m.path, 'tes\x7Ft')
-
-    def test_decode_del_in_filename_lc(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\x7ft', 32])
-        self.assertEqual(m.path, 'tes\x7Ft')
-
-    def test_decode_pad_in_filename(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\u0080t', 32])
-        self.assertEqual(m.path, u'tes\u0080t')
-
-    def test_decode_backslash_in_filename(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\x5Ct', 32])
-        self.assertEqual(m.path, 'tes\\t')
-
-    def test_decode_backslash_in_filename_lc(self):
-        m = gemato.manifest.ManifestEntryDATA.from_list(['DATA',
-            'tes\\x5ct', 32])
-        self.assertEqual(m.path, 'tes\\t')
-
-    def test_decode_invalid_backslash_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ['DATA', 'tes\\t', 32])
-
-    def test_decode_double_backslash_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ['DATA', 'tes\\\\t', 32])
-
-    def test_decode_trailing_backslash_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ['DATA', 'tes\\', 32])
-
-    def test_decode_empty_x_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ['DATA', 'tes\\xt', 32])
-
-    def test_decode_short_x_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ['DATA', 'tes\\x5t', 32])
-
-    def test_decode_empty_u_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ['DATA', 'tes\\ut', 32])
-
-    def test_decode_short_u_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ['DATA', 'tes\\u345t', 32])
-
-    def test_decode_empty_lu_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ['DATA', 'tes\\Ut', 32])
-
-    def test_decode_short_lu_in_filename(self):
-        self.assertRaises(gemato.exceptions.ManifestSyntaxError,
-                gemato.manifest.ManifestEntryDATA.from_list,
-                ['DATA', 'tes\\U0000345t', 32])
+@pytest.mark.parametrize('enc', PATH_ENCODING_INVALID_DATA)
+def test_path_decode_invalid(enc):
+    with pytest.raises(ManifestSyntaxError):
+        ManifestEntryDATA.from_list(['DATA', enc, 32])
