@@ -5,8 +5,6 @@
 
 import base64
 import io
-import tempfile
-import unittest
 
 import pytest
 
