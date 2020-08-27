@@ -1,46 +1,57 @@
 # gemato: Utility function tests
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
-import unittest
+import pytest
 
-import gemato.util
+from gemato.util import (
+    path_starts_with,
+    path_inside_dir,
+    )
 
 
-class UtilityTestCase(unittest.TestCase):
-    def test_path_starts_with(self):
-        self.assertTrue(gemato.util.path_starts_with("", ""))
-        self.assertTrue(gemato.util.path_starts_with("foo", ""))
-        self.assertTrue(gemato.util.path_starts_with("foo/", ""))
-        self.assertTrue(gemato.util.path_starts_with("foo/bar", ""))
-        self.assertTrue(gemato.util.path_starts_with("bar", ""))
-        self.assertTrue(gemato.util.path_starts_with("bar/", ""))
-        self.assertTrue(gemato.util.path_starts_with("bar/bar", ""))
-        self.assertTrue(gemato.util.path_starts_with("foo", "foo"))
-        self.assertTrue(gemato.util.path_starts_with("foo/", "foo"))
-        self.assertTrue(gemato.util.path_starts_with("foo/bar", "foo"))
-        self.assertFalse(gemato.util.path_starts_with("bar", "foo"))
-        self.assertFalse(gemato.util.path_starts_with("fooo", "foo"))
-        self.assertFalse(gemato.util.path_starts_with("foo.", "foo"))
-        self.assertTrue(gemato.util.path_starts_with("foo", "foo/"))
-        self.assertTrue(gemato.util.path_starts_with("foo/", "foo/"))
-        self.assertTrue(gemato.util.path_starts_with("foo/bar", "foo/bar/"))
+@pytest.mark.parametrize(
+    'p1,p2,expected',
+    [("", "", True),
+     ("foo", "", True),
+     ("foo/", "", True),
+     ("foo/bar", "", True),
+     ("bar", "", True),
+     ("bar/", "", True),
+     ("bar/bar", "", True),
+     ("foo", "foo", True),
+     ("foo/", "foo", True),
+     ("foo/bar", "foo", True),
+     ("bar", "foo", False),
+     ("fooo", "foo", False),
+     ("foo.", "foo", False),
+     ("foo", "foo/", True),
+     ("foo/", "foo/", True),
+     ("foo/bar", "foo/bar/", True),
+     ])
+def test_path_starts_with(p1, p2, expected):
+    assert path_starts_with(p1, p2) is expected
 
-    def test_path_inside_dir(self):
-        self.assertFalse(gemato.util.path_inside_dir("", ""))
-        self.assertTrue(gemato.util.path_inside_dir("foo", ""))
-        self.assertTrue(gemato.util.path_inside_dir("foo/", ""))
-        self.assertTrue(gemato.util.path_inside_dir("foo/bar", ""))
-        self.assertTrue(gemato.util.path_inside_dir("bar", ""))
-        self.assertTrue(gemato.util.path_inside_dir("bar/", ""))
-        self.assertTrue(gemato.util.path_inside_dir("bar/bar", ""))
-        self.assertFalse(gemato.util.path_inside_dir("foo", "foo"))
-        self.assertFalse(gemato.util.path_inside_dir("foo/", "foo"))
-        self.assertTrue(gemato.util.path_inside_dir("foo/bar", "foo"))
-        self.assertFalse(gemato.util.path_inside_dir("bar", "foo"))
-        self.assertFalse(gemato.util.path_inside_dir("fooo", "foo"))
-        self.assertFalse(gemato.util.path_inside_dir("foo.", "foo"))
-        self.assertFalse(gemato.util.path_inside_dir("foo", "foo/"))
-        self.assertFalse(gemato.util.path_inside_dir("foo/", "foo/"))
-        self.assertFalse(gemato.util.path_inside_dir("foo/bar", "foo/bar/"))
+
+@pytest.mark.parametrize(
+    'p1,p2,expected',
+    [("", "", False),
+     ("foo", "", True),
+     ("foo/", "", True),
+     ("foo/bar", "", True),
+     ("bar", "", True),
+     ("bar/", "", True),
+     ("bar/bar", "", True),
+     ("foo", "foo", False),
+     ("foo/", "foo", False),
+     ("foo/bar", "foo", True),
+     ("bar", "foo", False),
+     ("fooo", "foo", False),
+     ("foo.", "foo", False),
+     ("foo", "foo/", False),
+     ("foo/", "foo/", False),
+     ("foo/bar", "foo/bar/", False),
+     ])
+def test_path_inside_dir(p1, p2, expected):
+    assert path_inside_dir(p1, p2) is expected
