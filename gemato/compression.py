@@ -9,7 +9,7 @@ import io
 import lzma
 import os.path
 
-import gemato.exceptions
+from gemato.exceptions import UnsupportedCompression
 
 
 def open_compressed_file(suffix, f, mode='rb'):
@@ -34,7 +34,7 @@ def open_compressed_file(suffix, f, mode='rb'):
     elif suffix == "xz" and lzma is not None:
         return lzma.LZMAFile(f, format=lzma.FORMAT_XZ, mode=mode)
 
-    raise gemato.exceptions.UnsupportedCompression(suffix)
+    raise UnsupportedCompression(suffix)
 
 
 class FileStack(object):
@@ -84,8 +84,8 @@ def open_potentially_compressed_path(path, mode, **kwargs):
     f = io.open(path, bmode)
     fs = FileStack([f])
     try:
-        cf = open_compressed_file(compression, f,
-                bmode if kwargs else mode)
+        cf = open_compressed_file(
+            compression, f, bmode if kwargs else mode)
         fs.files.append(cf)
 
         # add a TextIOWrapper on top whenever we do not want
@@ -93,7 +93,7 @@ def open_potentially_compressed_path(path, mode, **kwargs):
         if 'b' not in mode:
             iow = io.TextIOWrapper(cf, **kwargs)
             fs.files.append(iow)
-    except:
+    except Exception:
         fs.close()
         raise
 

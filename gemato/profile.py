@@ -54,7 +54,7 @@ class DefaultProfile(object):
         return ()
 
     def want_compressed_manifest(self, relpath, manifest, unc_size,
-            compress_watermark):
+                                 compress_watermark):
         """
         Determine whether the specified Manifest (at @relpath) can
         be compressed. @manifest is the Manifest instance. @unc_size
@@ -87,15 +87,18 @@ class EbuildRepositoryProfile(DefaultProfile):
                 return True
             # plus some unconditional standard directories
             if relpath in ('eclass', 'licenses', 'metadata',
-                    'profiles'):
+                           'profiles'):
                 return True
         elif len(spl) == 2:
             # 'slow' way of detecting package directories
             if any(f.endswith('.ebuild') for f in filenames):
                 return True
             # some standard directories worth separate Manifests
-            if spl[0] == 'metadata' and spl[1] in ('dtd', 'glsa',
-                    'md5-cache', 'news', 'xml-schema'):
+            if spl[0] == 'metadata' and spl[1] in ('dtd',
+                                                   'glsa',
+                                                   'md5-cache',
+                                                   'news',
+                                                   'xml-schema'):
                 return True
         elif len(spl) == 3:
             # metadata cache -> per-directory Manifests
@@ -145,19 +148,20 @@ class BackwardsCompatEbuildRepositoryProfile(EbuildRepositoryProfile):
         if spl[2:3] == ['files']:
             return 'AUX'
 
-        return (super(BackwardsCompatEbuildRepositoryProfile, self)
-                .get_entry_type_for_path(path))
+        return (super().get_entry_type_for_path(path))
 
     def want_compressed_manifest(self, relpath, manifest, unc_size,
-            compress_watermark):
+                                 compress_watermark):
         for e in manifest.entries:
             # disable compression in package directories
             if e.tag == 'EBUILD':
                 return False
 
-        return (super(BackwardsCompatEbuildRepositoryProfile, self)
-                .want_compressed_manifest(relpath, manifest, unc_size,
-                    compress_watermark))
+        return (
+            super().want_compressed_manifest(relpath,
+                                             manifest,
+                                             unc_size,
+                                             compress_watermark))
 
 
 PROFILE_MAPPING = {

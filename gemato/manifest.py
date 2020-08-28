@@ -8,14 +8,18 @@ import io
 import os.path
 import re
 
-import gemato.exceptions
-import gemato.util
+from gemato.exceptions import (
+    ManifestSyntaxError,
+    ManifestUnsignedData,
+    )
+from gemato.util import (
+    path_starts_with,
+    path_inside_dir,
+    )
 
 
 class ManifestEntryTIMESTAMP(object):
-    """
-    ISO-8601 timestamp.
-    """
+    """ISO-8601 timestamp"""
 
     __slots__ = ['ts']
     tag = 'TIMESTAMP'
@@ -25,16 +29,18 @@ class ManifestEntryTIMESTAMP(object):
         self.ts = ts
 
     @classmethod
-    def from_list(cls, l):
-        assert l[0] == cls.tag
-        if len(l) != 2:
-            raise gemato.exceptions.ManifestSyntaxError(
-                    '{} line: expects 1 value, got: {}'.format(l[0], l[1:]))
+    def from_list(cls, data):
+        assert data[0] == cls.tag
+        if len(data) != 2:
+            raise ManifestSyntaxError(
+                f'{data[0]} line: expects 1 value, got: {data[1:]}')
         try:
-            ts = datetime.datetime.strptime(l[1], '%Y-%m-%dT%H:%M:%SZ')
+            ts = datetime.datetime.strptime(data[1],
+                                            '%Y-%m-%dT%H:%M:%SZ')
         except ValueError:
-            raise gemato.exceptions.ManifestSyntaxError(
-                    '{} line: expected ISO8601 timestamp, got: {}'.format(l[0], l[1:]))
+            raise ManifestSyntaxError(
+                f'{data[0]} line: expected ISO8601 timestamp, '
+                f'got: {data[1:]}')
         return cls(ts)
 
     def to_list(self):
@@ -49,13 +55,12 @@ class ManifestEntryTIMESTAMP(object):
 
 
 class ManifestPathEntry(object):
-    """
-    Base class for entries using a path.
-    """
+    """Base class for entries using a path"""
 
     __slots__ = ['path']
     disallowed_path_re = re.compile(r'[\x00-\x1F\x7F-\x9F\s\\]', re.U)
-    escape_seq_re = re.compile(r'\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})?')
+    escape_seq_re = re.compile(
+        r'\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})?')
 
     def __init__(self, path):
         self.path = path
@@ -64,30 +69,32 @@ class ManifestPathEntry(object):
     def decode_char(m):
         val = m.group(1)
         if val is None:
-            raise gemato.exceptions.ManifestSyntaxError(
-                    'Invalid escape sequence at pos {} of: {}'.format(m.start(), m.string))
+            raise ManifestSyntaxError(
+                f'Invalid escape sequence at pos {m.start()} '
+                f'of: {m.string}')
         return chr(int(val[1:], base=16))
 
     @classmethod
-    def process_path(cls, l):
-        if len(l) != 2:
-            raise gemato.exceptions.ManifestSyntaxError(
-                    '{} line: expects 1 value, got: {}'.format(l[0], l[1:]))
-        if not l[1] or l[1][0] == '/':
-            raise gemato.exceptions.ManifestSyntaxError(
-                    '{} line: expected relative path, got: {}'.format(l[0], l[1:]))
-        return cls.escape_seq_re.sub(cls.decode_char, l[1])
+    def process_path(cls, data):
+        if len(data) != 2:
+            raise ManifestSyntaxError(
+                f'{data[0]} line: expects 1 value, got: {data[1:]}')
+        if not data[1] or data[1][0] == '/':
+            raise ManifestSyntaxError(
+                f'{data[0]} line: expected relative path, '
+                f'got: {data[1:]}')
+        return cls.escape_seq_re.sub(cls.decode_char, data[1])
 
     @staticmethod
     def encode_char(m):
         assert len(m.group(0)) == 1
         cp = ord(m.group(0))
         if cp <= 0x7F:
-            return '\\x{:02X}'.format(cp)
+            return f'\\x{cp:02X}'
         elif cp <= 0xFFFF:
-            return '\\u{:04X}'.format(cp)
+            return f'\\u{cp:04X}'
         else:
-            return '\\U{:08X}'.format(cp)
+            return f'\\U{cp:08X}'
 
     @property
     def encoded_path(self):
@@ -102,16 +109,14 @@ class ManifestPathEntry(object):
 
 
 class ManifestEntryIGNORE(ManifestPathEntry):
-    """
-    Ignored path.
-    """
+    """Ignored path"""
 
     tag = 'IGNORE'
 
     @classmethod
-    def from_list(cls, l):
-        assert l[0] == cls.tag
-        return cls(cls.process_path(l))
+    def from_list(cls, data):
+        assert data[0] == cls.tag
+        return cls(cls.process_path(data))
 
     def to_list(self):
         return (self.tag, self.encoded_path)
@@ -125,26 +130,28 @@ class ManifestFileEntry(ManifestPathEntry):
     __slots__ = ['checksums', 'size']
 
     def __init__(self, path, size, checksums):
-        super(ManifestFileEntry, self).__init__(path)
+        super().__init__(path)
         self.size = size
         self.checksums = checksums
 
     @staticmethod
-    def process_checksums(l):
-        if len(l) < 3:
-            raise gemato.exceptions.ManifestSyntaxError(
-                    '{} line: expects at least 2 values, got: {}'.format(l[0], l[1:]))
+    def process_checksums(data):
+        if len(data) < 3:
+            raise ManifestSyntaxError(
+                f'{data[0]} line: expects at least 2 values, '
+                f'got: {data[1:]}')
 
         try:
-            size = int(l[2])
+            size = int(data[2])
             if size < 0:
                 raise ValueError()
         except ValueError:
-            raise gemato.exceptions.ManifestSyntaxError(
-                    '{} line: size must be a non-negative integer, got: {}'.format(l[0], l[2]))
+            raise ManifestSyntaxError(
+                f'{data[0]} line: size must be a non-negative integer, '
+                f'got: {data[2]}')
 
         checksums = {}
-        it = iter(l[3:])
+        it = iter(data[3:])
         while True:
             try:
                 ckname = next(it)
@@ -153,8 +160,8 @@ class ManifestFileEntry(ManifestPathEntry):
             try:
                 ckval = next(it)
             except StopIteration:
-                raise gemato.exceptions.ManifestSyntaxError(
-                        '{} line: checksum {} has no value'.format(l[0], ckname))
+                raise ManifestSyntaxError(
+                    f'{data[0]} line: checksum {ckname} has no value')
             checksums[ckname] = ckval
 
         return size, checksums
@@ -166,7 +173,7 @@ class ManifestFileEntry(ManifestPathEntry):
         return ret
 
     def __eq__(self, other):
-        return (super(ManifestFileEntry, self).__eq__(other)
+        return (super().__eq__(other)
                 and self.size == other.size
                 and self.checksums == other.checksums)
 
@@ -181,14 +188,14 @@ class ManifestEntryMANIFEST(ManifestFileEntry):
     tag = 'MANIFEST'
 
     @classmethod
-    def from_list(cls, l):
-        assert l[0] == cls.tag
-        path = cls.process_path(l[:2])
-        size, checksums = cls.process_checksums(l)
+    def from_list(cls, data):
+        assert data[0] == cls.tag
+        path = cls.process_path(data[:2])
+        size, checksums = cls.process_checksums(data)
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryMANIFEST, self).to_list(self.tag)
+        return super().to_list(self.tag)
 
 
 class ManifestEntryDATA(ManifestFileEntry):
@@ -199,14 +206,14 @@ class ManifestEntryDATA(ManifestFileEntry):
     tag = 'DATA'
 
     @classmethod
-    def from_list(cls, l):
-        assert l[0] == cls.tag
-        path = cls.process_path(l[:2])
-        size, checksums = cls.process_checksums(l)
+    def from_list(cls, data):
+        assert data[0] == cls.tag
+        path = cls.process_path(data[:2])
+        size, checksums = cls.process_checksums(data)
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryDATA, self).to_list(self.tag)
+        return super().to_list(self.tag)
 
 
 class ManifestEntryDIST(ManifestFileEntry):
@@ -217,16 +224,17 @@ class ManifestEntryDIST(ManifestFileEntry):
     tag = 'DIST'
 
     @classmethod
-    def from_list(cls, l):
-        path = cls.process_path(l[:2])
+    def from_list(cls, data):
+        path = cls.process_path(data[:2])
         if '/' in path:
-            raise gemato.exceptions.ManifestSyntaxError(
-                    'DIST line: file name expected, got directory path: {}'.format(path))
-        size, checksums = cls.process_checksums(l)
+            raise ManifestSyntaxError(
+                f'{data[0]} line: file name expected, got directory '
+                f'path: {path}')
+        size, checksums = cls.process_checksums(data)
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryDIST, self).to_list(self.tag)
+        return super().to_list(self.tag)
 
 
 class ManifestEntryEBUILD(ManifestFileEntry):
@@ -237,14 +245,14 @@ class ManifestEntryEBUILD(ManifestFileEntry):
     tag = 'EBUILD'
 
     @classmethod
-    def from_list(cls, l):
-        assert l[0] == cls.tag
-        path = cls.process_path(l[:2])
-        size, checksums = cls.process_checksums(l)
+    def from_list(cls, data):
+        assert data[0] == cls.tag
+        path = cls.process_path(data[:2])
+        size, checksums = cls.process_checksums(data)
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryEBUILD, self).to_list(self.tag)
+        return super().to_list(self.tag)
 
 
 class ManifestEntryMISC(ManifestFileEntry):
@@ -255,14 +263,14 @@ class ManifestEntryMISC(ManifestFileEntry):
     tag = 'MISC'
 
     @classmethod
-    def from_list(cls, l):
-        assert l[0] == cls.tag
-        path = cls.process_path(l[:2])
-        size, checksums = cls.process_checksums(l)
+    def from_list(cls, data):
+        assert data[0] == cls.tag
+        path = cls.process_path(data[:2])
+        size, checksums = cls.process_checksums(data)
         return cls(path, size, checksums)
 
     def to_list(self):
-        return super(ManifestEntryMISC, self).to_list(self.tag)
+        return super().to_list(self.tag)
 
 
 class ManifestEntryAUX(ManifestFileEntry):
@@ -275,19 +283,19 @@ class ManifestEntryAUX(ManifestFileEntry):
 
     def __init__(self, aux_path, size, checksums):
         self.aux_path = aux_path
-        super(ManifestEntryAUX, self).__init__(
+        super().__init__(
                 os.path.join('files', aux_path), size, checksums)
 
     @classmethod
-    def from_list(cls, l):
-        assert l[0] == cls.tag
-        path = cls.process_path(l[:2])
-        size, checksums = cls.process_checksums(l)
+    def from_list(cls, data):
+        assert data[0] == cls.tag
+        path = cls.process_path(data[:2])
+        size, checksums = cls.process_checksums(data)
         return cls(path, size, checksums)
 
     def to_list(self):
-        ret = super(ManifestEntryAUX, self).to_list(self.tag)
-        assert gemato.util.path_inside_dir(ret[1], 'files')
+        ret = super().to_list(self.tag)
+        assert path_inside_dir(ret[1], 'files')
         ret[1] = ret[1][6:]
         return ret
 
@@ -367,66 +375,67 @@ class ManifestFile(object):
         state = ManifestState.DATA
         openpgp_data = ''
 
-        for l in f:
+        for line in f:
             if state == ManifestState.DATA:
-                if l == '-----BEGIN PGP SIGNED MESSAGE-----\n':
+                if line == '-----BEGIN PGP SIGNED MESSAGE-----\n':
                     if self.entries:
-                        raise gemato.exceptions.ManifestUnsignedData()
+                        raise ManifestUnsignedData()
                     if verify_openpgp:
-                        openpgp_data += l
+                        openpgp_data += line
                     state = ManifestState.SIGNED_PREAMBLE
                     continue
             elif state == ManifestState.SIGNED_PREAMBLE:
                 if verify_openpgp:
-                    openpgp_data += l
+                    openpgp_data += line
                 # skip header lines up to the empty line
-                if l.strip():
+                if line.strip():
                     continue
                 state = ManifestState.SIGNED_DATA
             elif state == ManifestState.SIGNED_DATA:
                 if verify_openpgp:
-                    openpgp_data += l
-                if l == '-----BEGIN PGP SIGNATURE-----\n':
+                    openpgp_data += line
+                if line == '-----BEGIN PGP SIGNATURE-----\n':
                     state = ManifestState.SIGNATURE
                     continue
                 # dash-escaping, RFC 4880 says any line can suffer from it
-                if l.startswith('- '):
-                    l = l[2:]
+                if line.startswith('- '):
+                    line = line[2:]
             elif state == ManifestState.SIGNATURE:
                 if verify_openpgp:
-                    openpgp_data += l
-                if l == '-----END PGP SIGNATURE-----\n':
+                    openpgp_data += line
+                if line == '-----END PGP SIGNATURE-----\n':
                     state = ManifestState.POST_SIGNED_DATA
                     continue
 
-            if l.startswith('-----') and l.rstrip().endswith('-----'):
-                raise gemato.exceptions.ManifestSyntaxError(
-                        "Unexpected OpenPGP header: {}".format(l))
-            if state in (ManifestState.SIGNED_PREAMBLE, ManifestState.SIGNATURE):
+            if line.startswith('-----') and line.rstrip().endswith('-----'):
+                raise ManifestSyntaxError(
+                    f'Unexpected OpenPGP header: {line}')
+            if state in (ManifestState.SIGNED_PREAMBLE,
+                         ManifestState.SIGNATURE):
                 continue
 
-            sl = l.strip().split()
+            sl = line.strip().split()
             # skip empty lines
             if not sl:
                 continue
             if state == ManifestState.POST_SIGNED_DATA:
-                raise gemato.exceptions.ManifestUnsignedData()
+                raise ManifestUnsignedData()
             tag = sl[0]
             try:
-                self.entries.append(MANIFEST_TAG_MAPPING[tag]
-                        .from_list(sl))
+                self.entries.append(
+                    MANIFEST_TAG_MAPPING[tag].from_list(sl))
             except KeyError:
-                raise gemato.exceptions.ManifestSyntaxError(
-                        "Invalid Manifest line: {}".format(l))
+                raise ManifestSyntaxError(
+                    f'Invalid Manifest line: {line}')
 
         if state == ManifestState.SIGNED_PREAMBLE:
-            raise gemato.exceptions.ManifestSyntaxError(
+            raise ManifestSyntaxError(
                     "Manifest terminated early, in OpenPGP headers")
         elif state == ManifestState.SIGNED_DATA:
-            raise gemato.exceptions.ManifestSyntaxError(
+            raise ManifestSyntaxError(
                     "Manifest terminated early, before signature")
         elif state == ManifestState.SIGNATURE:
-            raise gemato.exceptions.ManifestSyntaxError(
+            raise ManifestSyntaxError(
                     "Manifest terminated early, inside signature")
 
         if verify_openpgp and state == ManifestState.POST_SIGNED_DATA:
@@ -436,7 +445,7 @@ class ManifestFile(object):
             self.openpgp_signed = True
 
     def dump(self, f, sign_openpgp=None, openpgp_keyid=None,
-            openpgp_env=None, sort=False):
+             openpgp_env=None, sort=False):
         """
         Dump data into file @f. The file should be open for writing
         in text mode, and truncated to zero length.
@@ -468,7 +477,7 @@ class ManifestFile(object):
                 openpgp_env.clear_sign_file(data, f, keyid=openpgp_keyid)
         else:
             for e in self.entries:
-                f.write(u' '.join(e.to_list()) + '\n')
+                f.write(' '.join(e.to_list()) + '\n')
 
     def find_timestamp(self):
         """
@@ -491,7 +500,7 @@ class ManifestFile(object):
             if e.tag == 'IGNORE':
                 # ignore matches recursively, so we process it separately
                 # py<3.5 does not have os.path.commonpath()
-                if gemato.util.path_starts_with(path, e.path):
+                if path_starts_with(path, e.path):
                     return e
             elif e.tag in ('DIST', 'TIMESTAMP'):
                 # distfiles are not local files, so skip them
@@ -523,7 +532,7 @@ class ManifestFile(object):
         for e in self.entries:
             if e.tag == 'MANIFEST':
                 mdir = os.path.dirname(e.path)
-                if gemato.util.path_inside_dir(path, mdir):
+                if path_inside_dir(path, mdir):
                     yield e
 
 

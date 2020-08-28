@@ -1,6 +1,6 @@
 # gemato: File verification routines
 # vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import contextlib
@@ -10,9 +10,12 @@ import io
 import os
 import stat
 
-import gemato.exceptions
-import gemato.hash
-import gemato.manifest
+from gemato.exceptions import (
+    ManifestCrossDevice,
+    ManifestInvalidPath,
+    )
+from gemato.hash import hash_file
+from gemato.manifest import manifest_hashes_to_hashlib
 
 
 def get_file_metadata(path, hashes):
@@ -37,7 +40,7 @@ def get_file_metadata(path, hashes):
 
     try:
         # we want O_NONBLOCK to avoid blocking when opening pipes
-        fd = os.open(path, os.O_RDONLY|os.O_NONBLOCK)
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
     except OSError as err:
         if err.errno == errno.ENOENT:
             exists = False
@@ -98,7 +101,7 @@ def get_file_metadata(path, hashes):
         yield st.st_mtime
 
         f = io.open(fd, 'rb')
-    except:
+    except Exception:
         if opened:
             os.close(fd)
         raise
@@ -110,11 +113,10 @@ def get_file_metadata(path, hashes):
 
         # 5. checksums
         e_hashes = sorted(hashes)
-        hashes = list(gemato.manifest.manifest_hashes_to_hashlib(e_hashes))
+        hashes = list(manifest_hashes_to_hashlib(e_hashes))
         e_hashes.append('__size__')
         hashes.append('__size__')
-        checksums = gemato.hash.hash_file(f, hashes,
-                                          _apparent_size=st.st_size)
+        checksums = hash_file(f, hashes, _apparent_size=st.st_size)
 
         ret = {}
         for ek, k in zip(e_hashes, hashes):
@@ -175,7 +177,7 @@ def verify_path(path, e, expected_dev=None, last_mtime=None):
         # 2. check for xdev condition
         st_dev = next(g)
         if expected_dev is not None and st_dev != expected_dev:
-            raise gemato.exceptions.ManifestCrossDevice(path)
+            raise ManifestCrossDevice(path)
 
         # 3. verify whether the file is a regular file
         ifmt, ftype = next(g)
@@ -216,7 +218,7 @@ def verify_path(path, e, expected_dev=None, last_mtime=None):
 
 
 def update_entry_for_path(path, e, hashes=None, expected_dev=None,
-        last_mtime=None):
+                          last_mtime=None):
     """
     Update the data in entry @e to match the current state of file
     at path @path. Uses hashes listed in @hashes (using Manifest names),
@@ -248,19 +250,17 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None,
         # 1. verify whether the file existed in the first place
         exists = next(g)
         if not exists:
-            raise gemato.exceptions.ManifestInvalidPath(path,
-                    ('__exists__', exists))
+            raise ManifestInvalidPath(path, ('__exists__', exists))
 
         # 2. check for xdev condition
         st_dev = next(g)
         if expected_dev is not None and st_dev != expected_dev:
-            raise gemato.exceptions.ManifestCrossDevice(path)
+            raise ManifestCrossDevice(path)
 
         # 3. verify whether the file is a regular file
         ifmt, ftype = next(g)
         if not stat.S_ISREG(ifmt):
-            raise gemato.exceptions.ManifestInvalidPath(path,
-                    ('__type__', ftype))
+            raise ManifestInvalidPath(path, ('__type__', ftype))
 
         # 4. get the apparent file size
         st_size = next(g)
@@ -276,8 +276,9 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None,
         checksums = next(g)
         size = checksums.pop('__size__')
         if st_size != 0:
-            assert st_size == size, ('Apparent size (st_size = {}) and real size ({}) are different!'
-                    .format(st_size, size))
+            assert st_size == size, (
+                f'Apparent size (st_size = {st_size}) and real size '
+                f'({size}) are different!')
 
         if e.size != size or e.checksums != checksums:
             e.size = size

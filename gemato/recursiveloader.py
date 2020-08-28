@@ -1,17 +1,43 @@
 # gemato: Recursive loader for Manifests
 # vim:fileencoding=utf-8
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
 import os.path
 
-import gemato.compression
-import gemato.exceptions
-import gemato.manifest
-import gemato.profile
-import gemato.util
-import gemato.verify
+from gemato.compression import (
+    open_potentially_compressed_path,
+    get_potential_compressed_names,
+    get_compressed_suffix_from_filename,
+    )
+from gemato.exceptions import (
+    ManifestMismatch,
+    ManifestIncompatibleEntry,
+    ManifestCrossDevice,
+    ManifestSymlinkLoop,
+    ManifestInvalidPath,
+    ManifestSyntaxError,
+    )
+from gemato.manifest import (
+    ManifestFile,
+    ManifestEntryIGNORE,
+    ManifestEntryTIMESTAMP,
+    new_manifest_entry,
+    ManifestEntryMANIFEST,
+    )
+from gemato.profile import DefaultProfile
+from gemato.util import (
+    path_starts_with,
+    MultiprocessingPoolWrapper,
+    throw_exception,
+    path_inside_dir,
+    )
+from gemato.verify import (
+    verify_path,
+    verify_entry_compatibility,
+    update_entry_for_path,
+    )
 
 
 class ManifestLoader(object):
@@ -45,17 +71,16 @@ class ManifestLoader(object):
 
         Returns a tuple of (ManifestFile instance, file stat result).
         """
-        m = gemato.manifest.ManifestFile()
+        m = ManifestFile()
         path = os.path.join(self.root_directory, relpath)
 
         if verify_entry is not None:
-            ret, diff = gemato.verify.verify_path(path, verify_entry)
+            ret, diff = verify_path(path, verify_entry)
             if not ret:
-                raise gemato.exceptions.ManifestMismatch(
-                        relpath, verify_entry, diff)
+                raise ManifestMismatch(relpath, verify_entry, diff)
 
-        with gemato.compression.open_potentially_compressed_path(
-                path, 'r', encoding='utf8') as f:
+        with open_potentially_compressed_path(path, 'r',
+                                              encoding='utf8') as f:
             m.load(f, self.verify_openpgp, self.openpgp_env)
             st = os.fstat(f.fileno())
 
@@ -90,12 +115,12 @@ class SubprocessVerifier(object):
         self.last_mtime = last_mtime
 
     def _verify_one_file(self, path, relpath, e):
-        ret, diff = gemato.verify.verify_path(path, e,
-                expected_dev=self.manifest_device,
-                last_mtime=self.last_mtime)
+        ret, diff = verify_path(path, e,
+                                expected_dev=self.manifest_device,
+                                last_mtime=self.last_mtime)
 
         if not ret:
-            err = gemato.exceptions.ManifestMismatch(relpath, e, diff)
+            err = ManifestMismatch(relpath, e, diff)
             ret = self.fail_handler(err)
             if ret is None:
                 ret = True
@@ -118,7 +143,7 @@ class SubprocessVerifier(object):
             if de is not None:
                 dpath = os.path.join(relpath, d)
                 ret &= self._verify_one_file(os.path.join(dirpath, d),
-                        dpath, de)
+                                             dpath, de)
 
         for f in filenames:
             # skip dotfiles
@@ -132,14 +157,13 @@ class SubprocessVerifier(object):
                 continue
             fe = dirdict.pop(f, None)
             ret &= self._verify_one_file(os.path.join(dirpath, f),
-                    fpath, fe)
-
+                                         fpath, fe)
 
         # check for missing files
         for f, e in dirdict.items():
             fpath = os.path.join(relpath, f)
             ret &= self._verify_one_file(os.path.join(dirpath, f),
-                    fpath, e)
+                                         fpath, e)
 
         return ret
 
@@ -173,13 +197,21 @@ class ManifestRecursiveLoader(object):
         'max_jobs',
     ]
 
-    def __init__(self, top_manifest_path,
-            verify_openpgp=None, openpgp_env=None,
-            sign_openpgp=None, openpgp_keyid=None,
-            hashes=None, allow_create=False, sort=None,
-            compress_watermark=None, compress_format=None,
-            profile=gemato.profile.DefaultProfile(),
-            max_jobs=None, allow_xdev=True):
+    def __init__(self,
+                 top_manifest_path,
+                 verify_openpgp=None,
+                 openpgp_env=None,
+                 sign_openpgp=None,
+                 openpgp_keyid=None,
+                 hashes=None,
+                 allow_create=False,
+                 sort=None,
+                 compress_watermark=None,
+                 compress_format=None,
+                 profile=DefaultProfile(),
+                 max_jobs=None,
+                 allow_xdev=True,
+                 ):
         """
         Instantiate the loader for a Manifest tree starting at top-level
         Manifest @top_manifest_path.
@@ -252,22 +284,27 @@ class ManifestRecursiveLoader(object):
         if self.compress_format is None:
             self.compress_format = 'gz'
 
-        self.manifest_loader = ManifestLoader(self.root_directory,
-                verify_openpgp, self.openpgp_env)
+        self.manifest_loader = ManifestLoader(
+            self.root_directory, verify_openpgp, self.openpgp_env)
         self.top_level_manifest_filename = os.path.basename(
-                top_manifest_path)
+            top_manifest_path)
         self.loaded_manifests = {}
         self.updated_manifests = set()
         self.manifest_device = None
 
         # TODO: allow catching OpenPGP exceptions somehow?
         m = self.load_manifest(self.top_level_manifest_filename,
-                allow_create=allow_create, store_dev=not allow_xdev)
+                               allow_create=allow_create,
+                               store_dev=not allow_xdev)
         self.openpgp_signed = m.openpgp_signed
         self.openpgp_signature = m.openpgp_signature
 
-    def load_manifest(self, relpath, verify_entry=None,
-            allow_create=False, store_dev=False):
+    def load_manifest(self,
+                      relpath,
+                      verify_entry=None,
+                      allow_create=False,
+                      store_dev=False,
+                      ):
         """
         Load a single Manifest file whose relative path within Manifest
         tree is @relpath. If @verify_entry is not null, the Manifest
@@ -287,7 +324,7 @@ class ManifestRecursiveLoader(object):
                     relpath, verify_entry)
         except IOError as err:
             if err.errno == errno.ENOENT and allow_create:
-                m = gemato.manifest.ManifestFile()
+                m = ManifestFile()
                 path = os.path.join(self.root_directory, relpath)
                 st = os.stat(os.path.dirname(path))
                 # trigger saving
@@ -297,7 +334,7 @@ class ManifestRecursiveLoader(object):
                 if relpath == 'Manifest':
                     for ip in (self.profile
                                .get_ignore_paths_for_new_manifest('')):
-                        ie = gemato.manifest.ManifestEntryIGNORE(ip)
+                        ie = ManifestEntryIGNORE(ip)
                         m.entries.append(ie)
             else:
                 raise err
@@ -330,11 +367,13 @@ class ManifestRecursiveLoader(object):
         else:
             sign = False
 
-        with gemato.compression.open_potentially_compressed_path(
-                path, 'w', encoding='utf8') as f:
-            m.dump(f, sign_openpgp=sign, sort=sort,
-                    openpgp_env=self.openpgp_env,
-                    openpgp_keyid=self.openpgp_keyid)
+        with open_potentially_compressed_path(path, 'w',
+                                              encoding='utf8') as f:
+            m.dump(f,
+                   sign_openpgp=sign,
+                   sort=sort,
+                   openpgp_env=self.openpgp_env,
+                   openpgp_keyid=self.openpgp_keyid)
             return f.buffer.tell()
 
     def _iter_unordered_manifests_for_path(self, path, recursive=False):
@@ -347,9 +386,9 @@ class ManifestRecursiveLoader(object):
         """
         for k, v in self.loaded_manifests.items():
             d = os.path.dirname(k)
-            if gemato.util.path_starts_with(path, d):
+            if path_starts_with(path, d):
                 yield (k, d, v)
-            elif recursive and gemato.util.path_starts_with(d, path):
+            elif recursive and path_starts_with(d, path):
                 yield (k, d, v)
 
     def _iter_manifests_for_path(self, path, recursive=False):
@@ -380,7 +419,7 @@ class ManifestRecursiveLoader(object):
         unconditionally of whether they match parent checksums.
         """
 
-        with gemato.util.MultiprocessingPoolWrapper(self.max_jobs) as pool:
+        with MultiprocessingPoolWrapper(self.max_jobs) as pool:
             # TODO: figure out how to avoid confusing uses of 'recursive'
             while True:
                 to_load = []
@@ -395,15 +434,15 @@ class ManifestRecursiveLoader(object):
                         mdir = os.path.dirname(mpath)
                         if not verify:
                             e = None
-                        if gemato.util.path_starts_with(path, mdir):
+                        if path_starts_with(path, mdir):
                             to_load.append((mpath, e))
-                        elif recursive and gemato.util.path_starts_with(mdir, path):
+                        elif recursive and path_starts_with(mdir, path):
                             to_load.append((mpath, e))
                 if not to_load:
                     break
 
-                manifests = pool.imap_unordered(self.manifest_loader, to_load,
-                                     chunksize=16)
+                manifests = pool.imap_unordered(
+                    self.manifest_loader, to_load, chunksize=16)
                 self.loaded_manifests.update(manifests)
 
     def find_timestamp(self):
@@ -432,7 +471,7 @@ class ManifestRecursiveLoader(object):
             e.ts = ts
         else:
             m = self.loaded_manifests[self.top_level_manifest_filename]
-            e = gemato.manifest.ManifestEntryTIMESTAMP(ts)
+            e = ManifestEntryTIMESTAMP(ts)
             m.entries.append(e)
 
     def find_path_entry(self, path):
@@ -448,7 +487,7 @@ class ManifestRecursiveLoader(object):
                     # ignore matches recursively, so we process it separately
                     # py<3.5 does not have os.path.commonpath()
                     fullpath = os.path.join(relpath, e.path)
-                    if gemato.util.path_starts_with(path, fullpath):
+                    if path_starts_with(path, fullpath):
                         return e
                 elif e.tag in ('DIST', 'TIMESTAMP'):
                     # distfiles are not local files, so skip them
@@ -468,7 +507,7 @@ class ManifestRecursiveLoader(object):
         """
         real_path = os.path.join(self.root_directory, relpath)
         path_entry = self.find_path_entry(relpath)
-        return gemato.verify.verify_path(real_path, path_entry)
+        return verify_path(real_path, path_entry)
 
     def assert_path_verifies(self, relpath):
         """
@@ -478,11 +517,10 @@ class ManifestRecursiveLoader(object):
         """
         real_path = os.path.join(self.root_directory, relpath)
         path_entry = self.find_path_entry(relpath)
-        ret, diff = gemato.verify.verify_path(real_path, path_entry,
-                expected_dev=self.manifest_device)
+        ret, diff = verify_path(real_path, path_entry,
+                                expected_dev=self.manifest_device)
         if not ret:
-            raise gemato.exceptions.ManifestMismatch(
-                    relpath, path_entry, diff)
+            raise ManifestMismatch(relpath, path_entry, diff)
 
     def find_dist_entry(self, filename, relpath=''):
         """
@@ -519,8 +557,8 @@ class ManifestRecursiveLoader(object):
         self.load_manifests_for_path(path, recursive=True,
                                      verify=verify_manifests)
         out = {}
-        for mpath, relpath, m in self._iter_manifests_for_path(path,
-                                    recursive=True):
+        for mpath, relpath, m in self._iter_manifests_for_path(
+                path, recursive=True):
             for e in m.entries:
                 if only_types is not None:
                     if e.tag not in only_types:
@@ -534,18 +572,19 @@ class ManifestRecursiveLoader(object):
                     continue
 
                 fullpath = os.path.join(relpath, e.path)
-                if gemato.util.path_starts_with(fullpath, path):
+                if path_starts_with(fullpath, path):
                     dirpath = os.path.dirname(fullpath)
                     filename = os.path.basename(e.path)
                     dirout = out.setdefault(dirpath, {})
                     if filename in dirout:
                         # compare the two entries
-                        ret, diff = gemato.verify.verify_entry_compatibility(
-                                dirout[filename], e)
+                        ret, diff = verify_entry_compatibility(
+                            dirout[filename], e)
                         if not ret:
-                            raise gemato.exceptions.ManifestIncompatibleEntry(
-                                    dirout[filename], e, diff)
-                        # we need to construct a single entry with both checksums
+                            raise ManifestIncompatibleEntry(
+                                dirout[filename], e, diff)
+                        # we need to construct a single entry with both
+                        # checksums
                         if diff:
                             new_checksums = dict(e.checksums)
                             for k, d1, d2 in diff:
@@ -555,9 +594,11 @@ class ManifestRecursiveLoader(object):
                     dirout[filename] = e
         return out
 
-    def assert_directory_verifies(self, path='',
-            fail_handler=gemato.util.throw_exception,
-            last_mtime=None):
+    def assert_directory_verifies(self,
+                                  path='',
+                                  fail_handler=throw_exception,
+                                  last_mtime=None,
+                                  ):
         """
         Verify the complete directory tree starting at @path (relative
         to top Manifest directory). Includes testing for stray files.
@@ -586,8 +627,8 @@ class ManifestRecursiveLoader(object):
 
         entry_dict = self.get_file_entry_dict(path)
         it = os.walk(os.path.join(self.root_directory, path),
-                onerror=gemato.util.throw_exception,
-                followlinks=True)
+                     onerror=throw_exception,
+                     followlinks=True)
 
         def _walk_directory(it):
             """
@@ -600,7 +641,7 @@ class ManifestRecursiveLoader(object):
                 dir_st = os.stat(dirpath)
                 if (self.manifest_device is not None
                         and dir_st.st_dev != self.manifest_device):
-                    raise gemato.exceptions.ManifestCrossDevice(dirpath)
+                    raise ManifestCrossDevice(dirpath)
 
                 dir_id = (dir_st.st_dev, dir_st.st_ino)
                 # if this directory was already processed for one of its
@@ -608,7 +649,7 @@ class ManifestRecursiveLoader(object):
                 parent_dir = os.path.dirname(dirpath)
                 parent_dir_ids = directory_ids.get(parent_dir, [])
                 if dir_id in parent_dir_ids:
-                    raise gemato.exceptions.ManifestSymlinkLoop(dirpath)
+                    raise ManifestSymlinkLoop(dirpath)
 
                 relpath = os.path.relpath(dirpath, self.root_directory)
                 # strip dot to avoid matching problems
@@ -648,10 +689,10 @@ class ManifestRecursiveLoader(object):
                 self.manifest_device,
                 fail_handler, last_mtime)
 
-        with gemato.util.MultiprocessingPoolWrapper(self.max_jobs) as pool:
+        with MultiprocessingPoolWrapper(self.max_jobs) as pool:
             # verify the directories in parallel
-            ret = all(pool.imap_unordered(verifier, _walk_directory(it),
-                               chunksize=64))
+            ret = all(pool.imap_unordered(
+                verifier, _walk_directory(it), chunksize=64))
 
             # check for missing directories
             for relpath, dirdict in entry_dict.items():
@@ -662,8 +703,13 @@ class ManifestRecursiveLoader(object):
 
         return ret
 
-    def save_manifests(self, hashes=None, force=False, sort=None,
-            compress_watermark=None, compress_format=None):
+    def save_manifests(self,
+                       hashes=None,
+                       force=False,
+                       sort=None,
+                       compress_watermark=None,
+                       compress_format=None,
+                       ):
         """
         Save the Manifests modified since the last save_manifests()
         call.
@@ -687,7 +733,7 @@ class ManifestRecursiveLoader(object):
         will be compressed using @compress_format. The Manifest files
         whose size is smaller will be uncompressed. To compress all
         Manifest files, pass a size of 0.
-        
+
         If @compress_watermark is None, the compression is left as-is.
         """
 
@@ -704,8 +750,8 @@ class ManifestRecursiveLoader(object):
 
         fixed_manifests = set()
         renamed_manifests = {}
-        for mpath, relpath, m in self._iter_manifests_for_path('',
-                                    recursive=True):
+        for mpath, relpath, m in self._iter_manifests_for_path(
+                '', recursive=True):
             for e in m.entries:
                 if e.tag != 'MANIFEST':
                     continue
@@ -718,7 +764,7 @@ class ManifestRecursiveLoader(object):
                     fullpath = renamed_manifests[fullpath]
                     e.path = os.path.relpath(fullpath, relpath)
 
-                gemato.verify.update_entry_for_path(
+                update_entry_for_path(
                     os.path.join(self.root_directory, fullpath),
                     e,
                     hashes=hashes,
@@ -735,8 +781,7 @@ class ManifestRecursiveLoader(object):
                 unc_size = self.save_manifest(mpath, sort=sort)
                 # let's see if we want to recompress it
                 if compress_watermark is not None:
-                    compr = (gemato.compression
-                            .get_compressed_suffix_from_filename(mpath))
+                    compr = get_compressed_suffix_from_filename(mpath)
                     is_compr = compr is not None
                     want_compr = self.profile.want_compressed_manifest(
                             mpath, m, unc_size, compress_watermark)
@@ -752,7 +797,7 @@ class ManifestRecursiveLoader(object):
                         self.save_manifest(new_mpath)
                         del self.loaded_manifests[mpath]
                         os.unlink(os.path.join(self.root_directory,
-                            mpath))
+                                               mpath))
                         renamed_manifests[mpath] = new_mpath
 
                         if mpath == self.top_level_manifest_filename:
@@ -766,11 +811,13 @@ class ManifestRecursiveLoader(object):
         self.updated_manifests.discard(self.top_level_manifest_filename)
         # at this point, the list should be empty
         assert not self.updated_manifests, (
-                "Unlinked but updated Manifests: {}".format(
-                    self.updated_manifests))
+            f'Unlinked but updated Manifests: {self.updated_manifests}')
 
-    def update_entry_for_path(self, path, new_entry_type='DATA',
-            hashes=None):
+    def update_entry_for_path(self,
+                              path,
+                              new_entry_type='DATA',
+                              hashes=None,
+                              ):
         """
         Update the Manifest entries for @path and queue the containing
         Manifests for update. @path must not be covered by IGNORE.
@@ -814,7 +861,7 @@ class ManifestRecursiveLoader(object):
                     # ignore matches recursively, so we process it separately
                     # py<3.5 does not have os.path.commonpath()
                     fullpath = os.path.join(relpath, e.path)
-                    assert not gemato.util.path_starts_with(path, fullpath)
+                    assert not path_starts_with(path, fullpath)
                 elif e.tag in ('DIST', 'TIMESTAMP'):
                     # distfiles are not local files, so skip them
                     # timestamp is not a file ;-)
@@ -832,13 +879,12 @@ class ManifestRecursiveLoader(object):
                         continue
 
                     try:
-                        gemato.verify.update_entry_for_path(
-                            os.path.join(self.root_directory,
-                                fullpath),
+                        update_entry_for_path(
+                            os.path.join(self.root_directory, fullpath),
                             e,
                             hashes=hashes,
                             expected_dev=self.manifest_device)
-                    except gemato.exceptions.ManifestInvalidPath as err:
+                    except ManifestInvalidPath as err:
                         if err.detail[0] == '__exists__':
                             # file does not exist anymore, so remove
                             # the entry
@@ -863,13 +909,11 @@ class ManifestRecursiveLoader(object):
                 newpath = os.path.relpath(path, relpath)
                 if new_entry_type == 'AUX':
                     # AUX has implicit files/ prefix
-                    assert gemato.util.path_inside_dir(newpath,
-                            'files')
+                    assert path_inside_dir(newpath, 'files')
                     # drop files/ prefix
                     newpath = os.path.relpath(newpath, 'files')
-                e = gemato.manifest.new_manifest_entry(
-                        new_entry_type, newpath, 0, {})
-                gemato.verify.update_entry_for_path(
+                e = new_manifest_entry(new_entry_type, newpath, 0, {})
+                update_entry_for_path(
                     os.path.join(self.root_directory, path),
                     e,
                     hashes=hashes,
@@ -879,8 +923,10 @@ class ManifestRecursiveLoader(object):
                 had_entry = True
                 break
 
-    def get_deduplicated_file_entry_dict_for_update(self, path='',
-            verify_manifests=True):
+    def get_deduplicated_file_entry_dict_for_update(self,
+                                                    path='',
+                                                    verify_manifests=True,
+                                                    ):
         """
         Find all file entries that apply to paths starting with @path.
         Remove all duplicate entries and queue the relevant Manifests
@@ -906,8 +952,8 @@ class ManifestRecursiveLoader(object):
         self.load_manifests_for_path(path, recursive=True,
                                      verify=verify_manifests)
         out = {}
-        for mpath, relpath, m in self._iter_manifests_for_path(path,
-                                    recursive=True):
+        for mpath, relpath, m in self._iter_manifests_for_path(
+                path, recursive=True):
             entries_to_remove = []
             for e in m.entries:
                 if e.tag in ('DIST', 'TIMESTAMP'):
@@ -916,16 +962,15 @@ class ManifestRecursiveLoader(object):
                     continue
 
                 fullpath = os.path.join(relpath, e.path)
-                if gemato.util.path_starts_with(fullpath, path):
+                if path_starts_with(fullpath, path):
                     if fullpath in out:
                         # compare the two entries
-                        ret, diff = gemato.verify.verify_entry_compatibility(
-                                out[fullpath][1], e)
+                        ret, diff = verify_entry_compatibility(
+                            out[fullpath][1], e)
                         # if semantically incompatible, throw
                         if not ret and diff[0][0] == '__type__':
-                            raise (gemato.exceptions
-                                    .ManifestIncompatibleEntry(
-                                        out[fullpath][1], e, diff))
+                            raise ManifestIncompatibleEntry(
+                                out[fullpath][1], e, diff)
                         # otherwise, make sure we have all checksums
                         out[fullpath][1].checksums.update(e.checksums)
                         # and drop the duplicate
@@ -957,22 +1002,23 @@ class ManifestRecursiveLoader(object):
         doing updates.
         """
 
-        manifest_filenames = (gemato.compression
-                .get_potential_compressed_names('Manifest'))
+        manifest_filenames = get_potential_compressed_names('Manifest')
 
-        entry_dict = self.get_file_entry_dict(path,
-                only_types=['IGNORE'], verify_manifests=verify_manifests)
+        entry_dict = self.get_file_entry_dict(
+            path,
+            only_types=['IGNORE'],
+            verify_manifests=verify_manifests)
         new_manifests = []
         directory_ids = {}
         it = os.walk(os.path.join(self.root_directory, path),
-                onerror=gemato.util.throw_exception,
-                followlinks=True)
+                     onerror=throw_exception,
+                     followlinks=True)
 
         for dirpath, dirnames, filenames in it:
             dir_st = os.stat(dirpath)
             if (self.manifest_device is not None
                     and dir_st.st_dev != self.manifest_device):
-                raise gemato.exceptions.ManifestCrossDevice(dirpath)
+                raise ManifestCrossDevice(dirpath)
 
             dir_id = (dir_st.st_dev, dir_st.st_ino)
             # if this directory was already processed for one of its
@@ -980,7 +1026,7 @@ class ManifestRecursiveLoader(object):
             parent_dir = os.path.dirname(dirpath)
             parent_dir_ids = directory_ids.get(parent_dir, [])
             if dir_id in parent_dir_ids:
-                raise gemato.exceptions.ManifestSymlinkLoop(dirpath)
+                raise ManifestSymlinkLoop(dirpath)
 
             relpath = os.path.relpath(dirpath, self.root_directory)
             # strip dot to avoid matching problems
@@ -1020,7 +1066,7 @@ class ManifestRecursiveLoader(object):
                     # let's try to load it
                     try:
                         self.load_manifest(fpath)
-                    except gemato.exceptions.ManifestSyntaxError:
+                    except ManifestSyntaxError:
                         # syntax error? probably not a Manifest then.
                         pass
                     else:
@@ -1028,9 +1074,12 @@ class ManifestRecursiveLoader(object):
 
         return new_manifests
 
-
-    def update_entries_for_directory(self, path='', hashes=None,
-            last_mtime=None, verify_manifests=False):
+    def update_entries_for_directory(self,
+                                     path='',
+                                     hashes=None,
+                                     last_mtime=None,
+                                     verify_manifests=False,
+                                     ):
         """
         Update the Manifest entries for the contents of directory
         @path (top directory by default), recursively. Includes adding
@@ -1063,29 +1112,27 @@ class ManifestRecursiveLoader(object):
             hashes = self.hashes
         assert hashes is not None
 
-        manifest_filenames = (gemato.compression
-                .get_potential_compressed_names('Manifest'))
+        manifest_filenames = get_potential_compressed_names('Manifest')
 
-        new_manifests = self.load_unregistered_manifests(path,
-                verify_manifests=verify_manifests)
+        new_manifests = self.load_unregistered_manifests(
+            path, verify_manifests=verify_manifests)
         entry_dict = self.get_deduplicated_file_entry_dict_for_update(
-                path, verify_manifests=verify_manifests)
+            path, verify_manifests=verify_manifests)
         manifest_stack = []
-        for mpath, mrpath, m in (self
-                ._iter_manifests_for_path(path)):
+        for mpath, mrpath, m in (self._iter_manifests_for_path(path)):
             manifest_stack.append((mpath, mrpath, m))
             break
         directory_ids = {}
 
         it = os.walk(os.path.join(self.root_directory, path),
-                onerror=gemato.util.throw_exception,
-                followlinks=True)
+                     onerror=throw_exception,
+                     followlinks=True)
 
         for dirpath, dirnames, filenames in it:
             dir_st = os.stat(dirpath)
             if (self.manifest_device is not None
                     and dir_st.st_dev != self.manifest_device):
-                raise gemato.exceptions.ManifestCrossDevice(dirpath)
+                raise ManifestCrossDevice(dirpath)
 
             dir_id = (dir_st.st_dev, dir_st.st_ino)
             # if this directory was already processed for one of its
@@ -1093,7 +1140,7 @@ class ManifestRecursiveLoader(object):
             parent_dir = os.path.dirname(dirpath)
             parent_dir_ids = directory_ids.get(parent_dir, [])
             if dir_id in parent_dir_ids:
-                raise gemato.exceptions.ManifestSymlinkLoop(dirpath)
+                raise ManifestSymlinkLoop(dirpath)
 
             relpath = os.path.relpath(dirpath, self.root_directory)
             # strip dot to avoid matching problems
@@ -1101,8 +1148,7 @@ class ManifestRecursiveLoader(object):
                 relpath = ''
 
             # drop Manifest paths until we get to a common directory
-            while not gemato.util.path_starts_with(relpath,
-                    manifest_stack[-1][1]):
+            while not path_starts_with(relpath, manifest_stack[-1][1]):
                 manifest_stack.pop()
 
             want_manifest = self.profile.want_manifest_in_directory(
@@ -1124,11 +1170,10 @@ class ManifestRecursiveLoader(object):
                     skip_dirs.append(d)
                 else:
                     # trigger the exception indirectly
-                    gemato.verify.update_entry_for_path(
-                        os.path.join(dirpath, d),
-                        de,
-                        hashes=hashes,
-                        expected_dev=self.manifest_device)
+                    update_entry_for_path(os.path.join(dirpath, d),
+                                          de,
+                                          hashes=hashes,
+                                          expected_dev=self.manifest_device)
                     assert False, "exception should have been raised"
 
             # skip scanning ignored directories
@@ -1150,8 +1195,8 @@ class ManifestRecursiveLoader(object):
                     if fe.tag == 'IGNORE':
                         continue
                     if fe.tag == 'MANIFEST':
-                        manifest_stack.append((fpath, relpath,
-                            self.loaded_manifests[fpath]))
+                        manifest_stack.append(
+                            (fpath, relpath, self.loaded_manifests[fpath]))
                         # do not update the Manifest entry if
                         # the relevant Manifest is going to be updated
                         # anyway
@@ -1164,20 +1209,19 @@ class ManifestRecursiveLoader(object):
                         continue
                     if fpath in new_manifests:
                         ftype = 'MANIFEST'
-                        manifest_stack.append((fpath, relpath,
-                            self.loaded_manifests[fpath]))
+                        manifest_stack.append(
+                            (fpath, relpath, self.loaded_manifests[fpath]))
                     else:
                         ftype = self.profile.get_entry_type_for_path(
                                 fpath)
 
                     # note: .path needs to be corrected below
-                    fe = gemato.manifest.new_manifest_entry(ftype,
-                            fpath, 0, {})
+                    fe = new_manifest_entry(ftype, fpath, 0, {})
                     new_entries.append(fe)
                     if relpath in self.updated_manifests:
                         continue
 
-                changed = gemato.verify.update_entry_for_path(
+                changed = update_entry_for_path(
                     os.path.join(dirpath, f),
                     fe,
                     hashes=hashes,
@@ -1192,17 +1236,18 @@ class ManifestRecursiveLoader(object):
                 mpath = os.path.join(relpath, 'Manifest')
                 m = self.create_manifest(mpath)
                 manifest_stack.append((mpath, relpath, m))
-                fe = gemato.manifest.ManifestEntryMANIFEST(
-                        mpath, 0, {})
+                fe = ManifestEntryMANIFEST(mpath, 0, {})
                 new_entries.append(fe)
 
                 for ip in (self.profile
                            .get_ignore_paths_for_new_manifest(relpath)):
-                    ie = gemato.manifest.ManifestEntryIGNORE(ip)
+                    ie = ManifestEntryIGNORE(ip)
                     iep = os.path.join(relpath, ip)
 
                     if self.find_path_entry(iep):
-                        raise NotImplementedError('Need to remove old parent entry for now-ignored path')
+                        raise NotImplementedError(
+                            'Need to remove old parent entry for '
+                            'now-ignored path')
 
                     m.entries.append(ie)
                     new_ignore_paths.append(iep)
@@ -1233,12 +1278,11 @@ class ManifestRecursiveLoader(object):
                             # but for now, we've shoved our path
                             # into .aux_path
                             fe.path = os.path.relpath(fe.aux_path,
-                                    mdirpath)
-                            assert gemato.util.path_inside_dir(
-                                    fe.path, 'files')
+                                                      mdirpath)
+                            assert path_inside_dir(fe.path, 'files')
                             # drop files/ prefix for the entry
-                            fe.aux_path = os.path.relpath(fe.path,
-                                    'files')
+                            fe.aux_path = os.path.relpath(
+                                fe.path, 'files')
                         else:
                             fe.path = os.path.relpath(fe.path, mdirpath)
                         # do not add duplicate entry if the path is ignored

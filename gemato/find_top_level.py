@@ -1,14 +1,17 @@
 # gemato: Top-level Manifest finding routine
 # vim:fileencoding=utf-8
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
 import os
 import os.path
 
-import gemato.compression
-import gemato.manifest
+from gemato.compression import (
+    get_potential_compressed_names,
+    open_potentially_compressed_path,
+    )
+from gemato.manifest import ManifestFile
 
 
 def find_top_level_manifest(path='.', allow_xdev=True, allow_compressed=False):
@@ -31,14 +34,14 @@ def find_top_level_manifest(path='.', allow_xdev=True, allow_compressed=False):
     cur_path = path
     last_found = None
     original_dev = None
-    m = gemato.manifest.ManifestFile()
+    m = ManifestFile()
 
     root_st = os.stat('/')
 
     manifest_filenames = ('Manifest',)
     if allow_compressed:
-        manifest_filenames = list(gemato.compression
-                .get_potential_compressed_names('Manifest'))
+        manifest_filenames = list(
+            get_potential_compressed_names('Manifest'))
 
     while True:
         st = os.stat(cur_path)
@@ -54,9 +57,8 @@ def find_top_level_manifest(path='.', allow_xdev=True, allow_compressed=False):
             try:
                 # note: this is safe for allow_compressed=False
                 # since it detects compression by filename suffix
-                with (gemato.compression
-                        .open_potentially_compressed_path(m_path, 'r',
-                            encoding='utf8')) as f:
+                with open_potentially_compressed_path(
+                        m_path, 'r', encoding='utf8') as f:
                     fst = os.fstat(f.fileno())
                     if fst.st_dev != original_dev and not allow_xdev:
                         return last_found
