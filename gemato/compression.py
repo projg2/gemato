@@ -75,13 +75,13 @@ def open_potentially_compressed_path(path, mode, **kwargs):
 
     compression = get_compressed_suffix_from_filename(path)
     if compression is None:
-        return io.open(path, mode, **kwargs)
+        return open(path, mode, **kwargs)
 
     bmode = mode
     if 'b' not in bmode:
         bmode += 'b'
 
-    f = io.open(path, bmode)
+    f = open(path, bmode)
     fs = FileStack([f])
     try:
         cf = open_compressed_file(

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim:fileencoding=utf-8
 # Ultra-optimized Meta-Manifest writing.
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
@@ -19,7 +19,7 @@ import gen_fast_manifest
 
 
 def manifest_dir_generator(iter_n):
-    with io.open('profiles/categories', 'r') as f:
+    with open('profiles/categories', 'r') as f:
         categories = [x.strip() for x in f]
 
     for c in categories:
@@ -83,7 +83,7 @@ def make_toplevel(d, ts, pgp_key):
                     raise ValueError('GPG error: {}'.format(serr))
                 data = sout
 
-            with io.open(dsttop, 'wb') as f:
+            with open(dsttop, 'wb') as f:
                 f.write(data)
 
             break
@@ -93,18 +93,18 @@ def gen_metamanifest(top_dir, pgp_key):
     os.chdir(top_dir)
 
     # pre-populate IGNORE entries
-    with io.open('metadata/Manifest', 'wb') as f:
+    with open('metadata/Manifest', 'wb') as f:
         f.write(b'''IGNORE timestamp
 IGNORE timestamp.chk
 IGNORE timestamp.commit
 IGNORE timestamp.x
 ''')
     for mdir in ('dtd', 'glsa', 'news', 'xml-schema'):
-        with io.open(os.path.join('metadata', mdir, 'Manifest'), 'wb') as f:
+        with open(os.path.join('metadata', mdir, 'Manifest'), 'wb') as f:
             f.write(b'''IGNORE timestamp.chk
 IGNORE timestamp.commit
 ''')
-    with io.open('Manifest', 'wb') as f:
+    with open('Manifest', 'wb') as f:
         f.write(b'''IGNORE distfiles
 IGNORE local
 IGNORE lost+found

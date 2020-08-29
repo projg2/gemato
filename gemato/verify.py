@@ -6,7 +6,6 @@
 import contextlib
 import errno
 import fcntl
-import io
 import os
 import stat
 
@@ -100,7 +99,7 @@ def get_file_metadata(path, hashes):
         # 5. st_mtime
         yield st.st_mtime
 
-        f = io.open(fd, 'rb')
+        f = open(fd, 'rb')
     except Exception:
         if opened:
             os.close(fd)

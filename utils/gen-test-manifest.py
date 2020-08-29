@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import glob
-import io
 import os
 import os.path
 import sys
@@ -47,7 +46,7 @@ def write_manifest_entries_for_dir(manifest_file, topdir, hashes):
 
 
 def gen_metamanifests(top_dir, hashes):
-    with io.open(os.path.join(top_dir, 'profiles/categories'), 'r') as f:
+    with open(os.path.join(top_dir, 'profiles/categories'), 'r') as f:
         categories = [x.strip() for x in f]
 
     alldirs = []
@@ -65,10 +64,10 @@ def gen_metamanifests(top_dir, hashes):
     for bm in alldirs:
         bmdir = os.path.join(top_dir, bm)
         if not list(glob.glob(os.path.join(bmdir, 'Manifest*'))):
-            with io.open(os.path.join(bmdir, 'Manifest'), 'w') as f:
+            with open(os.path.join(bmdir, 'Manifest'), 'w') as f:
                 write_manifest_entries_for_dir(f, bmdir, hashes)
 
-    with io.open(os.path.join(top_dir, 'Manifest'), 'w') as f:
+    with open(os.path.join(top_dir, 'Manifest'), 'w') as f:
         write_manifest_entries_for_dir(f, top_dir, hashes)
 
 

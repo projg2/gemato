@@ -77,7 +77,7 @@ def hash_path(path, hash_names):
     specified as @hash_names. Returns a dict of (hash_name -> hex value)
     mappings.
     """
-    with io.open(path, 'rb') as f:
+    with open(path, 'rb') as f:
         return hash_file(f, hash_names)
 
 

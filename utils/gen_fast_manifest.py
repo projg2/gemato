@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # vim:fileencoding=utf-8
 # Ultra-optimized Manifest writing.
-# (c) 2017 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
 import glob
 import gzip
 import hashlib
-import io
 import os
 import os.path
 import sys
@@ -18,7 +17,7 @@ def get_manifest_entry(t, path, relpath):
     sha512 = hashlib.sha512()
     blake2 = hashlib.blake2b()
 
-    with io.open(path, 'rb') as f:
+    with open(path, 'rb') as f:
         buf = f.read()
         sha512.update(buf)
         blake2.update(buf)
@@ -85,7 +84,7 @@ def gen_manifest(top_dir):
 
     # load DIST and IGNORE entries from existing Manifest
     try:
-        with io.open(os.path.join(top_dir, 'Manifest'), 'rb') as f:
+        with open(os.path.join(top_dir, 'Manifest'), 'rb') as f:
             for l in f:
                 if l.startswith(b'DIST') or l.startswith(b'IGNORE'):
                     manifest_entries.append(l.rstrip())
@@ -107,7 +106,7 @@ def gen_manifest(top_dir):
         if had_manifest:
             os.unlink(os.path.join(top_dir, 'Manifest'))
     else:
-        with io.open(os.path.join(top_dir, 'Manifest'), 'wb') as f:
+        with open(os.path.join(top_dir, 'Manifest'), 'wb') as f:
             f.write(manifest_data)
 
 

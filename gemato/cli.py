@@ -7,7 +7,6 @@ from __future__ import print_function
 
 import argparse
 import datetime
-import io
 import logging
 import multiprocessing
 import os.path
@@ -113,7 +112,7 @@ class BaseOpenPGPMixin(object):
                                      proxy=args.proxy)
 
         if args.openpgp_key is not None:
-            with io.open(args.openpgp_key, 'rb') as f:
+            with open(args.openpgp_key, 'rb') as f:
                 self.openpgp_env.import_key(f)
 
     def cleanup(self):
@@ -539,7 +538,7 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
             if p == '-':
                 f = sys.stdin
             else:
-                f = io.open(p, 'r')
+                f = open(p, 'r')
 
             try:
                 try:
