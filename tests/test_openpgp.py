@@ -6,6 +6,7 @@
 import datetime
 import io
 import os
+import tempfile
 
 import pytest
 
@@ -23,7 +24,10 @@ from gemato.exceptions import (
     OpenPGPRuntimeError,
     )
 from gemato.manifest import ManifestFile
-from gemato.openpgp import OpenPGPEnvironment
+from gemato.openpgp import (
+    OpenPGPEnvironment,
+    OpenPGPSystemEnvironment,
+    )
 from gemato.recursiveloader import ManifestRecursiveLoader
 
 from tests.keydata import (
@@ -321,22 +325,41 @@ def test_noverify_load_cli(tmp_path):
                                  '--no-openpgp-verify', str(tmp_path)])
 
 
-@pytest.fixture
-def openpgp_env():
+class OpenPGPMockedSystemEnvironment(OpenPGPSystemEnvironment):
+    """System environment variant mocked to use isolated GNUPGHOME"""
+    def __init__(self, *args, **kwargs):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        os.environ['GNUPGHOME'] = self._tmpdir.name
+        super().__init__(*args, **kwargs)
+
+    def close(self):
+        if self._tmpdir is not None:
+            self._tmpdir.cleanup()
+            self._tmpdir = None
+            os.environ.pop('GNUPGHOME', None)
+
+    def import_key(self, keyfile):
+        exitst, out, err = self._spawn_gpg(
+            ['gpg', '--batch', '--import'], keyfile.read())
+        if exitst != 0:
+            raise OpenPGPKeyImportError(err.decode('utf8'))
+
+
+@pytest.fixture(params=[OpenPGPEnvironment,
+                        OpenPGPMockedSystemEnvironment])
+def openpgp_env(request):
     """OpenPGP environment fixture"""
-    env = OpenPGPEnvironment()
+    env = request.param()
     yield env
     env.close()
 
 
-@pytest.fixture
-def openpgp_env_valid_key(openpgp_env):
-    """OpenPGP environment with good key loaded"""
-    try:
-        openpgp_env.import_key(io.BytesIO(VALID_PUBLIC_KEY))
-    except OpenPGPNoImplementation as e:
-        pytest.skip(str(e))
-    yield openpgp_env
+@pytest.fixture(params=[OpenPGPEnvironment])
+def openpgp_env_with_refresh(request):
+    """OpenPGP environments that support refreshing keys"""
+    env = request.param()
+    yield env
+    env.close()
 
 
 MANIFEST_VARIANTS = [
@@ -656,28 +679,28 @@ REFRESH_VARIANTS = [
 @pytest.mark.parametrize(
     'manifest_var,key_var,server_key_fpr,server_key_var,expected',
     REFRESH_VARIANTS)
-def test_refresh_hkp(openpgp_env, hkp_server, manifest_var, key_var,
-                     server_key_fpr, server_key_var, expected):
+def test_refresh_hkp(openpgp_env_with_refresh, hkp_server, manifest_var,
+                     key_var, server_key_fpr, server_key_var, expected):
     """Test refreshing against a HKP keyserver"""
     try:
         if key_var is not None:
             with io.BytesIO(globals()[key_var]) as f:
-                openpgp_env.import_key(f)
+                openpgp_env_with_refresh.import_key(f)
 
         if server_key_var is not None:
             hkp_server.keys[server_key_fpr] = globals()[server_key_var]
 
         if expected is None:
-            openpgp_env.refresh_keys(allow_wkd=False,
-                                     keyserver=hkp_server.addr)
+            openpgp_env_with_refresh.refresh_keys(
+                allow_wkd=False, keyserver=hkp_server.addr)
             with io.StringIO(globals()[manifest_var]) as f:
-                openpgp_env.verify_file(f)
+                openpgp_env_with_refresh.verify_file(f)
         else:
             with pytest.raises(expected):
-                openpgp_env.refresh_keys(allow_wkd=False,
-                                         keyserver=hkp_server.addr)
+                openpgp_env_with_refresh.refresh_keys(
+                    allow_wkd=False, keyserver=hkp_server.addr)
                 with io.StringIO(globals()[manifest_var]) as f:
-                    openpgp_env.verify_file(f)
+                    openpgp_env_with_refresh.verify_file(f)
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
@@ -685,14 +708,14 @@ def test_refresh_hkp(openpgp_env, hkp_server, manifest_var, key_var,
 @pytest.mark.parametrize(
     'manifest_var,key_var,server_key_fpr,server_key_var,expected',
     REFRESH_VARIANTS)
-def test_refresh_wkd(openpgp_env, manifest_var, key_var, server_key_fpr,
-                     server_key_var, expected):
+def test_refresh_wkd(openpgp_env_with_refresh, manifest_var, key_var,
+                     server_key_fpr, server_key_var, expected):
     """Test refreshing against WKD"""
     with pytest.importorskip('responses').RequestsMock() as responses:
         try:
             if key_var is not None:
                 with io.BytesIO(globals()[key_var]) as f:
-                    openpgp_env.import_key(f)
+                    openpgp_env_with_refresh.import_key(f)
 
             if server_key_var is not None:
                 responses.add(
@@ -709,24 +732,27 @@ def test_refresh_wkd(openpgp_env, manifest_var, key_var, server_key_fpr,
                     status=404)
 
             if expected is None:
-                openpgp_env.refresh_keys(allow_wkd=True,
-                                         keyserver='hkps://block.invalid/')
+                openpgp_env_with_refresh.refresh_keys(
+                    allow_wkd=True, keyserver='hkps://block.invalid/')
                 with io.StringIO(globals()[manifest_var]) as f:
-                    openpgp_env.verify_file(f)
+                    openpgp_env_with_refresh.verify_file(f)
             else:
                 with pytest.raises(expected):
-                    openpgp_env.refresh_keys(allow_wkd=True,
-                                             keyserver='hkps://block.invalid/')
+                    openpgp_env_with_refresh.refresh_keys(
+                        allow_wkd=True, keyserver='hkps://block.invalid/')
                     with io.StringIO(globals()[manifest_var]) as f:
-                        openpgp_env.verify_file(f)
+                        openpgp_env_with_refresh.verify_file(f)
         except OpenPGPNoImplementation as e:
             pytest.skip(str(e))
 
 
-def test_refresh_wkd_fallback_to_hkp(openpgp_env_valid_key, hkp_server):
+def test_refresh_wkd_fallback_to_hkp(openpgp_env_with_refresh,
+                                     hkp_server):
     """Test whether WKD refresh failure falls back to HKP"""
     with pytest.importorskip('responses').RequestsMock() as responses:
         try:
+            with io.BytesIO(VALID_PUBLIC_KEY) as f:
+                openpgp_env_with_refresh.import_key(f)
             hkp_server.keys[KEY_FINGERPRINT] = REVOKED_PUBLIC_KEY
             responses.add(
                 responses.GET,
@@ -734,12 +760,12 @@ def test_refresh_wkd_fallback_to_hkp(openpgp_env_valid_key, hkp_server):
                 '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato',
                 status=404)
 
-            openpgp_env_valid_key.refresh_keys(allow_wkd=True,
-                                               keyserver=hkp_server.addr)
+            openpgp_env_with_refresh.refresh_keys(
+                allow_wkd=True, keyserver=hkp_server.addr)
 
             with pytest.raises(OpenPGPRevokedKeyFailure):
                 with io.StringIO(SIGNED_MANIFEST) as f:
-                    openpgp_env_valid_key.verify_file(f)
+                    openpgp_env_with_refresh.verify_file(f)
         except OpenPGPNoImplementation as e:
             pytest.skip(str(e))
 
