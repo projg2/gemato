@@ -33,7 +33,7 @@ def verify_failure(e):
     return False
 
 
-class GematoCommand(object):
+class GematoCommand:
     """
     Base class for commands supported by gemato.
     """
@@ -80,7 +80,7 @@ class GematoCommand(object):
         pass
 
 
-class BaseOpenPGPMixin(object):
+class BaseOpenPGPMixin:
     """
     A base mixin that adds logic to load and use OpenPGP keys.
     """
@@ -157,7 +157,7 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
                 logging.info('Keys refreshed.')
 
 
-class BaseManifestLoaderMixin(object):
+class BaseManifestLoaderMixin:
     """
     Mixin for commands using RecursiveManifestLoader class.
     """

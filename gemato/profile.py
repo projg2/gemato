@@ -6,7 +6,7 @@
 import os.path
 
 
-class DefaultProfile(object):
+class DefaultProfile:
     """
     Profile is a class describing the specific properties of a directory
     tree. It is used when updating Manifests to determine the most

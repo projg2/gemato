@@ -12,7 +12,7 @@ import sys
 import pyblake2
 
 
-class ExternalToolHash(object):
+class ExternalToolHash:
     def __init__(self, argv):
         self.subp = subprocess.Popen(argv,
                 stdin=subprocess.PIPE,

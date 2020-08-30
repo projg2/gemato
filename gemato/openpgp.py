@@ -37,7 +37,7 @@ GNUPG = os.environ.get('GNUPG', 'gpg')
 GNUPGCONF = os.environ.get('GNUPGCONF', 'gpgconf')
 
 
-class OpenPGPSignatureData(object):
+class OpenPGPSignatureData:
     __slots__ = ['fingerprint', 'timestamp', 'expire_timestamp',
                  'primary_key_fingerprint']
 
@@ -49,7 +49,7 @@ class OpenPGPSignatureData(object):
         self.primary_key_fingerprint = primary_key_fingerprint
 
 
-class OpenPGPSystemEnvironment(object):
+class OpenPGPSystemEnvironment:
     """
     OpenPGP environment class that uses the global OpenPGP environment
     (user's home directory or GNUPGHOME).

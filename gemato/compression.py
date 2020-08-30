@@ -37,7 +37,7 @@ def open_compressed_file(suffix, f, mode='rb'):
     raise UnsupportedCompression(suffix)
 
 
-class FileStack(object):
+class FileStack:
     """
     A context manager for stacked files. Maintains handles for all files
     on stack, returns the topmost (last) layer on enter and closes them

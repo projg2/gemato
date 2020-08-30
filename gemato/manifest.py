@@ -18,7 +18,7 @@ from gemato.util import (
     )
 
 
-class ManifestEntryTIMESTAMP(object):
+class ManifestEntryTIMESTAMP:
     """ISO-8601 timestamp"""
 
     __slots__ = ['ts']
@@ -54,7 +54,7 @@ class ManifestEntryTIMESTAMP(object):
                 or (self.tag == other.tag and self.ts < other.ts))
 
 
-class ManifestPathEntry(object):
+class ManifestPathEntry:
     """Base class for entries using a path"""
 
     __slots__ = ['path']
@@ -320,7 +320,7 @@ def new_manifest_entry(tag, *args):
     return MANIFEST_TAG_MAPPING[tag](*args)
 
 
-class ManifestState(object):
+class ManifestState:
     """
     FSM constants for loading Manifest.
     """
@@ -332,7 +332,7 @@ class ManifestState(object):
     POST_SIGNED_DATA = 4
 
 
-class ManifestFile(object):
+class ManifestFile:
     """
     A class encapsulating a single Manifest file. It supports reading
     from files and writing to them.

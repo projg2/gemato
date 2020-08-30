@@ -13,7 +13,7 @@ HASH_BUFFER_SIZE = 65536
 MAX_SLURP_SIZE = 1048576
 
 
-class SizeHash(object):
+class SizeHash:
     """A cheap wrapper to count file size via hashlib-like interface"""
 
     __slots__ = ['size']

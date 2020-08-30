@@ -1,10 +1,10 @@
 # gemato: Utility functions
 # vim:fileencoding=utf-8
-# (c) 2017-2018 Michał Górny
+# (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 
-class MultiprocessingPoolWrapper(object):
+class MultiprocessingPoolWrapper:
     """
     A portability wrapper for multiprocessing.Pool that supports
     context manager API (and any future hacks we might need).

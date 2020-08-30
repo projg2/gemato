@@ -40,7 +40,7 @@ from gemato.verify import (
     )
 
 
-class ManifestLoader(object):
+class ManifestLoader:
     """
     Helper class to load Manifests in subprocesses.
     """
@@ -99,7 +99,7 @@ class ManifestLoader(object):
         return (args[0], self.verify_and_load(*args)[0])
 
 
-class SubprocessVerifier(object):
+class SubprocessVerifier:
     """
     Helper class used to verify directories in subprocesses.
     """
@@ -168,7 +168,7 @@ class SubprocessVerifier(object):
         return ret
 
 
-class ManifestRecursiveLoader(object):
+class ManifestRecursiveLoader:
     """
     A class encapsulating a tree covered by multiple Manifests.
     Automatically verifies and loads additional sub-Manifests,
