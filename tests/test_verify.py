@@ -28,9 +28,10 @@ from gemato.verify import (
 TEST_STRING = b'The quick brown fox jumps over the lazy dog'
 
 
-@pytest.fixture
-def test_tree(tmp_path):
+@pytest.fixture(scope='module')
+def test_tree(tmp_path_factory):
     """Test tree with different file types needed for tests"""
+    tmp_path = tmp_path_factory.mktemp('verify-')
     with open(tmp_path / 'empty-file', 'w'):
         pass
     with open(tmp_path / 'regular-file', 'wb') as f:

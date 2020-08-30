@@ -3,7 +3,6 @@
 # (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
-import collections
 import errno
 import functools
 import io
@@ -88,31 +87,34 @@ class HKPServerRequestHandler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
 
-@pytest.fixture
-def hkp_server():
-    keys = {}
-    # try 10 randomly selected ports before giving up
-    for port in random.sample(range(1024, 32768), 10):
-        try:
-            server = HTTPServer(
-                ('127.0.0.1', port),
-                functools.partial(HKPServerRequestHandler, keys))
-        except OSError as e:
-            if e.errno != errno.EADDRINUSE:
-                raise unittest.SkipTest('Unable to bind the HKP server: {}'
-                        .format(e))
+class HKPServer:
+    def __init__(self):
+        self.keys = {}
+        self.addr = None
+
+    def start(self):
+        # try 10 randomly selected ports before giving up
+        for port in random.sample(range(1024, 32768), 10):
+            try:
+                self.server = HTTPServer(
+                    ('127.0.0.1', port),
+                    functools.partial(HKPServerRequestHandler, self.keys))
+            except OSError as e:
+                if e.errno != errno.EADDRINUSE:
+                    pytest.skip(
+                        f'Unable to bind the HKP server: {e}')
+            else:
+                break
         else:
-            break
-    else:
-        pytest.skip('Unable to find a free port for HKP server')
+            pytest.skip('Unable to find a free port for HKP server')
 
-    server_addr = f'hkp://127.0.0.1:{port}'
-    server_thread = threading.Thread(target=server.serve_forever)
-    server_thread.start()
+        self.addr = f'hkp://127.0.0.1:{port}'
+        self.thread = threading.Thread(target=self.server.serve_forever)
+        self.thread.start()
 
-    yield collections.namedtuple('HKPServerTuple', ('addr', 'keys'))(
-        server_addr, keys)
-
-    server.shutdown()
-    server.server_close()
-    server_thread.join()
+    def stop(self):
+        assert self.addr is not None
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join()
+        self.addr = None

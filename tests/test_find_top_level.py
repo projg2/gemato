@@ -12,8 +12,9 @@ import pytest
 from gemato.find_top_level import find_top_level_manifest
 
 
-@pytest.fixture
-def plain_tree(tmp_path):
+@pytest.fixture(scope='module')
+def plain_tree(tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp('find-top-level-plain-')
     for d in ('empty-subdir',
               'manifest-subdir',
               'deep/manifest-subdir',
@@ -84,8 +85,9 @@ def test_cross_device(tmp_path):
     assert find_top_level_manifest(tmp_path / 'test') is None
 
 
-@pytest.fixture
-def compressed_manifest_tree(tmp_path):
+@pytest.fixture(scope='module')
+def compressed_manifest_tree(tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp('find-top-level-compressed-')
     for d in ('empty-subdir',
               'manifest-subdir',
               'deep/manifest-subdir',

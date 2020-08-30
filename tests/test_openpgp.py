@@ -37,11 +37,7 @@ from tests.keydata import (
     OTHER_PUBLIC_KEY, OTHER_PUBLIC_KEY_UID, OTHER_PUBLIC_KEY_SIG,
     UNEXPIRE_SIG,
     )
-from tests.testutil import hkp_server
-
-
-# workaround pyflakes
-hkp_server = hkp_server
+from tests.testutil import HKPServer
 
 
 VALID_PUBLIC_KEY = PUBLIC_KEY + UID + PUBLIC_KEY_SIG
@@ -636,6 +632,22 @@ def test_recursive_manifest_loader_save_submanifest(tmp_path, privkey_env):
         m2.load(f, openpgp_env=privkey_env)
     assert not m2.openpgp_signed
     assert m2.openpgp_signature is None
+
+
+@pytest.fixture(scope='module')
+def global_hkp_server():
+    """A fixture that starts a single HKP server instance for tests"""
+    server = HKPServer()
+    server.start()
+    yield server
+    server.stop()
+
+
+@pytest.fixture
+def hkp_server(global_hkp_server):
+    """A fixture that resets the global HKP server with empty keys"""
+    global_hkp_server.keys.clear()
+    yield global_hkp_server
 
 
 COMBINED_PUBLIC_KEYS = OTHER_VALID_PUBLIC_KEY + VALID_PUBLIC_KEY

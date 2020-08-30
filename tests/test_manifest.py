@@ -99,7 +99,7 @@ def test_find_timestamp(manifest_var, expected):
         assert m.find_timestamp().ts == expected
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def test_manifest():
     m = ManifestFile()
     with io.StringIO(TEST_MANIFEST) as f:
@@ -107,7 +107,7 @@ def test_manifest():
     yield m
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def deprecated_manifest():
     m = ManifestFile()
     with io.StringIO(TEST_DEPRECATED_MANIFEST) as f:
