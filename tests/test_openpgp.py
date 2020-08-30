@@ -25,6 +25,7 @@ from gemato.exceptions import (
     )
 from gemato.manifest import ManifestFile
 from gemato.openpgp import (
+    GNUPG,
     OpenPGPEnvironment,
     OpenPGPSystemEnvironment,
     )
@@ -340,7 +341,7 @@ class OpenPGPMockedSystemEnvironment(OpenPGPSystemEnvironment):
 
     def import_key(self, keyfile):
         exitst, out, err = self._spawn_gpg(
-            ['gpg', '--batch', '--import'], keyfile.read())
+            [GNUPG, '--batch', '--import'], keyfile.read())
         if exitst != 0:
             raise OpenPGPKeyImportError(err.decode('utf8'))
 
