@@ -13,6 +13,8 @@ class DefaultProfile:
     correct behavior for a given use case.
     """
 
+    name = 'default'
+
     def set_loader_options(self, loader):
         """
         Alter loader @loader with profile-specific options. This
@@ -74,6 +76,8 @@ class EbuildRepositoryProfile(DefaultProfile):
     """
     A profile suited for a modern ebuild repository.
     """
+
+    name = 'ebuild'
 
     def want_manifest_in_directory(self, relpath, dirnames, filenames):
         # a quick way to catch most of packages and ::gentoo categories
@@ -138,6 +142,8 @@ class BackwardsCompatEbuildRepositoryProfile(EbuildRepositoryProfile):
     with Manifest2 format.
     """
 
+    name = 'old-ebuild'
+
     def get_entry_type_for_path(self, path):
         spl = path.split(os.path.sep)
         if len(spl) == 3:
@@ -164,11 +170,12 @@ class BackwardsCompatEbuildRepositoryProfile(EbuildRepositoryProfile):
                                              compress_watermark))
 
 
-PROFILE_MAPPING = {
-    'default': DefaultProfile,
-    'ebuild': EbuildRepositoryProfile,
-    'old-ebuild': BackwardsCompatEbuildRepositoryProfile,
-}
+PROFILE_MAPPING = dict(
+    (getattr(profile, 'name'), profile)
+    for profile in (DefaultProfile,
+                    EbuildRepositoryProfile,
+                    BackwardsCompatEbuildRepositoryProfile,
+                    ))
 
 
 def get_profile_by_name(name):
