@@ -11,6 +11,8 @@ import pytest
 
 from gemato.find_top_level import find_top_level_manifest
 
+from tests.testutil import disallow_writes
+
 
 @pytest.fixture(scope='module')
 def plain_tree(tmp_path_factory):
@@ -33,6 +35,7 @@ IGNORE ignored-empty-dir
               'ignored-dir/Manifest'):
         with open(tmp_path / f, 'w'):
             pass
+    disallow_writes(tmp_path)
     yield tmp_path
 
 
@@ -107,6 +110,7 @@ IGNORE ignored-empty-dir
               'ignored-dir/Manifest.gz'):
         with gzip.GzipFile(tmp_path / f, 'w'):
             pass
+    disallow_writes(tmp_path)
     yield tmp_path
 
 

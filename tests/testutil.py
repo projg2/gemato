@@ -11,6 +11,7 @@ import os
 import os.path
 import random
 import shutil
+import stat
 import tempfile
 import threading
 import unittest
@@ -19,6 +20,17 @@ import pytest
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
+
+
+def disallow_writes(path):
+    """Mark path non-writable, recursively"""
+    for dirpath, dirs, files in os.walk(path, topdown=False):
+        for f in files + dirs:
+            st = os.lstat(os.path.join(dirpath, f))
+            if not stat.S_ISLNK(st.st_mode):
+                os.chmod(os.path.join(dirpath, f),
+                         st.st_mode & ~0o222)
+    os.chmod(path, 0o555)
 
 
 class LoggingTestCase(unittest.TestCase):

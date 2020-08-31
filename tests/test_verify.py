@@ -24,6 +24,8 @@ from gemato.verify import (
     verify_entry_compatibility,
     )
 
+from tests.testutil import disallow_writes
+
 
 TEST_STRING = b'The quick brown fox jumps over the lazy dog'
 
@@ -46,6 +48,7 @@ def test_tree(tmp_path_factory):
     unix_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     unix_sock.bind(str(tmp_path / 'unix-socket'))
     unix_sock.listen(1)
+    disallow_writes(tmp_path)
     yield tmp_path
     unix_sock.close()
 
