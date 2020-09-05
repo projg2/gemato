@@ -137,6 +137,15 @@ class OpenPGPKeyImportError(OpenPGPRuntimeError):
         return f'OpenPGP key import failed:\n{self.output}'
 
 
+class OpenPGPKeyListingError(OpenPGPRuntimeError):
+    """
+    An exception raised when key listing fails.
+    """
+
+    def __str__(self):
+        return f'OpenPGP key listing failed:\n{self.output}'
+
+
 class OpenPGPKeyRefreshError(OpenPGPRuntimeError):
     """
     An exception raised when keyring refresh (update) fails.

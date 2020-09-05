@@ -22,6 +22,7 @@ from gemato.exceptions import (
     OpenPGPExpiredKeyFailure,
     OpenPGPRevokedKeyFailure,
     OpenPGPKeyImportError,
+    OpenPGPKeyListingError,
     OpenPGPKeyRefreshError,
     OpenPGPUnknownSigFailure,
     OpenPGPSigningFailure,
@@ -278,6 +279,59 @@ debug-level guru
         if exitst != 0:
             raise OpenPGPKeyImportError(err.decode('utf8'))
 
+    def list_keys(self):
+        """
+        List fingerprints and UIDs of all keys in keyring
+
+        Returns a mapping from fingerprint (as a string) to an iterable
+        of UIDs.
+        """
+
+        exitst, out, err = self._spawn_gpg(
+            [GNUPG, '--batch', '--with-colons', '--list-keys'])
+        if exitst != 0:
+            raise OpenPGPKeyListingError(err.decode('utf8'))
+
+        prev_pub = None
+        fpr = None
+        ret = {}
+
+        for line in out.splitlines():
+            # were we expecting a fingerprint?
+            if prev_pub is not None:
+                if line.startswith(b'fpr:'):
+                    fpr = line.split(b':')[9].decode('ASCII')
+                    if not fpr.endswith(prev_pub):
+                        raise OpenPGPKeyListingError(
+                            f'Incorrect fingerprint {fpr} for key '
+                            f'{prev_pub}')
+                    logging.debug(
+                        f'list_keys(): fingerprint: {fpr}')
+                    ret[fpr] = []
+                    prev_pub = None
+                else:
+                    raise OpenPGPKeyListingError(
+                        f'No fingerprint in GPG output, instead got: '
+                        f'{line}')
+            elif line.startswith(b'pub:'):
+                # wait for the fingerprint
+                prev_pub = line.split(b':')[4].decode('ASCII')
+                logging.debug(f'list_keys(): keyid: {prev_pub}')
+            elif line.startswith(b'uid:'):
+                if fpr is None:
+                    raise OpenPGPKeyListingError(
+                        f'UID without key in GPG output: {line}')
+                uid = line.split(b':')[9]
+                name, addr = email.utils.parseaddr(uid.decode('utf8'))
+                if '@' in addr:
+                    logging.debug(f'list_keys(): UID: {addr}')
+                    ret[fpr].append(addr)
+                else:
+                    logging.debug(
+                        f'list_keys(): ignoring UID without mail: {uid}')
+
+        return ret
+
     zbase32_translate = bytes.maketrans(
         b'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
         b'ybndrfg8ejkmcpqxot1uwisza345h769')
@@ -304,61 +358,19 @@ debug-level guru
             return False
 
         # list all keys in the keyring
-        exitst, out, err = self._spawn_gpg(
-            [GNUPG, '--batch', '--with-colons', '--list-keys'])
-        if exitst != 0:
-            raise OpenPGPKeyRefreshError(err.decode('utf8'))
-
-        # find keys and UIDs
-        addrs = set()
-        addrs_key = set()
-        keys = set()
-        prev_pub = None
-        for line in out.splitlines():
-            # were we expecting a fingerprint?
-            if prev_pub is not None:
-                if line.startswith(b'fpr:'):
-                    fpr = line.split(b':')[9].decode('ASCII')
-                    assert fpr.endswith(prev_pub)
-                    logging.debug(
-                        f'refresh_keys_wkd(): fingerprint: {fpr}')
-                    keys.add(fpr)
-                    prev_pub = None
-                else:
-                    # old GnuPG doesn't give fingerprints by default
-                    # (but it doesn't support WKD either)
-                    logging.debug(
-                        'refresh_keys_wkd(): failing due to old gpg')
-                    return False
-            elif line.startswith(b'pub:'):
-                if keys:
-                    # every key must have at least one UID
-                    if not addrs_key:
-                        logging.debug(
-                            'refresh_keys_wkd(): failing due to no UIDs')
-                        return False
-                    addrs.update(addrs_key)
-                    addrs_key = set()
-
-                # wait for the fingerprint
-                prev_pub = line.split(b':')[4].decode('ASCII')
-                logging.debug(f'refresh_keys_wkd(): keyid: {prev_pub}')
-            elif line.startswith(b'uid:'):
-                uid = line.split(b':')[9]
-                name, addr = email.utils.parseaddr(uid.decode('utf8'))
-                if '@' in addr:
-                    logging.debug(f'refresh_keys_wkd(): UID: {addr}')
-                    addrs_key.add(addr)
-                else:
-                    logging.debug(
-                        f'refresh_keys_wkd(): ignoring UID without '
-                        f'mail: {uid.decode("utf8")}')
-
-        # grab the final set (also aborts when there are no keys)
-        if not addrs_key:
-            logging.debug('refresh_keys_wkd(): failing due to no UIDs')
+        keys = self.list_keys()
+        if not keys:
+            logging.debug('refresh_keys_wkd(): no keys found')
             return False
-        addrs.update(addrs_key)
+        addrs = set()
+        for key, uids in keys.items():
+            if not uids:
+                logging.debug(
+                    f'refresh_keys_wkd(): failing due to no UIDs on '
+                    f'key {key}')
+                return False
+            addrs.update(uids)
+        keys = set(keys)
 
         data = b''
         proxies = {}

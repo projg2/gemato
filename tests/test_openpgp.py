@@ -642,6 +642,22 @@ def test_recursive_manifest_loader_save_submanifest(tmp_path, privkey_env):
     assert m2.openpgp_signature is None
 
 
+@pytest.mark.parametrize(
+    'key_var,expected',
+    [('VALID_PUBLIC_KEY', {KEY_FINGERPRINT: ['gemato@example.com']}),
+     ('OTHER_VALID_PUBLIC_KEY',
+      {OTHER_KEY_FINGERPRINT: ['gemato@example.com']}),
+     ('VALID_KEY_SUBKEY', {KEY_FINGERPRINT: ['gemato@example.com']}),
+     ('VALID_KEY_NOEMAIL', {KEY_FINGERPRINT: []}),
+     ])
+def test_list_keys(openpgp_env_with_refresh, key_var, expected):
+    try:
+        openpgp_env_with_refresh.import_key(io.BytesIO(globals()[key_var]))
+    except OpenPGPNoImplementation as e:
+        pytest.skip(str(e))
+    assert openpgp_env_with_refresh.list_keys() == expected
+
+
 @pytest.fixture(scope='module')
 def global_hkp_server():
     """A fixture that starts a single HKP server instance for tests"""
