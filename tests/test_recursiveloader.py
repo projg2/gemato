@@ -568,12 +568,30 @@ class StrayInvalidCompressedManifestLayout(BaseLayout):
         'sub/test': '',
     }
 
+    COMPRESSION_SUFFIX = 'gz'
+
     @classmethod
     def create(cls, tmp_path):
         super().create(tmp_path)
-        with open(tmp_path / 'sub/Manifest.gz', 'w') as f:
+        with open(tmp_path / f'sub/Manifest.{cls.COMPRESSION_SUFFIX}',
+                  'w') as f:
             # important: this is written uncompressed
             f.write('I AM SOOO INVALID\n')
+
+
+class StrayInvalidCompressedManifestBz2Layout(
+        StrayInvalidCompressedManifestLayout):
+    COMPRESSION_SUFFIX = 'bz2'
+
+
+class StrayInvalidCompressedManifestLzmaLayout(
+        StrayInvalidCompressedManifestLayout):
+    COMPRESSION_SUFFIX = 'lzma'
+
+
+class StrayInvalidCompressedManifestXzLayout(
+        StrayInvalidCompressedManifestLayout):
+    COMPRESSION_SUFFIX = 'xz'
 
 
 class FilenameWhitespaceLayout(BaseLayout):
@@ -767,6 +785,9 @@ FLAT_LAYOUTS = [
     StrayCompressedManifestLayout,
     StrayInvalidManifestLayout,
     StrayInvalidCompressedManifestLayout,
+    StrayInvalidCompressedManifestBz2Layout,
+    StrayInvalidCompressedManifestLzmaLayout,
+    StrayInvalidCompressedManifestXzLayout,
     FilenameWhitespaceLayout,
     FilenameBackslashLayout,
     NonexistingDirectoryLayout,
@@ -1725,17 +1746,46 @@ def test_update_entry_for_path_no_hash_specified(layout_factory):
        'DATA sub/Manifest 19 MD5 1c0817af3a5def5d5c90b139988727a7\n'
        'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
        }),
-     pytest.param(
-      StrayInvalidCompressedManifestLayout,
+     (StrayInvalidCompressedManifestLayout,
       ['MD5'],
       ManifestRecursiveLoader.update_entries_for_directory,
       '',
       None,
       None,
       {'Manifest':
-       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n'
-       'DATA sub/Manifest.gz 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n',
-       }, marks=pytest.mark.xfail),
+       'DATA sub/Manifest.gz 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
+       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
+     (StrayInvalidCompressedManifestBz2Layout,
+      ['MD5'],
+      ManifestRecursiveLoader.update_entries_for_directory,
+      '',
+      None,
+      None,
+      {'Manifest':
+       'DATA sub/Manifest.bz2 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
+       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
+     (StrayInvalidCompressedManifestLzmaLayout,
+      ['MD5'],
+      ManifestRecursiveLoader.update_entries_for_directory,
+      '',
+      None,
+      None,
+      {'Manifest':
+       'DATA sub/Manifest.lzma 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
+       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
+     (StrayInvalidCompressedManifestXzLayout,
+      ['MD5'],
+      ManifestRecursiveLoader.update_entries_for_directory,
+      '',
+      None,
+      None,
+      {'Manifest':
+       'DATA sub/Manifest.xz 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
+       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
      (FilenameWhitespaceLayout,
       ['MD5'],
       ManifestRecursiveLoader.update_entries_for_directory,
@@ -1983,16 +2033,15 @@ def test_update_entry_and_discard(layout_factory):
        'TIMESTAMP\n',
        },
       'TIMESTAMP'),
-     pytest.param(
-      StrayInvalidCompressedManifestLayout,
+     (StrayInvalidCompressedManifestLayout,
       '',
       {'Manifest':
-       'DATA sub/test 0 SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709\n'
        'DATA sub/Manifest.gz 18 SHA1 '
        '6af661c09147db2a2b51ae7c3cf2834d88884596\n'
+       'DATA sub/test 0 SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709\n'
        'TIMESTAMP\n',
        },
-      'TIMESTAMP', marks=pytest.mark.xfail),
+      'TIMESTAMP'),
      (FilenameWhitespaceLayout,
       '',
       {'Manifest':

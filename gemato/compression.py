@@ -12,6 +12,13 @@ import os.path
 from gemato.exceptions import UnsupportedCompression
 
 
+# NB: bz2 is not covered here since it uses generic OSError
+InvalidCompressedFileExceptions = (
+    gzip.BadGzipFile,
+    lzma.LZMAError,
+)
+
+
 def open_compressed_file(suffix, f, mode='rb'):
     """
     Get a file-like object for an open compressed file @fileobj

@@ -10,6 +10,7 @@ from gemato.compression import (
     open_potentially_compressed_path,
     get_potential_compressed_names,
     get_compressed_suffix_from_filename,
+    InvalidCompressedFileExceptions,
     )
 from gemato.exceptions import (
     ManifestMismatch,
@@ -1069,6 +1070,14 @@ class ManifestRecursiveLoader:
                         self.load_manifest(fpath)
                     except ManifestSyntaxError:
                         # syntax error? probably not a Manifest then.
+                        pass
+                    except OSError as exc:
+                        # bz2 returns generic OSError without errno
+                        # so non-null errno probably means something
+                        # else happened
+                        if exc.errno is not None:
+                            raise
+                    except InvalidCompressedFileExceptions:
                         pass
                     else:
                         new_manifests.append(fpath)
