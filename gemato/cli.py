@@ -589,8 +589,12 @@ class GnuPGWrapCommand(VerifyingOpenPGPMixin, GematoCommand):
         p = subprocess.Popen(self.argv)
         ret = p.wait()
         if ret < 0:
-            logging.error(f'Child process terminated due to signal: '
-                          f'{signal.strsignal(-ret)}')
+            if hasattr(signal, 'strsignal'):
+                sig = signal.strsignal(-ret)
+            else:
+                sig = -ret
+            logging.error(
+                f'Child process terminated due to signal: {sig}')
         return ret
 
 

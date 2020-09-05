@@ -845,6 +845,13 @@ def test_get_wkd_url(email, expected):
     assert OpenPGPEnvironment.get_wkd_url(email) == expected
 
 
+def signal_desc(sig):
+    if hasattr(signal, 'strsignal'):
+        return signal.strsignal(sig)
+    else:
+        return sig
+
+
 @pytest.mark.parametrize(
     'command,expected,match',
     [('true', 0, None),
@@ -853,10 +860,10 @@ def test_get_wkd_url(email, expected):
      ('gpg --verify {tmp_path}/Manifest.subkey', 2, None),
      ('sh -c "kill $$"', -signal.SIGTERM,
       f'Child process terminated due to signal: '
-      f'{signal.strsignal(signal.SIGTERM)}'),
+      f'{signal_desc(signal.SIGTERM)}'),
      ('sh -c "kill -USR1 $$"', -signal.SIGUSR1,
       f'Child process terminated due to signal: '
-      f'{signal.strsignal(signal.SIGUSR1)}'),
+      f'{signal_desc(signal.SIGUSR1)}'),
      ])
 def test_cli_gpg_wrap(tmp_path, caplog, command, expected, match):
     with open(tmp_path / '.key.bin', 'wb') as f:
