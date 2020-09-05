@@ -8,15 +8,21 @@ import gzip
 import io
 import lzma
 import os.path
+import sys
 
 from gemato.exceptions import UnsupportedCompression
 
 
-# NB: bz2 is not covered here since it uses generic OSError
-InvalidCompressedFileExceptions = (
-    gzip.BadGzipFile,
-    lzma.LZMAError,
-)
+# NB: bz2 (and gzip in py<3.8) uses generic OSError
+if sys.hexversion >= 0x03080000:
+    InvalidCompressedFileExceptions = (
+        gzip.BadGzipFile,
+        lzma.LZMAError,
+    )
+else:
+    InvalidCompressedFileExceptions = (
+        lzma.LZMAError,
+    )
 
 
 def open_compressed_file(suffix, f, mode='rb'):
