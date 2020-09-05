@@ -33,6 +33,7 @@ from gemato.recursiveloader import ManifestRecursiveLoader
 
 from tests.keydata import (
     PUBLIC_KEY, SECRET_KEY, PUBLIC_SUBKEY, UID,
+    UID_NOEMAIL, PUBLIC_KEY_NOEMAIL_SIG,
     PUBLIC_KEY_SIG, PUBLIC_SUBKEY_SIG, EXPIRED_KEY_SIG, REVOCATION_SIG,
     OTHER_PUBLIC_KEY, OTHER_PUBLIC_KEY_UID, OTHER_PUBLIC_KEY_SIG,
     UNEXPIRE_SIG,
@@ -182,6 +183,8 @@ SIG_TIMESTAMP = datetime.datetime(2017, 11, 8, 9, 1, 26)
 OTHER_VALID_PUBLIC_KEY = (OTHER_PUBLIC_KEY + OTHER_PUBLIC_KEY_UID +
                           OTHER_PUBLIC_KEY_SIG)
 OTHER_KEY_FINGERPRINT = '4B8349B90C56EE7F054D52871822F5424EB6DA81'
+
+VALID_KEY_NOEMAIL = PUBLIC_KEY + UID_NOEMAIL + PUBLIC_KEY_NOEMAIL_SIG
 
 VALID_KEY_SUBKEY = (PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY +
                     PUBLIC_SUBKEY_SIG)
@@ -363,6 +366,7 @@ MANIFEST_VARIANTS = [
     # manifest, key, expected fpr/exception
     # == good manifests ==
     ('SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', None),
+    ('SIGNED_MANIFEST', 'VALID_KEY_NOEMAIL', None),
     ('DASH_ESCAPED_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', None),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_KEY_SUBKEY', None),
     # == using private key ==
@@ -509,11 +513,15 @@ def test_cli(tmp_path, caplog, manifest_var, key_var, expected):
 EMPTY_DATA = b''
 
 
-@pytest.mark.parametrize('key_var,success', [('VALID_PUBLIC_KEY', True),
-                                             ('MALFORMED_PUBLIC_KEY', False),
-                                             ('EMPTY_DATA', False),
-                                             ('FORGED_PUBLIC_KEY', False),
-                                             ('UNSIGNED_PUBLIC_KEY', False)])
+@pytest.mark.parametrize(
+    'key_var,success',
+    [('VALID_PUBLIC_KEY', True),
+     ('VALID_KEY_NOEMAIL', True),
+     ('MALFORMED_PUBLIC_KEY', False),
+     ('EMPTY_DATA', False),
+     ('FORGED_PUBLIC_KEY', False),
+     ('UNSIGNED_PUBLIC_KEY', False),
+     ])
 def test_env_import_key(openpgp_env, key_var, success):
     """Test importing valid and invalid keys"""
     try:
@@ -691,7 +699,10 @@ REFRESH_VARIANTS = [
 
 @pytest.mark.parametrize(
     'manifest_var,key_var,server_key_fpr,server_key_var,expected',
-    REFRESH_VARIANTS)
+    REFRESH_VARIANTS +
+    [('SIGNED_MANIFEST', 'VALID_KEY_NOEMAIL', KEY_FINGERPRINT,
+      'VALID_PUBLIC_KEY', None),
+     ])
 def test_refresh_hkp(openpgp_env_with_refresh, hkp_server, manifest_var,
                      key_var, server_key_fpr, server_key_var, expected):
     """Test refreshing against a HKP keyserver"""
@@ -719,12 +730,22 @@ def test_refresh_hkp(openpgp_env_with_refresh, hkp_server, manifest_var,
 
 
 @pytest.mark.parametrize(
-    'manifest_var,key_var,server_key_fpr,server_key_var,expected',
-    REFRESH_VARIANTS)
-def test_refresh_wkd(openpgp_env_with_refresh, manifest_var, key_var,
-                     server_key_fpr, server_key_var, expected):
+    'manifest_var,key_var,server_key_fpr,server_key_var,expected,'
+    'expect_hit',
+    [args + (True,) for args in REFRESH_VARIANTS] +
+    [('SIGNED_MANIFEST', 'VALID_KEY_NOEMAIL', KEY_FINGERPRINT,
+      'VALID_PUBLIC_KEY', OpenPGPKeyRefreshError, False),
+     ])
+def test_refresh_wkd(openpgp_env_with_refresh,
+                     manifest_var,
+                     key_var,
+                     server_key_fpr,
+                     server_key_var,
+                     expected,
+                     expect_hit):
     """Test refreshing against WKD"""
-    with pytest.importorskip('responses').RequestsMock() as responses:
+    with pytest.importorskip('responses').RequestsMock(
+            assert_all_requests_are_fired=expect_hit) as responses:
         try:
             if key_var is not None:
                 with io.BytesIO(globals()[key_var]) as f:
