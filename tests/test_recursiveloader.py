@@ -8,6 +8,7 @@ import datetime
 import gzip
 import itertools
 import os
+import re
 
 import pytest
 
@@ -27,28 +28,51 @@ from tests.test_compression import COMPRESSION_ALGOS
 from tests.testutil import disallow_writes
 
 
+@pytest.fixture(scope='module')
+def layout_cache():
+    cache = {}
+    yield cache
+    for layout, tmp_path in cache.items():
+        layout.cleanup(tmp_path)
+
+
 class LayoutFactory:
     """Factory to install layouts in temporary directory with cleanup"""
 
-    def __init__(self, tmp_path):
-        self.tmp_path = tmp_path
+    def __init__(self, tmp_path_factory, name, layout_cache):
+        self.tmp_path_factory = tmp_path_factory
+        self.name = name
+        self.layout_cache = layout_cache
         self.layouts = []
 
     def create(self, layout, readonly=False):
-        layout.create(self.tmp_path)
-        self.layouts.append(layout)
         if readonly:
-            disallow_writes(self.tmp_path)
-        return self.tmp_path
+            if layout not in self.layout_cache:
+                tmp_path = self.tmp_path_factory.mktemp(layout.__name__)
+                layout.create(tmp_path)
+                disallow_writes(tmp_path)
+                self.layout_cache[layout] = tmp_path
+            return self.layout_cache[layout]
+
+        tmp_path = self.tmp_path_factory.mktemp(self.name)
+        layout.create(tmp_path)
+        self.layouts.append((layout, tmp_path))
+        return tmp_path
 
     def cleanup(self):
-        for layout in self.layouts:
-            layout.cleanup(self.tmp_path)
+        for layout, tmp_path in self.layouts:
+            layout.cleanup(tmp_path)
 
 
 @pytest.fixture
-def layout_factory(tmp_path):
-    factory = LayoutFactory(tmp_path)
+def layout_factory(request, tmp_path_factory, layout_cache):
+    # stolen from pytest
+    name = request.node.name
+    name = re.sub(r"[\W]", "_", name)
+    MAXVAL = 30
+    name = name[:MAXVAL]
+
+    factory = LayoutFactory(tmp_path_factory, name, layout_cache)
     yield factory
     factory.cleanup()
 
