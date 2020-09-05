@@ -62,7 +62,7 @@ def test_unreadable_manifest(tmp_path):
     """Test failure when one of Manifest files is not readable"""
     with open(tmp_path / 'Manifest', 'w') as f:
         os.fchmod(f.fileno(), 0)
-    with pytest.raises(IOError):
+    with pytest.raises(PermissionError):
         find_top_level_manifest(tmp_path)
 
 

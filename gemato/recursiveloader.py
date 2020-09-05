@@ -3,7 +3,6 @@
 # (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
-import errno
 import os.path
 
 from gemato.compression import (
@@ -323,22 +322,21 @@ class ManifestRecursiveLoader:
         try:
             m, st = self.manifest_loader.verify_and_load(
                     relpath, verify_entry)
-        except IOError as err:
-            if err.errno == errno.ENOENT and allow_create:
-                m = ManifestFile()
-                path = os.path.join(self.root_directory, relpath)
-                st = os.stat(os.path.dirname(path))
-                # trigger saving
-                self.updated_manifests.add(relpath)
+        except FileNotFoundError:
+            if not allow_create:
+                raise
+            m = ManifestFile()
+            path = os.path.join(self.root_directory, relpath)
+            st = os.stat(os.path.dirname(path))
+            # trigger saving
+            self.updated_manifests.add(relpath)
 
-                # add initial IGNORE entries to top-level Manifest
-                if relpath == 'Manifest':
-                    for ip in (self.profile
-                               .get_ignore_paths_for_new_manifest('')):
-                        ie = ManifestEntryIGNORE(ip)
-                        m.entries.append(ie)
-            else:
-                raise err
+            # add initial IGNORE entries to top-level Manifest
+            if relpath == 'Manifest':
+                for ip in (self.profile
+                           .get_ignore_paths_for_new_manifest('')):
+                    ie = ManifestEntryIGNORE(ip)
+                    m.entries.append(ie)
 
         if store_dev:
             self.manifest_device = st.st_dev

@@ -3,7 +3,6 @@
 # (c) 2017-2020 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
-import errno
 import os
 import os.path
 
@@ -64,9 +63,8 @@ def find_top_level_manifest(path='.', allow_xdev=True, allow_compressed=False):
                         return last_found
 
                     m.load(f, verify_openpgp=False)
-            except IOError as e:
-                if e.errno != errno.ENOENT:
-                    raise
+            except FileNotFoundError:
+                pass
             else:
                 # check if the initial path is ignored
                 relpath = os.path.relpath(path, cur_path)

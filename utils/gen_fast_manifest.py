@@ -89,9 +89,7 @@ def gen_manifest(top_dir):
                 if l.startswith(b'DIST') or l.startswith(b'IGNORE'):
                     manifest_entries.append(l.rstrip())
         had_manifest = True
-    except IOError as e:
-        if e.errno != errno.ENOENT:
-            raise
+    except FileNotFoundError:
         had_manifest = False
 
     # generate local file entries

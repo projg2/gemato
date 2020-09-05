@@ -40,11 +40,11 @@ def get_file_metadata(path, hashes):
     try:
         # we want O_NONBLOCK to avoid blocking when opening pipes
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    except FileNotFoundError:
+        exists = False
+        opened = False
     except OSError as err:
-        if err.errno == errno.ENOENT:
-            exists = False
-            opened = False
-        elif err.errno in (errno.ENXIO, errno.EOPNOTSUPP):
+        if err.errno in (errno.ENXIO, errno.EOPNOTSUPP):
             # ENXIO = unconnected device or socket
             # EOPNOTSUPP = opening UNIX socket on FreeBSD
             exists = True

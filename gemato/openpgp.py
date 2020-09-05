@@ -195,9 +195,7 @@ class OpenPGPSystemEnvironment:
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  env=env)
-        except OSError as e:
-            if e.errno != errno.ENOENT:
-                raise
+        except FileNotFoundError:
             raise OpenPGPNoImplementation()
 
         out, err = p.communicate(stdin)
