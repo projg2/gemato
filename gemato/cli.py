@@ -10,6 +10,8 @@ import datetime
 import logging
 import multiprocessing
 import os.path
+import signal
+import subprocess
 import sys
 import timeit
 
@@ -561,14 +563,50 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
         return 0 if ret else 1
 
 
+class GnuPGWrapCommand(VerifyingOpenPGPMixin, GematoCommand):
+    name = 'gpg-wrap'
+    help = ('Run specified command with GNUPGHOME set to OpenPGP '
+            'verification environment (with keys loaded)')
+
+    def add_options(self, subp):
+        super().add_options(subp)
+
+        subp.add_argument(
+            'argv', nargs='+',
+            help='Command to execute')
+
+    def parse_args(self, args, argp):
+        super().parse_args(args, argp)
+
+        if args.openpgp_key is None:
+            argp.error('gpg-wrap requires --openpgp-key to be specified')
+        self.argv = args.argv
+
+    def __call__(self):
+        super().__call__()
+        assert isinstance(self.openpgp_env, OpenPGPEnvironment)
+        os.environ['GNUPGHOME'] = self.openpgp_env._home
+        p = subprocess.Popen(self.argv)
+        ret = p.wait()
+        if ret < 0:
+            logging.error(f'Child process terminated due to signal: '
+                          f'{signal.strsignal(-ret)}')
+        return ret
+
+
 def main(argv):
     argp = argparse.ArgumentParser(
             prog=argv[0],
             description='Gentoo Manifest Tool')
     subp = argp.add_subparsers()
 
-    commands = [VerifyCommand, UpdateCommand, CreateCommand,
-                HashCommand, OpenPGPVerifyCommand]
+    commands = [VerifyCommand,
+                UpdateCommand,
+                CreateCommand,
+                HashCommand,
+                OpenPGPVerifyCommand,
+                GnuPGWrapCommand,
+                ]
     for cmdclass in commands:
         cmd = cmdclass()
         cmdp = subp.add_parser(cmd.name, help=cmd.help)

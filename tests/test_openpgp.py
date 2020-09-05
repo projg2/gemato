@@ -6,6 +6,8 @@
 import datetime
 import io
 import os
+import shlex
+import signal
 import tempfile
 
 import pytest
@@ -841,3 +843,39 @@ def test_refresh_wkd_fallback_to_hkp(openpgp_env_with_refresh,
      ])
 def test_get_wkd_url(email, expected):
     assert OpenPGPEnvironment.get_wkd_url(email) == expected
+
+
+@pytest.mark.parametrize(
+    'command,expected,match',
+    [('true', 0, None),
+     ('false', 1, None),
+     ('gpg --verify {tmp_path}/Manifest', 0, None),
+     ('gpg --verify {tmp_path}/Manifest.subkey', 2, None),
+     ('sh -c "kill $$"', -signal.SIGTERM,
+      f'Child process terminated due to signal: '
+      f'{signal.strsignal(signal.SIGTERM)}'),
+     ('sh -c "kill -USR1 $$"', -signal.SIGUSR1,
+      f'Child process terminated due to signal: '
+      f'{signal.strsignal(signal.SIGUSR1)}'),
+     ])
+def test_cli_gpg_wrap(tmp_path, caplog, command, expected, match):
+    with open(tmp_path / '.key.bin', 'wb') as f:
+        f.write(VALID_PUBLIC_KEY)
+    with open(tmp_path / 'Manifest', 'w') as f:
+        f.write(SIGNED_MANIFEST)
+    with open(tmp_path / 'Manifest.subkey', 'w') as f:
+        f.write(SUBKEY_SIGNED_MANIFEST)
+
+    command = [x.replace('{tmp_path}', str(tmp_path))
+               for x in shlex.split(command)]
+    retval = gemato.cli.main(['gemato', 'gpg-wrap',
+                              '--openpgp-key',
+                              str(tmp_path / '.key.bin'),
+                              '--no-refresh-keys',
+                              '--'] + command)
+    if str(OpenPGPNoImplementation('')) in caplog.text:
+        pytest.skip('OpenPGP implementation missing')
+
+    assert retval == expected
+    if match is not None:
+        assert match in caplog.text
