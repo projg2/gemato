@@ -2068,8 +2068,7 @@ COMMON_COMPRESS_VARIANTS = (
     list(itertools.chain.from_iterable(
         [(BasicTestLayout, 0, algo,
           [x for x in BasicTestLayout.MANIFESTS if x != 'Manifest']),
-         pytest.param(BasicTestLayout, 64, algo, ['sub/Manifest'],
-                      marks=pytest.mark.xfail),
+         (BasicTestLayout, 64, algo, ['sub/Manifest']),
          ] for algo in COMPRESSION_ALGOS)) +
     [(CompressedSubManifestLayout, 0, 'gz', ['sub/Manifest']),
      (CompressedSubManifestLayout, 4096, 'gz', []),

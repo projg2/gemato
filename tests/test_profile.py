@@ -40,7 +40,7 @@ DIRS = [
     'profiles/updates',
 ]
 PACKAGE_MANIFESTS = ['dev-foo/bar/Manifest']
-EXPECTED_MANIFESTS = PACKAGE_MANIFESTS + [
+EXPECTED_MANIFESTS = [
     'dev-foo/Manifest',
     'eclass/Manifest',
     'licenses/Manifest',
@@ -126,6 +126,11 @@ EXPECTED_TYPES[BackwardsCompatEbuildRepositoryProfile].update({
     'dev-foo/bar/files/test.patch': 'AUX',
 })
 
+PKG_MANIFEST_SUFFIX = {
+    EbuildRepositoryProfile: '.gz',
+    BackwardsCompatEbuildRepositoryProfile: '',
+}
+
 ALL_PROFILES = [
     EbuildRepositoryProfile,
     BackwardsCompatEbuildRepositoryProfile,
@@ -188,7 +193,7 @@ def test_update_entries_for_directory(test_repo, profile):
         [(path, make_expect_match(path, entry_type))
          for path, entry_type in EXPECTED_TYPES[profile].items()] +
         [(path, make_expect_match(path, 'MANIFEST', manifests_exist=False))
-         for path in EXPECTED_MANIFESTS] +
+         for path in EXPECTED_MANIFESTS + PACKAGE_MANIFESTS] +
         [(path, make_expect_match(path, 'IGNORE'))
          for path in EXPECTED_IGNORE])
     found = dict((path, make_entry_match(m, path))
@@ -197,8 +202,12 @@ def test_update_entries_for_directory(test_repo, profile):
 
     m.save_manifests()
     manifests_expected = dict(
-        (path, make_expect_match(path, 'MANIFEST'))
-        for path in EXPECTED_MANIFESTS)
+        itertools.chain(
+            ((path + '.gz', make_expect_match(path, 'MANIFEST'))
+             for path in EXPECTED_MANIFESTS),
+            ((path + PKG_MANIFEST_SUFFIX[profile],
+             make_expect_match(path, 'MANIFEST'))
+             for path in PACKAGE_MANIFESTS)))
     manifests_found = dict((path, make_entry_match(m, path))
                            for path in manifests_expected)
     assert manifests_found == manifests_expected
@@ -216,8 +225,11 @@ def test_cli_update(test_repo, profile):
     expected = dict(
         [(path, make_expect_match(path, entry_type))
          for path, entry_type in EXPECTED_TYPES[profile].items()] +
-        [(path, make_expect_match(path, 'MANIFEST'))
+        [(path + '.gz', make_expect_match(path, 'MANIFEST'))
          for path in EXPECTED_MANIFESTS] +
+        [(path + PKG_MANIFEST_SUFFIX[profile],
+          make_expect_match(path, 'MANIFEST'))
+         for path in PACKAGE_MANIFESTS] +
         [(path, make_expect_match(path, 'IGNORE'))
          for path in EXPECTED_IGNORE])
     found = dict((path, make_entry_match(m, path))
@@ -254,67 +266,6 @@ def test_regression_top_level_ignore_in_all_manifests(test_repo, profile):
         'dev-foo/Manifest': ('MANIFEST', False),
         'dev-foo/distfiles': None,
     }
-    found = dict((path, make_entry_match(m, path))
-                 for path in expected)
-    assert found == expected
-
-
-def test_no_compress_compat(test_repo):
-    """Verify that package directory Manifests are not compressed"""
-    profile = BackwardsCompatEbuildRepositoryProfile
-
-    m = ManifestRecursiveLoader(
-        test_repo / 'Manifest',
-        hashes=['SHA256', 'SHA512'],
-        compress_watermark=0,
-        allow_create=True,
-        profile=profile())
-    m.update_entries_for_directory('')
-    m.save_manifests()
-
-    expected = dict(
-        itertools.chain.from_iterable(
-            [(path, None),
-             (path + '.gz', make_expect_match(path, 'MANIFEST')),
-             ]
-            for path in EXPECTED_MANIFESTS
-            if path not in PACKAGE_MANIFESTS))
-    expected.update(
-        itertools.chain.from_iterable(
-            [(path, make_expect_match(path, 'MANIFEST')),
-             (path + '.gz', None),
-             ]
-            for path in EXPECTED_MANIFESTS
-            if path in PACKAGE_MANIFESTS))
-    found = dict((path, make_entry_match(m, path))
-                 for path in expected)
-    assert found == expected
-
-
-def test_no_compress_compat_cli(test_repo):
-    """Verify that package directory Manifests are not compressed (CLI)"""
-    profile = BackwardsCompatEbuildRepositoryProfile
-
-    assert gemato.cli.main(['gemato', 'create',
-                            '--profile', profile.name,
-                            '--compress-watermark=0',
-                            str(test_repo)]) == 0
-
-    m = ManifestRecursiveLoader(test_repo / 'Manifest')
-    expected = dict(
-        itertools.chain.from_iterable(
-            [(path, None),
-             (path + '.gz', make_expect_match(path, 'MANIFEST')),
-             ]
-            for path in EXPECTED_MANIFESTS
-            if path not in PACKAGE_MANIFESTS))
-    expected.update(
-        itertools.chain.from_iterable(
-            [(path, make_expect_match(path, 'MANIFEST')),
-             (path + '.gz', None),
-             ]
-            for path in EXPECTED_MANIFESTS
-            if path in PACKAGE_MANIFESTS))
     found = dict((path, make_entry_match(m, path))
                  for path in expected)
     assert found == expected

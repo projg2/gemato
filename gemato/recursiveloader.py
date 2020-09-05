@@ -374,6 +374,7 @@ class ManifestRecursiveLoader:
                    sort=sort,
                    openpgp_env=self.openpgp_env,
                    openpgp_keyid=self.openpgp_keyid)
+            f.flush()
             return f.buffer.tell()
 
     def _iter_unordered_manifests_for_path(self, path, recursive=False):
