@@ -22,10 +22,10 @@ from gemato.exceptions import (
     OpenPGPKeyImportError,
     OpenPGPKeyRefreshError,
     OpenPGPRuntimeError,
+    OpenPGPUntrustedSigFailure,
     )
 from gemato.manifest import ManifestFile
 from gemato.openpgp import (
-    GNUPG,
     OpenPGPEnvironment,
     OpenPGPSystemEnvironment,
     )
@@ -338,11 +338,8 @@ class OpenPGPMockedSystemEnvironment(OpenPGPSystemEnvironment):
             self._tmpdir = None
             os.environ.pop('GNUPGHOME', None)
 
-    def import_key(self, keyfile):
-        exitst, out, err = self._spawn_gpg(
-            [GNUPG, '--batch', '--import'], keyfile.read())
-        if exitst != 0:
-            raise OpenPGPKeyImportError(err.decode('utf8'))
+    def import_key(self, keyfile, trust=True):
+        OpenPGPEnvironment.import_key(self, keyfile, trust=trust)
 
 
 @pytest.fixture(params=[OpenPGPEnvironment,
@@ -416,6 +413,19 @@ def test_verify_manifest(openpgp_env, manifest_var, key_var, expected):
             else:
                 with pytest.raises(expected):
                     openpgp_env.verify_file(f)
+    except OpenPGPNoImplementation as e:
+        pytest.skip(str(e))
+
+
+def test_verify_untrusted_key():
+    try:
+        openpgp_env = OpenPGPMockedSystemEnvironment()
+        with io.BytesIO(VALID_PUBLIC_KEY) as f:
+            openpgp_env.import_key(f, trust=False)
+
+        with io.StringIO(SIGNED_MANIFEST) as f:
+            with pytest.raises(OpenPGPUntrustedSigFailure):
+                openpgp_env.verify_file(f)
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 

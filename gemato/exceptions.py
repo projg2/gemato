@@ -195,6 +195,14 @@ class OpenPGPUnknownSigFailure(OpenPGPRuntimeError):
                 f'{self.output}')
 
 
+class OpenPGPUntrustedSigFailure(OpenPGPRuntimeError):
+    """OpenPGP verification failed due to untrusted signing key"""
+
+    def __str__(self):
+        return (f'Good OpenPGP signature made using untrusted key:\n'
+                f'{self.output}')
+
+
 class OpenPGPSigningFailure(OpenPGPRuntimeError):
     """
     An exception raised when OpenPGP signing fails.
