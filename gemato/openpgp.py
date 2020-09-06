@@ -51,6 +51,22 @@ class OpenPGPSignatureData:
         self.primary_key_fingerprint = primary_key_fingerprint
 
 
+ZBASE32_TRANSLATE = bytes.maketrans(
+    b'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
+    b'ybndrfg8ejkmcpqxot1uwisza345h769')
+
+
+def get_wkd_url(email):
+    localname, domain = email.encode('utf8').split(b'@', 1)
+    b32 = (
+        base64.b32encode(hashlib.sha1(localname.lower()).digest())
+        .translate(ZBASE32_TRANSLATE).decode())
+    uenc = urllib.parse.quote(localname)
+    ldomain = domain.lower().decode('utf8')
+    return (f'https://{ldomain}/.well-known/openpgpkey/hu/'
+            f'{b32}?l={uenc}')
+
+
 class SystemGPGEnvironment:
     """
     OpenPGP environment class that uses the global OpenPGP environment
@@ -354,21 +370,6 @@ debug-level guru
 
         return ret
 
-    zbase32_translate = bytes.maketrans(
-        b'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
-        b'ybndrfg8ejkmcpqxot1uwisza345h769')
-
-    @classmethod
-    def get_wkd_url(cls, email):
-        localname, domain = email.encode('utf8').split(b'@', 1)
-        b32 = (
-            base64.b32encode(hashlib.sha1(localname.lower()).digest())
-            .translate(cls.zbase32_translate).decode())
-        uenc = urllib.parse.quote(localname)
-        ldomain = domain.lower().decode('utf8')
-        return (f'https://{ldomain}/.well-known/openpgpkey/hu/'
-                f'{b32}?l={uenc}')
-
     def refresh_keys_wkd(self):
         """
         Attempt to fetch updated keys using WKD.  Returns true if *all*
@@ -402,7 +403,7 @@ debug-level guru
                 'https': self.proxy,
             }
         for a in addrs:
-            url = self.get_wkd_url(a)
+            url = get_wkd_url(a)
             resp = requests.get(url, proxies=proxies)
             if resp.status_code != 200:
                 logging.debug(f'refresh_keys_wkd(): failing due to failed'

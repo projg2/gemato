@@ -30,6 +30,7 @@ from gemato.manifest import ManifestFile
 from gemato.openpgp import (
     SystemGPGEnvironment,
     IsolatedGPGEnvironment,
+    get_wkd_url,
     )
 from gemato.recursiveloader import ManifestRecursiveLoader
 
@@ -842,7 +843,7 @@ def test_refresh_wkd_fallback_to_hkp(openpgp_env_with_refresh,
       'iy9q119eutrkn8s1mk4r39qejnbu3n5q?l=Joe.Doe'),
      ])
 def test_get_wkd_url(email, expected):
-    assert IsolatedGPGEnvironment.get_wkd_url(email) == expected
+    assert get_wkd_url(email) == expected
 
 
 def signal_desc(sig):
