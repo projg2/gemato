@@ -233,6 +233,8 @@ FORGED_UNEXPIRE_KEY = (PUBLIC_KEY + UID + EXPIRED_KEY_SIG +
 UNSIGNED_PUBLIC_KEY = PUBLIC_KEY + UID
 UNSIGNED_SUBKEY = PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY
 
+COMBINED_PUBLIC_KEYS = OTHER_VALID_PUBLIC_KEY + VALID_PUBLIC_KEY
+
 
 def strip_openpgp(text):
     lines = text.lstrip().splitlines()
@@ -367,6 +369,7 @@ MANIFEST_VARIANTS = [
     # == good manifests ==
     ('SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', None),
     ('SIGNED_MANIFEST', 'VALID_KEY_NOEMAIL', None),
+    ('SIGNED_MANIFEST', 'COMBINED_PUBLIC_KEYS', None),
     ('DASH_ESCAPED_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', None),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_KEY_SUBKEY', None),
     # == using private key ==
@@ -383,6 +386,16 @@ MANIFEST_VARIANTS = [
      OpenPGPExpiredKeyFailure),
     ('SIGNED_MANIFEST', 'REVOKED_PUBLIC_KEY',
      OpenPGPRevokedKeyFailure),
+    ('SIGNED_MANIFEST', 'OTHER_VALID_PUBLIC_KEY',
+     OpenPGPVerificationFailure),
+    ('SIGNED_MANIFEST', 'UNSIGNED_PUBLIC_KEY',
+     OpenPGPKeyImportError),
+    ('SIGNED_MANIFEST', 'FORGED_PUBLIC_KEY',
+     OpenPGPKeyImportError),
+    ('SUBKEY_SIGNED_MANIFEST', 'UNSIGNED_SUBKEY',
+     OpenPGPVerificationFailure),
+    ('SUBKEY_SIGNED_MANIFEST', 'FORGED_SUBKEY',
+     OpenPGPVerificationFailure),
 ]
 
 
@@ -405,16 +418,20 @@ def assert_signature(sig, manifest_var):
 def test_verify_manifest(openpgp_env, manifest_var, key_var, expected):
     """Test direct Manifest data verification"""
     try:
-        if key_var is not None:
-            with io.BytesIO(globals()[key_var]) as f:
-                openpgp_env.import_key(f)
-
         with io.StringIO(globals()[manifest_var]) as f:
             if expected is None:
+                if key_var is not None:
+                    with io.BytesIO(globals()[key_var]) as kf:
+                        openpgp_env.import_key(kf)
+
                 sig = openpgp_env.verify_file(f)
                 assert_signature(sig, manifest_var)
             else:
                 with pytest.raises(expected):
+                    if key_var is not None:
+                        with io.BytesIO(globals()[key_var]) as kf:
+                            openpgp_env.import_key(kf)
+
                     openpgp_env.verify_file(f)
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
@@ -438,25 +455,33 @@ def test_verify_untrusted_key():
 def test_manifest_load(openpgp_env, manifest_var, key_var, expected):
     """Test Manifest verification via ManifestFile.load()"""
     try:
-        if key_var is not None:
-            with io.BytesIO(globals()[key_var]) as f:
-                openpgp_env.import_key(f)
-
+        key_loaded = False
         m = ManifestFile()
         with io.StringIO(globals()[manifest_var]) as f:
             if expected is None:
+                if key_var is not None:
+                    with io.BytesIO(globals()[key_var]) as kf:
+                        openpgp_env.import_key(kf)
+
+                key_loaded = True
                 m.load(f, openpgp_env=openpgp_env)
                 assert m.openpgp_signed
                 assert_signature(m.openpgp_signature, manifest_var)
             else:
                 with pytest.raises(expected):
+                    if key_var is not None:
+                        with io.BytesIO(globals()[key_var]) as kf:
+                            openpgp_env.import_key(kf)
+
+                    key_loaded = True
                     m.load(f, openpgp_env=openpgp_env)
                 assert not m.openpgp_signed
                 assert m.openpgp_signature is None
 
-        # Manifest entries should be loaded even if verification failed
-        assert m.find_timestamp() is not None
-        assert m.find_path_entry('myebuild-0.ebuild') is not None
+        if key_loaded:
+            # Manifest entries should be loaded even if verification failed
+            assert m.find_timestamp() is not None
+            assert m.find_path_entry('myebuild-0.ebuild') is not None
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
@@ -468,14 +493,14 @@ def test_recursive_manifest_loader(tmp_path, openpgp_env, filename,
                                    manifest_var, key_var, expected):
     """Test Manifest verification via ManifestRecursiveLoader"""
     try:
-        if key_var is not None:
-            with io.BytesIO(globals()[key_var]) as f:
-                openpgp_env.import_key(f)
-
         with open_potentially_compressed_path(tmp_path / filename, 'w') as cf:
             cf.write(globals()[manifest_var])
 
         if expected is None:
+            if key_var is not None:
+                with io.BytesIO(globals()[key_var]) as f:
+                    openpgp_env.import_key(f)
+
             m = ManifestRecursiveLoader(tmp_path / filename,
                                         verify_openpgp=True,
                                         openpgp_env=openpgp_env)
@@ -483,6 +508,10 @@ def test_recursive_manifest_loader(tmp_path, openpgp_env, filename,
             assert_signature(m.openpgp_signature, manifest_var)
         else:
             with pytest.raises(expected):
+                if key_var is not None:
+                    with io.BytesIO(globals()[key_var]) as f:
+                        openpgp_env.import_key(f)
+
                 ManifestRecursiveLoader(tmp_path / filename,
                                         verify_openpgp=True,
                                         openpgp_env=openpgp_env)
