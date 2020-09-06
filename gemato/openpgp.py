@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import tempfile
 import urllib.parse
+import warnings
 
 from gemato.exceptions import (
     OpenPGPNoImplementation,
@@ -33,6 +34,11 @@ try:
     import requests
 except ImportError:
     requests = None
+
+try:
+    import pgpy
+except ImportError:
+    pgpy = None
 
 
 GNUPG = os.environ.get('GNUPG', 'gpg')
@@ -212,7 +218,7 @@ class SystemGPGEnvironment:
                                  stderr=subprocess.PIPE,
                                  env=env)
         except FileNotFoundError:
-            raise OpenPGPNoImplementation()
+            raise OpenPGPNoImplementation('install gpg')
 
         out, err = p.communicate(stdin)
         return (p.wait(), out, err)
@@ -469,6 +475,111 @@ debug-level guru
         if self.proxy is not None:
             env_override['http_proxy'] = self.proxy
         return (super()._spawn_gpg(options, stdin, env_override))
+
+
+class PGPyEnvironment:
+    """Stand-alone environment using pgpy library"""
+
+    __slots__ = ['debug', 'keyring', 'proxy']
+
+    def __init__(self, debug=False, proxy=None):
+        if pgpy is None:
+            raise OpenPGPNoImplementation('install PGPy')
+        self.debug = debug
+        self.keyring = pgpy.PGPKeyring()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_cb):
+        pass
+
+    def close(self):
+        pass
+
+    def import_key(self, keyfile):
+        with warnings.catch_warnings(record=True) as warns:
+            try:
+                key_res = pgpy.PGPKey.from_blob(keyfile.read())
+            except ValueError as e:
+                raise OpenPGPKeyImportError(
+                    f'OpenPGP key import failed: {e}')
+        fprs = []
+        for k in key_res[1].values():
+            fprs.extend(self.keyring.load(k))
+
+        for w in warns:
+            if str(w.message) == 'Incorrect crc24':
+                raise OpenPGPKeyImportError(
+                    f'OpenPGP key import failed: {w.message}')
+
+        for fpr in fprs:
+            with self.keyring.key(fpr) as k:
+                if k.parent is not None:
+                    try:
+                        verifies = k.parent.verify(k)
+                    except pgpy.errors.PGPError:
+                        logging.debug(
+                            f'Rejecting subkey {fpr} due to missing sig')
+                        self.keyring.unload(k)
+                    else:
+                        if not verifies:
+                            logging.debug(
+                                f'Rejecting subkey {fpr} since parent '
+                                f'key signature does not check out')
+                            self.keyring.unload(k)
+                for uid in k.userids:
+                    if uid.selfsig is None:
+                        raise OpenPGPKeyImportError(
+                            f'Self-signature on {uid} missing')
+                    if not k.verify(uid):
+                        raise OpenPGPKeyImportError(
+                            f'Self-signature on {uid} does not verify')
+
+    def verify_file(self, f):
+        msg = pgpy.PGPMessage.from_blob(f.read())
+        assert msg.is_signed
+        assert len(msg.signatures) == 1
+        assert len(msg.signers) == 1
+
+        signer, = msg.signers
+        try:
+            with self.keyring.key(signer) as k:
+                pk = k
+                if k.parent is not None:
+                    pk = k.parent
+                assert pk.parent is None
+
+                vr = k.verify(msg)
+                if not vr:
+                    raise OpenPGPVerificationFailure(
+                        f'Bad signature made by key {k.fingerprint}')
+                now = datetime.datetime.utcnow()
+                sig_expire = msg.signatures[0].expires_at
+                if sig_expire is not None and sig_expire < now:
+                    raise OpenPGPVerificationFailure(
+                        f'Signature expired at {msg.signatures[0].expires_at}')
+                if k.expires_at is not None and k.expires_at < now:
+                    raise OpenPGPExpiredKeyFailure(
+                        f'Key {k.fingerprint} expired at {k.expires_at}')
+                if pk.expires_at is not None and pk.expires_at < now:
+                    raise OpenPGPExpiredKeyFailure(
+                        f'Primary key {pk.fingerprint} expired '
+                        f'at {k.expires_at}')
+                if list(k.revocation_signatures):
+                    raise OpenPGPRevokedKeyFailure(
+                        f'Key {pk.fingerprint} was revoked')
+                if list(pk.revocation_signatures):
+                    raise OpenPGPRevokedKeyFailure(
+                        f'Primary key {pk.fingerprint} was revoked')
+                return OpenPGPSignatureData(
+                    k.fingerprint,
+                    msg.signatures[0].created,
+                    msg.signatures[0].expires_at,
+                    pk.fingerprint)
+        except KeyError:
+            raise OpenPGPVerificationFailure(
+                f'Key {signer} not in keyring')
 
 
 OpenPGPSystemEnvironment = SystemGPGEnvironment

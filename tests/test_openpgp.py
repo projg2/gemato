@@ -30,6 +30,7 @@ from gemato.manifest import ManifestFile
 from gemato.openpgp import (
     SystemGPGEnvironment,
     IsolatedGPGEnvironment,
+    PGPyEnvironment,
     get_wkd_url,
     )
 from gemato.recursiveloader import ManifestRecursiveLoader
@@ -348,15 +349,21 @@ class MockedSystemGPGEnvironment(SystemGPGEnvironment):
 
 
 @pytest.fixture(params=[IsolatedGPGEnvironment,
-                        MockedSystemGPGEnvironment])
+                        MockedSystemGPGEnvironment,
+                        PGPyEnvironment,
+                        ])
 def openpgp_env(request):
     """OpenPGP environment fixture"""
-    env = request.param()
+    try:
+        env = request.param()
+    except OpenPGPNoImplementation as e:
+        pytest.skip(str(e))
     yield env
     env.close()
 
 
-@pytest.fixture(params=[IsolatedGPGEnvironment])
+@pytest.fixture(params=[IsolatedGPGEnvironment,
+                        ])
 def openpgp_env_with_refresh(request):
     """OpenPGP environments that support refreshing keys"""
     env = request.param()
@@ -417,6 +424,10 @@ def assert_signature(sig, manifest_var):
                          MANIFEST_VARIANTS)
 def test_verify_manifest(openpgp_env, manifest_var, key_var, expected):
     """Test direct Manifest data verification"""
+    if (isinstance(openpgp_env, PGPyEnvironment) and
+            manifest_var == 'DASH_ESCAPED_SIGNED_MANIFEST'):
+        pytest.xfail('dash escaping is known-broken in pgpy')
+
     try:
         with io.StringIO(globals()[manifest_var]) as f:
             if expected is None:
@@ -454,6 +465,10 @@ def test_verify_untrusted_key():
                          MANIFEST_VARIANTS)
 def test_manifest_load(openpgp_env, manifest_var, key_var, expected):
     """Test Manifest verification via ManifestFile.load()"""
+    if (isinstance(openpgp_env, PGPyEnvironment) and
+            manifest_var == 'DASH_ESCAPED_SIGNED_MANIFEST'):
+        pytest.xfail('dash escaping is known-broken in pgpy')
+
     try:
         key_loaded = False
         m = ManifestFile()
@@ -492,6 +507,10 @@ def test_manifest_load(openpgp_env, manifest_var, key_var, expected):
 def test_recursive_manifest_loader(tmp_path, openpgp_env, filename,
                                    manifest_var, key_var, expected):
     """Test Manifest verification via ManifestRecursiveLoader"""
+    if (isinstance(openpgp_env, PGPyEnvironment) and
+            manifest_var == 'DASH_ESCAPED_SIGNED_MANIFEST'):
+        pytest.xfail('dash escaping is known-broken in pgpy')
+
     try:
         with open_potentially_compressed_path(tmp_path / filename, 'w') as cf:
             cf.write(globals()[manifest_var])
@@ -543,7 +562,7 @@ def test_cli(tmp_path, caplog, manifest_var, key_var, expected):
                               '--no-refresh-keys',
                               '--require-signed-manifest',
                               str(tmp_path)])
-    if str(OpenPGPNoImplementation('')) in caplog.text:
+    if str(OpenPGPNoImplementation('install gpg')) in caplog.text:
         pytest.skip('OpenPGP implementation missing')
 
     eexit = 0 if expected is None else 1
@@ -590,14 +609,18 @@ def test_env_home_after_close():
             env.home
 
 
-@pytest.fixture
-def privkey_env(openpgp_env):
+@pytest.fixture(params=[IsolatedGPGEnvironment,
+                        MockedSystemGPGEnvironment,
+                        ])
+def privkey_env(request):
     """Environment with private key loaded"""
     try:
-        openpgp_env.import_key(io.BytesIO(PRIVATE_KEY))
+        env = request.param()
+        env.import_key(io.BytesIO(PRIVATE_KEY))
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
-    return openpgp_env
+    yield env
+    env.close()
 
 
 TEST_STRING = u'The quick brown fox jumps over the lazy dog'
@@ -714,9 +737,6 @@ def hkp_server(global_hkp_server):
     """A fixture that resets the global HKP server with empty keys"""
     global_hkp_server.keys.clear()
     yield global_hkp_server
-
-
-COMBINED_PUBLIC_KEYS = OTHER_VALID_PUBLIC_KEY + VALID_PUBLIC_KEY
 
 
 REFRESH_VARIANTS = [
@@ -910,7 +930,7 @@ def test_cli_gpg_wrap(tmp_path, caplog, command, expected, match):
                               str(tmp_path / '.key.bin'),
                               '--no-refresh-keys',
                               '--'] + command)
-    if str(OpenPGPNoImplementation('')) in caplog.text:
+    if str(OpenPGPNoImplementation('install gpg')) in caplog.text:
         pytest.skip('OpenPGP implementation missing')
 
     assert retval == expected
