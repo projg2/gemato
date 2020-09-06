@@ -28,8 +28,8 @@ from gemato.exceptions import (
     )
 from gemato.manifest import ManifestFile
 from gemato.openpgp import (
-    OpenPGPEnvironment,
-    OpenPGPSystemEnvironment,
+    SystemGPGEnvironment,
+    IsolatedGPGEnvironment,
     )
 from gemato.recursiveloader import ManifestRecursiveLoader
 
@@ -327,7 +327,7 @@ def test_noverify_load_cli(tmp_path):
                                  '--no-openpgp-verify', str(tmp_path)])
 
 
-class OpenPGPMockedSystemEnvironment(OpenPGPSystemEnvironment):
+class MockedSystemGPGEnvironment(SystemGPGEnvironment):
     """System environment variant mocked to use isolated GNUPGHOME"""
     def __init__(self, *args, **kwargs):
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -341,11 +341,11 @@ class OpenPGPMockedSystemEnvironment(OpenPGPSystemEnvironment):
             os.environ.pop('GNUPGHOME', None)
 
     def import_key(self, keyfile, trust=True):
-        OpenPGPEnvironment.import_key(self, keyfile, trust=trust)
+        IsolatedGPGEnvironment.import_key(self, keyfile, trust=trust)
 
 
-@pytest.fixture(params=[OpenPGPEnvironment,
-                        OpenPGPMockedSystemEnvironment])
+@pytest.fixture(params=[IsolatedGPGEnvironment,
+                        MockedSystemGPGEnvironment])
 def openpgp_env(request):
     """OpenPGP environment fixture"""
     env = request.param()
@@ -353,7 +353,7 @@ def openpgp_env(request):
     env.close()
 
 
-@pytest.fixture(params=[OpenPGPEnvironment])
+@pytest.fixture(params=[IsolatedGPGEnvironment])
 def openpgp_env_with_refresh(request):
     """OpenPGP environments that support refreshing keys"""
     env = request.param()
@@ -421,7 +421,7 @@ def test_verify_manifest(openpgp_env, manifest_var, key_var, expected):
 
 def test_verify_untrusted_key():
     try:
-        openpgp_env = OpenPGPMockedSystemEnvironment()
+        openpgp_env = MockedSystemGPGEnvironment()
         with io.BytesIO(VALID_PUBLIC_KEY) as f:
             openpgp_env.import_key(f, trust=False)
 
@@ -548,13 +548,13 @@ def test_env_import_key(openpgp_env, key_var, success):
 
 def test_env_double_close():
     """Test that env can be closed multiple times"""
-    with OpenPGPEnvironment() as env:
+    with IsolatedGPGEnvironment() as env:
         env.close()
 
 
 def test_env_home_after_close():
     """Test that .home can not be referenced after closing"""
-    with OpenPGPEnvironment() as env:
+    with IsolatedGPGEnvironment() as env:
         env.close()
         with pytest.raises(AssertionError):
             env.home
@@ -842,7 +842,7 @@ def test_refresh_wkd_fallback_to_hkp(openpgp_env_with_refresh,
       'iy9q119eutrkn8s1mk4r39qejnbu3n5q?l=Joe.Doe'),
      ])
 def test_get_wkd_url(email, expected):
-    assert OpenPGPEnvironment.get_wkd_url(email) == expected
+    assert IsolatedGPGEnvironment.get_wkd_url(email) == expected
 
 
 def signal_desc(sig):

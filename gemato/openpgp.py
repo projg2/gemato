@@ -51,7 +51,7 @@ class OpenPGPSignatureData:
         self.primary_key_fingerprint = primary_key_fingerprint
 
 
-class OpenPGPSystemEnvironment:
+class SystemGPGEnvironment:
     """
     OpenPGP environment class that uses the global OpenPGP environment
     (user's home directory or GNUPGHOME).
@@ -202,7 +202,7 @@ class OpenPGPSystemEnvironment:
         return (p.wait(), out, err)
 
 
-class OpenPGPEnvironment(OpenPGPSystemEnvironment):
+class IsolatedGPGEnvironment(SystemGPGEnvironment):
     """
     An isolated environment for OpenPGP routines. Used to get reliable
     verification results independently of user configuration.
@@ -250,7 +250,7 @@ debug-level guru
             self.close()
 
     def clone(self):
-        return OpenPGPEnvironment(debug=self.debug, proxy=self.proxy)
+        return IsolatedGPGEnvironment(debug=self.debug, proxy=self.proxy)
 
     @staticmethod
     def _rmtree_error_handler(func, path, exc_info):
@@ -468,3 +468,7 @@ debug-level guru
         if self.proxy is not None:
             env_override['http_proxy'] = self.proxy
         return (super()._spawn_gpg(options, stdin, env_override))
+
+
+OpenPGPSystemEnvironment = SystemGPGEnvironment
+OpenPGPEnvironment = IsolatedGPGEnvironment

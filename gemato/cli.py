@@ -25,6 +25,7 @@ from gemato.manifest import (
 from gemato.openpgp import (
     OpenPGPEnvironment,
     OpenPGPSystemEnvironment,
+    IsolatedGPGEnvironment,
     )
 from gemato.profile import get_profile_by_name
 from gemato.recursiveloader import ManifestRecursiveLoader
@@ -584,7 +585,7 @@ class GnuPGWrapCommand(VerifyingOpenPGPMixin, GematoCommand):
 
     def __call__(self):
         super().__call__()
-        assert isinstance(self.openpgp_env, OpenPGPEnvironment)
+        assert isinstance(self.openpgp_env, IsolatedGPGEnvironment)
         os.environ['GNUPGHOME'] = self.openpgp_env._home
         p = subprocess.Popen(self.argv)
         ret = p.wait()
