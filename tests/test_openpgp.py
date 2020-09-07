@@ -338,6 +338,12 @@ class MockedSystemGPGEnvironment(SystemGPGEnvironment):
         os.environ['GNUPGHOME'] = self._tmpdir.name
         super().__init__(*args, **kwargs)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_cb):
+        self.close()
+
     def close(self):
         if self._tmpdir is not None:
             self._tmpdir.cleanup()
@@ -450,13 +456,13 @@ def test_verify_manifest(openpgp_env, manifest_var, key_var, expected):
 
 def test_verify_untrusted_key():
     try:
-        openpgp_env = MockedSystemGPGEnvironment()
-        with io.BytesIO(VALID_PUBLIC_KEY) as f:
-            openpgp_env.import_key(f, trust=False)
+        with MockedSystemGPGEnvironment() as openpgp_env:
+            with io.BytesIO(VALID_PUBLIC_KEY) as f:
+                openpgp_env.import_key(f, trust=False)
 
-        with io.StringIO(SIGNED_MANIFEST) as f:
-            with pytest.raises(OpenPGPUntrustedSigFailure):
-                openpgp_env.verify_file(f)
+            with io.StringIO(SIGNED_MANIFEST) as f:
+                with pytest.raises(OpenPGPUntrustedSigFailure):
+                    openpgp_env.verify_file(f)
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
