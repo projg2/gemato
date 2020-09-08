@@ -18,7 +18,7 @@ from gemato.compression import (
 
 TEST_STRING = b'The quick brown fox jumps over the lazy dog'
 # we need to be specific on endianness to avoid unreliably writing BOM
-UTF16_TEST_STRING = TEST_STRING.decode('utf8').encode('utf_16_be')
+UTF16_TEST_STRING = TEST_STRING.decode('ASCII').encode('utf_16_be')
 
 
 COMPRESSION_ALGOS = ['gz', 'bz2', 'lzma', 'xz']
@@ -128,7 +128,7 @@ def test_open_potentially_compressed_path_with_encoding(test_file):
 
     with open_potentially_compressed_path(test_file, 'r',
                                           encoding='utf_16_be') as cf:
-        assert cf.read() == TEST_STRING.decode('utf8')
+        assert cf.read() == TEST_STRING.decode('ASCII')
 
 
 @pytest.mark.parametrize('encoding,out_var', [(None, 'TEST_STRING'),
@@ -141,7 +141,7 @@ def test_open_potentially_compressed_path_write_with_unicode(
     if encoding is not None:
         kwargs['encoding'] = encoding
     with open_potentially_compressed_path(test_file, 'w', **kwargs) as cf:
-        cf.write(TEST_STRING.decode('utf8'))
+        cf.write(TEST_STRING.decode('ASCII'))
 
     suffix = test_file.suffix.lstrip('.')
     with open(test_file, 'rb') as rf:
@@ -157,7 +157,7 @@ def test_open_potentially_compressed_path_with_encoding_line_api(test_file):
 
     with open_potentially_compressed_path(test_file, 'r',
                                           encoding='utf_16_be') as cf:
-        assert [x for x in cf] == [TEST_STRING.decode('utf8')]
+        assert [x for x in cf] == [TEST_STRING.decode('ASCII')]
 
 
 def test_open_potentially_compressed_path_fileno_passthrough(test_file):
