@@ -292,7 +292,7 @@ debug-level guru
             ret, sout, serr = self._spawn_gpg(
                 [GNUPGCONF, '--kill', 'all'])
             if ret != 0:
-                logging.warning(f'{GNUPGCONF} --kill failed: {serr}')
+                logging.warning(f'{GNUPGCONF} --kill failed: {serr!r}')
             if not self.debug:
                 # we need to loop due to ENOTEMPTY potential
                 while os.path.isdir(self._home):
@@ -372,7 +372,8 @@ debug-level guru
                     ret[fpr].append(addr)
                 else:
                     logging.debug(
-                        f'list_keys(): ignoring UID without mail: {uid}')
+                        f'list_keys(): ignoring UID without mail: '
+                        f'{uid!r}')
 
         return ret
 
