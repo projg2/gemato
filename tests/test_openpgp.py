@@ -38,6 +38,7 @@ from gemato.recursiveloader import ManifestRecursiveLoader
 from tests.keydata import (
     PUBLIC_KEY, SECRET_KEY, PUBLIC_SUBKEY, UID,
     UID_NOEMAIL, PUBLIC_KEY_NOEMAIL_SIG,
+    UID_NONUTF, PUBLIC_KEY_NONUTF_SIG,
     PUBLIC_KEY_SIG, PUBLIC_SUBKEY_SIG, EXPIRED_KEY_SIG, REVOCATION_SIG,
     OTHER_PUBLIC_KEY, OTHER_PUBLIC_KEY_UID, OTHER_PUBLIC_KEY_SIG,
     UNEXPIRE_SIG,
@@ -189,6 +190,7 @@ OTHER_VALID_PUBLIC_KEY = (OTHER_PUBLIC_KEY + OTHER_PUBLIC_KEY_UID +
 OTHER_KEY_FINGERPRINT = '4B8349B90C56EE7F054D52871822F5424EB6DA81'
 
 VALID_KEY_NOEMAIL = PUBLIC_KEY + UID_NOEMAIL + PUBLIC_KEY_NOEMAIL_SIG
+VALID_KEY_NONUTF = PUBLIC_KEY + UID_NONUTF + PUBLIC_KEY_NONUTF_SIG
 
 VALID_KEY_SUBKEY = (PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY +
                     PUBLIC_SUBKEY_SIG)
@@ -382,6 +384,7 @@ MANIFEST_VARIANTS = [
     # == good manifests ==
     ('SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', None),
     ('SIGNED_MANIFEST', 'VALID_KEY_NOEMAIL', None),
+    ('SIGNED_MANIFEST', 'VALID_KEY_NONUTF', None),
     ('SIGNED_MANIFEST', 'COMBINED_PUBLIC_KEYS', None),
     ('DASH_ESCAPED_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', None),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_KEY_SUBKEY', None),
@@ -584,6 +587,7 @@ EMPTY_DATA = b''
     'key_var,success',
     [('VALID_PUBLIC_KEY', True),
      ('VALID_KEY_NOEMAIL', True),
+     ('VALID_KEY_NONUTF', True),
      ('MALFORMED_PUBLIC_KEY', False),
      ('EMPTY_DATA', False),
      ('FORGED_PUBLIC_KEY', False),
@@ -720,6 +724,7 @@ def test_recursive_manifest_loader_save_submanifest(tmp_path, privkey_env):
       {OTHER_KEY_FINGERPRINT: ['gemato@example.com']}),
      ('VALID_KEY_SUBKEY', {KEY_FINGERPRINT: ['gemato@example.com']}),
      ('VALID_KEY_NOEMAIL', {KEY_FINGERPRINT: []}),
+     ('VALID_KEY_NONUTF', {KEY_FINGERPRINT: ['gemato@example.com']}),
      ])
 def test_list_keys(openpgp_env_with_refresh, key_var, expected):
     try:
@@ -748,6 +753,8 @@ def hkp_server(global_hkp_server):
 REFRESH_VARIANTS = [
     # manifest, key, server key fpr, server key, expected exception
     ('SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
+     'VALID_PUBLIC_KEY', None),
+    ('SIGNED_MANIFEST', 'VALID_KEY_NONUTF', KEY_FINGERPRINT,
      'VALID_PUBLIC_KEY', None),
     ('SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
      'REVOKED_PUBLIC_KEY', OpenPGPRevokedKeyFailure),

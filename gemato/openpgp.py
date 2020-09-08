@@ -371,7 +371,8 @@ debug-level guru
                     raise OpenPGPKeyListingError(
                         f'UID without key in GPG output: {line}')
                 uid = line.split(b':')[9]
-                name, addr = email.utils.parseaddr(uid.decode('utf8'))
+                _, addr = email.utils.parseaddr(
+                    uid.decode('utf8', errors='replace'))
                 if '@' in addr:
                     logging.debug(f'list_keys(): UID: {addr}')
                     ret[fpr].append(addr)
