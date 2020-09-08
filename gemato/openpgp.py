@@ -63,14 +63,13 @@ ZBASE32_TRANSLATE = bytes.maketrans(
 
 
 def get_wkd_url(email):
-    localname, domain = email.encode('utf8').split(b'@', 1)
+    localname, domain = email.split('@', 1)
     b32 = (
-        base64.b32encode(hashlib.sha1(localname.lower()).digest())
-        .translate(ZBASE32_TRANSLATE).decode())
-    uenc = urllib.parse.quote(localname)
-    ldomain = domain.lower().decode('utf8')
-    return (f'https://{ldomain}/.well-known/openpgpkey/hu/'
-            f'{b32}?l={uenc}')
+        base64.b32encode(
+            hashlib.sha1(localname.encode('utf8').lower()).digest())
+        .translate(ZBASE32_TRANSLATE).decode('ASCII'))
+    return (f'https://{domain.lower()}/.well-known/openpgpkey/hu/'
+            f'{b32}?l={urllib.parse.quote(localname)}')
 
 
 class SystemGPGEnvironment:
