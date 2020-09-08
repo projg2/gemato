@@ -684,18 +684,18 @@ class AddToMultiManifestLayout(BaseLayout):
     DIRS = ['a', 'b']
     MANIFESTS = {
         'Manifest': '''
-MANIFEST a/Manifest.a 47 MD5 89b9c1e9e5a063ee60b91b632c84c7c8
-MANIFEST a/Manifest.b 47 MD5 1b1504046a2023ed75a2a89aed7c52f4
-''',
+MANIFEST a/Manifest.a 46 MD5 9694e21e0a3f2e49cbc0fc9ab44797e8
+MANIFEST a/Manifest.b 46 MD5 93f00cb02b04ad2520414af7983ebae7
+'''.lstrip(),
         'a/Manifest': '''
 DATA c 0 MD5 d41d8cd98f00b204e9800998ecf8427e
-''',
+'''.lstrip(),
         'a/Manifest.a': '''
 DATA a 0 MD5 d41d8cd98f00b204e9800998ecf8427e
-''',
+'''.lstrip(),
         'a/Manifest.b': '''
 DATA b 0 MD5 d41d8cd98f00b204e9800998ecf8427e
-''',
+'''.lstrip(),
     }
     FILES = {
         'a/a': '',
@@ -1728,16 +1728,6 @@ def test_update_entry_for_path_no_hash_specified(layout_factory):
        'a/Manifest':
        'DATA stray 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
        }),
-     (MultipleStrayFilesLayout,
-      ['MD5'],
-      ManifestRecursiveLoader.update_entries_for_directory,
-      '',
-      None,
-      None,
-      {'Manifest': ''.join(f'DATA sub/file.{x} 0 MD5 '
-                           f'd41d8cd98f00b204e9800998ecf8427e\n'
-                           for x in 'cba'),
-       }),
      (StrayManifestLayout,
       ['MD5'],
       ManifestRecursiveLoader.update_entries_for_directory,
@@ -1759,56 +1749,6 @@ def test_update_entry_for_path_no_hash_specified(layout_factory):
        'e6378b64d3577c73c979fdb423937d94\n',
        'sub/Manifest.gz':
        StrayCompressedManifestLayout.MANIFESTS['sub/Manifest.gz'].lstrip()
-       }),
-     (StrayInvalidManifestLayout,
-      ['MD5'],
-      ManifestRecursiveLoader.update_entries_for_directory,
-      '',
-      None,
-      None,
-      {'Manifest':
-       'DATA sub/Manifest 19 MD5 1c0817af3a5def5d5c90b139988727a7\n'
-       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
-       }),
-     (StrayInvalidCompressedManifestLayout,
-      ['MD5'],
-      ManifestRecursiveLoader.update_entries_for_directory,
-      '',
-      None,
-      None,
-      {'Manifest':
-       'DATA sub/Manifest.gz 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
-       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
-       }),
-     (StrayInvalidCompressedManifestBz2Layout,
-      ['MD5'],
-      ManifestRecursiveLoader.update_entries_for_directory,
-      '',
-      None,
-      None,
-      {'Manifest':
-       'DATA sub/Manifest.bz2 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
-       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
-       }),
-     (StrayInvalidCompressedManifestLzmaLayout,
-      ['MD5'],
-      ManifestRecursiveLoader.update_entries_for_directory,
-      '',
-      None,
-      None,
-      {'Manifest':
-       'DATA sub/Manifest.lzma 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
-       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
-       }),
-     (StrayInvalidCompressedManifestXzLayout,
-      ['MD5'],
-      ManifestRecursiveLoader.update_entries_for_directory,
-      '',
-      None,
-      None,
-      {'Manifest':
-       'DATA sub/Manifest.xz 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
-       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
        }),
      (FilenameWhitespaceLayout,
       ['MD5'],
@@ -1845,19 +1785,6 @@ def test_update_entry_for_path_no_hash_specified(layout_factory):
        'DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
        'b/Manifest':
        'DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
-       }),
-     (AddToMultiManifestLayout,
-      ['MD5'],
-      ManifestRecursiveLoader.update_entries_for_directory,
-      '',
-      None,
-      None,
-      {'Manifest':
-       'MANIFEST a/Manifest.a 47 MD5 89b9c1e9e5a063ee60b91b632c84c7c8\n'
-       'MANIFEST a/Manifest.b 47 MD5 1b1504046a2023ed75a2a89aed7c52f4\n'
-       'DATA b/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n'
-       'MANIFEST a/Manifest 46 MD5 dae3736ed4a6d6a3a74aa0af1b063bdf\n',
-       'a/Manifest': 'DATA c 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
        }),
      (SubManifestMismatchLayout,
       ['MD5'],
@@ -1916,6 +1843,67 @@ def test_update_entry_hash_specs(layout_factory, layout, ctor, func, path,
                                 allow_xdev=False)
     func(m, path, hashes=call)
     m.save_manifests(hashes=save)
+
+    output = {}
+    for relpath in layout.MANIFESTS:
+        with open_potentially_compressed_path(tmp_path / relpath,
+                                              'r') as f:
+            output[relpath] = f.read()
+    expected = dict(layout.MANIFESTS)
+    expected.update(manifest_update)
+    assert output == expected
+    m.assert_directory_verifies()
+
+
+@pytest.mark.parametrize(
+    'layout,manifest_update',
+    [(MultipleStrayFilesLayout,
+      {'Manifest': ''.join(f'DATA sub/file.{x} 0 MD5 '
+                           f'd41d8cd98f00b204e9800998ecf8427e\n'
+                           for x in 'abc'),
+       }),
+     (StrayInvalidManifestLayout,
+      {'Manifest':
+       'DATA sub/Manifest 19 MD5 1c0817af3a5def5d5c90b139988727a7\n'
+       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
+     (StrayInvalidCompressedManifestLayout,
+      {'Manifest':
+       'DATA sub/Manifest.gz 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
+       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
+     (StrayInvalidCompressedManifestBz2Layout,
+      {'Manifest':
+       'DATA sub/Manifest.bz2 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
+       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
+     (StrayInvalidCompressedManifestLzmaLayout,
+      {'Manifest':
+       'DATA sub/Manifest.lzma 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
+       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
+     (StrayInvalidCompressedManifestXzLayout,
+      {'Manifest':
+       'DATA sub/Manifest.xz 18 MD5 f937f0ff743477e4f70ef2b79672c9bc\n'
+       'DATA sub/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
+     (AddToMultiManifestLayout,
+      {'Manifest':
+       'DATA b/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n'
+       'MANIFEST a/Manifest 46 MD5 dae3736ed4a6d6a3a74aa0af1b063bdf\n'
+       'MANIFEST a/Manifest.a 46 MD5 9694e21e0a3f2e49cbc0fc9ab44797e8\n'
+       'MANIFEST a/Manifest.b 46 MD5 93f00cb02b04ad2520414af7983ebae7\n',
+       'a/Manifest': 'DATA c 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+       }),
+     ])
+def test_update_entries_unordered(layout_factory, layout,
+                                  manifest_update):
+    tmp_path = layout_factory.create(layout)
+    m = ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
+                                hashes=['MD5'],
+                                allow_xdev=False)
+    m.update_entries_for_directory('')
+    m.save_manifests(sort=True, force=True)
 
     output = {}
     for relpath in layout.MANIFESTS:
@@ -2047,23 +2035,6 @@ def test_update_entry_and_discard(layout_factory):
        'TIMESTAMP\n',
        'sub/Manifest.gz': 'DATA test 0 SHA1 '
        'da39a3ee5e6b4b0d3255bfef95601890afd80709\n',
-       },
-      'TIMESTAMP'),
-     (StrayInvalidManifestLayout,
-      '',
-      {'Manifest': 'DATA sub/Manifest 19 SHA1 '
-       '0edaf6696720e166e43e5eedbde23818a8a4939c\n'
-       'DATA sub/test 0 SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709\n'
-       'TIMESTAMP\n',
-       },
-      'TIMESTAMP'),
-     (StrayInvalidCompressedManifestLayout,
-      '',
-      {'Manifest':
-       'DATA sub/Manifest.gz 18 SHA1 '
-       '6af661c09147db2a2b51ae7c3cf2834d88884596\n'
-       'DATA sub/test 0 SHA1 da39a3ee5e6b4b0d3255bfef95601890afd80709\n'
-       'TIMESTAMP\n',
        },
       'TIMESTAMP'),
      (FilenameWhitespaceLayout,
@@ -2346,7 +2317,7 @@ def test_regenerate_update_manifest(layout_factory):
     m = ManifestRecursiveLoader(tmp_path / 'Manifest',
                                 allow_create=True)
     m.update_entries_for_directory('', hashes=['MD5'])
-    m.save_manifests()
+    m.save_manifests(sort=True)
 
     output = {}
     for relpath in layout.MANIFESTS:
@@ -2355,13 +2326,13 @@ def test_regenerate_update_manifest(layout_factory):
             output[relpath] = f.read()
     expected = {
         'Manifest': 'DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n'
-        'MANIFEST b/Manifest 49 MD5 b86a7748346d54c6455886306f017e6c\n'
-        'MANIFEST a/Manifest 220 MD5 e85fbbce600362ab3378ebd7a2bc06db\n',
+        'MANIFEST a/Manifest 220 MD5 8e387c62a971e90f8cc1ea5e740647dd\n'
+        'MANIFEST b/Manifest 49 MD5 b86a7748346d54c6455886306f017e6c\n',
         'a/Manifest':
-        'MANIFEST x/Manifest 49 MD5 b86a7748346d54c6455886306f017e6c\n'
-        'MANIFEST z/Manifest 49 MD5 b86a7748346d54c6455886306f017e6c\n'
         'DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n'
-        'DATA y/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
+        'DATA y/test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n'
+        'MANIFEST x/Manifest 49 MD5 b86a7748346d54c6455886306f017e6c\n'
+        'MANIFEST z/Manifest 49 MD5 b86a7748346d54c6455886306f017e6c\n',
         'a/x/Manifest':
         'DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n',
         'a/z/Manifest':
