@@ -337,6 +337,7 @@ class MockedSystemGPGEnvironment(SystemGPGEnvironment):
     """System environment variant mocked to use isolated GNUPGHOME"""
     def __init__(self, *args, **kwargs):
         self._tmpdir = tempfile.TemporaryDirectory()
+        self._home = self._tmpdir.name
         os.environ['GNUPGHOME'] = self._tmpdir.name
         super().__init__(*args, **kwargs)
 
@@ -348,6 +349,9 @@ class MockedSystemGPGEnvironment(SystemGPGEnvironment):
 
     def close(self):
         if self._tmpdir is not None:
+            IsolatedGPGEnvironment.close(self)
+            # we need to recreate it to make cleanup() happy
+            os.mkdir(self._tmpdir.name)
             self._tmpdir.cleanup()
             self._tmpdir = None
             os.environ.pop('GNUPGHOME', None)

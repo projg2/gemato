@@ -229,6 +229,19 @@ class SystemGPGEnvironment:
         return (p.wait(), out, err)
 
 
+def _rmtree_error_handler(func, path, exc_info):
+    # ignore ENOENT -- it probably means a race condition between
+    # us and gpg-agent cleaning up after itself
+    # also non-empty directory due to races, and EBUSY for NFS:
+    # https://bugs.gentoo.org/684172
+    if (not isinstance(exc_info[1], OSError)
+            or exc_info[1].errno not in (errno.ENOENT,
+                                         errno.ENOTEMPTY,
+                                         errno.EEXIST,
+                                         errno.EBUSY)):
+        raise exc_info[1]
+
+
 class IsolatedGPGEnvironment(SystemGPGEnvironment):
     """
     An isolated environment for OpenPGP routines. Used to get reliable
@@ -279,19 +292,6 @@ debug-level guru
     def clone(self):
         return IsolatedGPGEnvironment(debug=self.debug, proxy=self.proxy)
 
-    @staticmethod
-    def _rmtree_error_handler(func, path, exc_info):
-        # ignore ENOENT -- it probably means a race condition between
-        # us and gpg-agent cleaning up after itself
-        # also non-empty directory due to races, and EBUSY for NFS:
-        # https://bugs.gentoo.org/684172
-        if (not isinstance(exc_info[1], OSError)
-                or exc_info[1].errno not in (errno.ENOENT,
-                                             errno.ENOTEMPTY,
-                                             errno.EEXIST,
-                                             errno.EBUSY)):
-            raise exc_info[1]
-
     def close(self):
         if self._home is not None:
             ret, sout, serr = self._spawn_gpg(
@@ -304,7 +304,7 @@ debug-level guru
                 # we need to loop due to ENOTEMPTY potential
                 while os.path.isdir(self._home):
                     shutil.rmtree(self._home,
-                                  onerror=self._rmtree_error_handler)
+                                  onerror=_rmtree_error_handler)
             else:
                 logging.debug(f'GNUPGHOME left for debug purposes: '
                               f'{self._home}')
