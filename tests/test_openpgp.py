@@ -5,6 +5,7 @@
 
 import datetime
 import io
+import logging
 import os
 import shlex
 import signal
@@ -875,22 +876,26 @@ def test_refresh_wkd(openpgp_env_with_refresh,
             pytest.skip(str(e))
 
 
+@pytest.mark.parametrize('status', [401, 404, 500, ConnectionError])
 def test_refresh_wkd_fallback_to_hkp(openpgp_env_with_refresh,
-                                     hkp_server):
+                                     hkp_server, caplog, status):
     """Test whether WKD refresh failure falls back to HKP"""
     with pytest.importorskip('responses').RequestsMock() as responses:
         try:
             with io.BytesIO(VALID_PUBLIC_KEY) as f:
                 openpgp_env_with_refresh.import_key(f)
             hkp_server.keys[KEY_FINGERPRINT] = REVOKED_PUBLIC_KEY
-            responses.add(
-                responses.GET,
-                'https://example.com/.well-known/openpgpkey/hu/'
-                '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato',
-                status=404)
+            if status is not ConnectionError:
+                responses.add(
+                    responses.GET,
+                    'https://example.com/.well-known/openpgpkey/hu/'
+                    '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato',
+                    status=status)
 
+            caplog.set_level(logging.DEBUG)
             openpgp_env_with_refresh.refresh_keys(
                 allow_wkd=True, keyserver=hkp_server.addr)
+            assert 'failing due to failed request' in caplog.text
 
             with pytest.raises(OpenPGPRevokedKeyFailure):
                 with io.StringIO(SIGNED_MANIFEST) as f:

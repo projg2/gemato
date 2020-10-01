@@ -416,10 +416,14 @@ debug-level guru
             }
         for a in addrs:
             url = get_wkd_url(a)
-            resp = requests.get(url, proxies=proxies)
-            if resp.status_code != 200:
-                logging.debug(f'refresh_keys_wkd(): failing due to failed'
-                              f'request for {url}: {resp}')
+            try:
+                resp = requests.get(url, proxies=proxies)
+                resp.raise_for_status()
+            except (requests.exceptions.ConnectionError,
+                    requests.exceptions.HTTPError,
+                    ) as e:
+                logging.debug(f'refresh_keys_wkd(): failing due to failed '
+                              f'request for {url}: {e}')
                 return False
             data += resp.content
 
