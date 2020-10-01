@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name='gemato',
-    version='16.1',
+    version='16.2',
     description='Gentoo Manifest Tool -- a stand-alone utility to verify and update Gentoo Manifest files',
 
     author='Michał Górny',
