@@ -11,8 +11,12 @@ import gemato.hash
 
 def benchmark_one(path, hashes):
 	f = lambda: gemato.hash.hash_path(path, hashes)
-	t = timeit.repeat(f, number=1)
-	print("{} -> {}".format(hashes, t))
+	print("{} -> [ ".format(hashes), end='', flush=True)
+	results = []
+	for t in (timeit.timeit(f, number=1) for i in range(5)):
+		print("{:.4}".format(t), end=" ", flush=True)
+		results.append(t)
+	print("] -> min: {:.4}".format(min(results)))
 
 
 def benchmark(path, hash_sets):
