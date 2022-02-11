@@ -1,6 +1,0 @@
-include COPYING
-include tox.ini
-include bin/gemato
-include tests/*.py
-include utils/*.bash
-include utils/*.py
