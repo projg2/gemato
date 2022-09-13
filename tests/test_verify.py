@@ -89,6 +89,10 @@ TEST_PATH_TYPES = {
 }
 
 
+EMPTY_SHA1 = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+EMPTY_MD5 = "d41d8cd98f00b204e9800998ecf8427e"
+
+
 def get_checksums(path):
     """Get checksums for the specified path"""
     try:
@@ -110,8 +114,8 @@ TEST_PATH_SIZES = {
     '/proc/version': 0,
 }
 TEST_PATH_CHECKSUMS = {
-    'empty-file': {'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
-                   'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+    'empty-file': {'MD5': EMPTY_MD5,
+                   'SHA1': EMPTY_SHA1,
                    '__size__': TEST_PATH_SIZES['empty-file'],
                    },
     'regular-file': {'MD5': '9e107d9d372bb6826bd81d3542a419d6',
@@ -166,7 +170,7 @@ def test_get_file_metadata(test_tree, path, expected):
         expected)
 
 
-EMPTY_FILE_DATA = [0, {}]
+EMPTY_FILE_DATA = [0, {"MD5": EMPTY_MD5}]
 ZERO_MD5 = '00000000000000000000000000000000'
 ZERO_SHA1 = '0000000000000000000000000000000000000000'
 
@@ -215,16 +219,17 @@ class FILE_MTIME:
      for path in NONFILE_TEST_PATHS] +
     # test DATA on regular files
     list(itertools.chain.from_iterable(
-        [(path, 'DATA', [TEST_PATH_CHECKSUMS[path]['__size__'], {}],
-          None, True, []),
-         (path, 'DATA', [TEST_PATH_CHECKSUMS[path]['__size__'],
+        [(path, 'DATA', [TEST_PATH_CHECKSUMS[path]['__size__'],
                          strip_size(TEST_PATH_CHECKSUMS[path])],
           None, True, []),
-         # wrong size
-         (path, 'DATA', [TEST_PATH_CHECKSUMS[path]['__size__'] + 11, {}],
-          None, False, [('__size__',
-                         TEST_PATH_CHECKSUMS[path]['__size__'] + 11,
-                         TEST_PATH_CHECKSUMS[path]['__size__'])]),
+         # wrong size and checksum
+         (path, 'DATA', [TEST_PATH_CHECKSUMS[path]['__size__'] + 11,
+                         mangle_one_checksum(TEST_PATH_CHECKSUMS[path])],
+          None, False,
+          [('__size__', TEST_PATH_CHECKSUMS[path]['__size__'] + 11,
+            TEST_PATH_CHECKSUMS[path]['__size__'])] +
+          ([('MD5', ZERO_MD5, TEST_PATH_CHECKSUMS[path]['MD5'])]
+           if path in EMPTY_FILE_TEST_PATHS else [])),
          # one wrong checksum
          (path, 'DATA', [TEST_PATH_CHECKSUMS[path]['__size__'],
                          mangle_one_checksum(TEST_PATH_CHECKSUMS[path])],
@@ -314,7 +319,7 @@ def test_cross_filesystem(test_tree, function):
     if st.st_dev == lst.st_dev:
         pytest.skip('/proc and test tree on the same filesystem!?')
 
-    entry = new_manifest_entry('DATA', filename, 0, {})
+    entry = new_manifest_entry('DATA', filename, 0, {"MD5": EMPTY_MD5})
     with pytest.raises(ManifestCrossDevice):
         function(test_tree / filename, entry, expected_dev=st.st_dev)
 
@@ -426,16 +431,16 @@ def test_update_AUX(test_tree):
     assert entry.aux_path == path
     assert entry.path == f'files/{path}'
     assert entry.size == 0
-    assert entry.checksums == {}
+    assert entry.checksums == {"MD5": EMPTY_MD5}
 
 
 @pytest.mark.parametrize(
     'function,args',
     [(get_file_metadata, [[]]),
      (verify_path,
-      [new_manifest_entry('DATA', 'unreadable-file', 0, {})]),
+      [new_manifest_entry('DATA', 'unreadable-file', 0, {"MD5": EMPTY_MD5})]),
      (update_entry_for_path,
-      [new_manifest_entry('DATA', 'unreadable-file', 0, {})]),
+      [new_manifest_entry('DATA', 'unreadable-file', 0, {"MD5": EMPTY_MD5})]),
      ])
 def test_unreadable_file(test_tree, function, args):
     with pytest.raises(PermissionError):
@@ -445,60 +450,60 @@ def test_unreadable_file(test_tree, function, args):
 
 @pytest.mark.parametrize(
     'a_cls,a_name,a_args,b_cls,b_name,b_args,expected,diff',
-    [('DATA', 'test', [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
-      'DATA', 'test', [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+    [('DATA', 'test', [0, {'MD5': EMPTY_MD5}],
+      'DATA', 'test', [0, {'MD5': EMPTY_MD5}],
       True, []),
      ('DATA', 'test-1.ebuild',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'EBUILD', 'test-1.ebuild',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       True, []),
      ('DATA', 'files/test.patch',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'AUX', 'test.patch',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       True, []),
      ('DATA', 'Manifest',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'MANIFEST', 'Manifest',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       True, []),
      ('DATA', 'metadata.xml',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'MISC', 'metadata.xml',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       False, [('__type__', 'DATA', 'MISC')]),
      ('DATA', 'test',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'IGNORE', 'test', [],
       False, [('__type__', 'DATA', 'IGNORE')]),
      ('DATA', 'test-1.tar.gz',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'DIST', 'test-1.tar.gz',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       False, [('__type__', 'DATA', 'DIST')]),
      ('DATA', 'mismatched-size',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'DATA', 'mismatched-size',
-      [32, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [32, {'MD5': EMPTY_MD5}],
       False, [('__size__', 0, 32)]),
      ('DATA', 'mismatched-md5',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'DATA', 'mismatched-md5',
       [0, {'MD5': ZERO_MD5}],
-      False, [('MD5', 'd41d8cd98f00b204e9800998ecf8427e', ZERO_MD5)]),
+      False, [('MD5', EMPTY_MD5, ZERO_MD5)]),
      ('DATA', 'hash-subset',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'DATA', 'mismatched-md5',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
-           'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709'}],
-      True, [('SHA1', None, 'da39a3ee5e6b4b0d3255bfef95601890afd80709')]),
+      [0, {'MD5': EMPTY_MD5,
+           'SHA1': EMPTY_SHA1}],
+      True, [('SHA1', None, EMPTY_SHA1)]),
      ('DATA', 'mismatched-hash-sets',
-      [0, {'MD5': 'd41d8cd98f00b204e9800998ecf8427e'}],
+      [0, {'MD5': EMPTY_MD5}],
       'DATA', 'mismatched-md5',
-      [0, {'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709'}],
-      True, [('MD5', 'd41d8cd98f00b204e9800998ecf8427e', None),
-             ('SHA1', None, 'da39a3ee5e6b4b0d3255bfef95601890afd80709')]),
+      [0, {'SHA1': EMPTY_SHA1}],
+      True, [('MD5', EMPTY_MD5, None),
+             ('SHA1', None, EMPTY_SHA1)]),
      ])
 def test_entry_compatibility(a_cls, a_name, a_args, b_cls, b_name,
                              b_args, expected, diff):
