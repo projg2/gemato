@@ -165,7 +165,7 @@ def verify_path(path, e, expected_dev=None, last_mtime=None):
     else:
         expect_exist = True
         checksums = list(filter(is_hash_supported, e.checksums))
-        if not checksums:
+        if not checksums and e.checksums:
             raise ManifestNoSupportedHashes(e)
 
     with contextlib.closing(get_file_metadata(path, checksums)) as g:
