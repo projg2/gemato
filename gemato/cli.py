@@ -1,6 +1,6 @@
 # gemato: CLI routines
 # vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 from __future__ import print_function
@@ -235,6 +235,8 @@ class VerifyCommand(BaseManifestLoaderMixin, VerifyingOpenPGPMixin,
             if tlm is None:
                 logging.error(f'Top-level Manifest not found in {p}')
                 return 1
+
+            logging.info(f"Using top-level Manifest: {tlm}")
 
             start = timeit.default_timer()
             m = ManifestRecursiveLoader(tlm, **self.init_kwargs)
