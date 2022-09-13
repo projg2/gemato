@@ -264,3 +264,18 @@ class ManifestInvalidFilename(GematoException):
                 f'to Manifest: disallowed character '
                 f'U+{ord(self.filename[self.pos]):04X} at position '
                 f'{self.pos}')
+
+
+class ManifestNoSupportedHashes(GematoException):
+    """
+    An exception raised when all hashes given for an entry are
+    unsupported.
+    """
+
+    def __init__(self, entry):
+        super().__init__()
+        self.entry = entry
+
+    def __str__(self):
+        return (f"No hashes provided for file {self.entry.path!r} are "
+                f"supported (out of {' '.join(self.entry.checksums)})")

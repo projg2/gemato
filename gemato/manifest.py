@@ -1,6 +1,6 @@
 # gemato: Manifest file objects
 # vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
@@ -557,3 +557,10 @@ def manifest_hashes_to_hashlib(hashes):
     """
     for h in hashes:
         yield MANIFEST_HASH_MAPPING[h]
+
+
+def is_hash_supported(h):
+    """
+    Return True if the passed hash (in Manifest naming) is supported.
+    """
+    return h in MANIFEST_HASH_MAPPING

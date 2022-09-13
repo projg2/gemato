@@ -1,6 +1,6 @@
 # gemato: File verification routines
 # vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import contextlib
@@ -12,9 +12,10 @@ import stat
 from gemato.exceptions import (
     ManifestCrossDevice,
     ManifestInvalidPath,
+    ManifestNoSupportedHashes,
     )
 from gemato.hash import hash_file
-from gemato.manifest import manifest_hashes_to_hashlib
+from gemato.manifest import manifest_hashes_to_hashlib, is_hash_supported
 
 
 def get_file_metadata(path, hashes):
@@ -163,7 +164,9 @@ def verify_path(path, e, expected_dev=None, last_mtime=None):
         checksums = ()
     else:
         expect_exist = True
-        checksums = e.checksums
+        checksums = list(filter(is_hash_supported, e.checksums))
+        if not checksums:
+            raise ManifestNoSupportedHashes(e)
 
     with contextlib.closing(get_file_metadata(path, checksums)) as g:
         # 1. verify whether the file existed in the first place
@@ -204,7 +207,7 @@ def verify_path(path, e, expected_dev=None, last_mtime=None):
             diff.append(('__size__', e.size, size))
 
         # 7. verify the checksums
-        for h in sorted(e.checksums):
+        for h in sorted(checksums):
             exp = e.checksums[h]
             got = checksums[h]
             if got != exp:

@@ -1,6 +1,6 @@
 # gemato: Recursive loader tests
 # vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import base64
@@ -20,8 +20,9 @@ from gemato.exceptions import (
     ManifestIncompatibleEntry,
     ManifestCrossDevice,
     ManifestSymlinkLoop,
+    ManifestNoSupportedHashes,
     )
-from gemato.manifest import ManifestPathEntry
+from gemato.manifest import ManifestPathEntry, ManifestFileEntry
 from gemato.recursiveloader import ManifestRecursiveLoader
 
 from tests.test_compression import COMPRESSION_ALGOS
@@ -788,6 +789,32 @@ DATA test 11 SHA1 561295c9cbf9d6b2f6428414504a8deed3020641
                 f'TIMESTAMP {future_dt.strftime("%Y-%m-%dT%H:%M:%SZ")}'))
 
 
+class UnknownHashLayout(BaseLayout):
+    """Layout with a supported and unknown hash"""
+
+    MANIFESTS = {
+        'Manifest': '''
+DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e X-UNKNOWN 0123456789abcdef
+''',
+    }
+    FILES = {
+        'test': '',
+    }
+
+
+class UnknownHashOnlyLayout(BaseLayout):
+    """Layout with unknown hash only"""
+
+    MANIFESTS = {
+        'Manifest': '''
+DATA test 0 X-UNKNOWN 0123456789abcdef
+''',
+    }
+    FILES = {
+        'test': '',
+    }
+
+
 FLAT_LAYOUTS = [
     DuplicateEntryLayout,
     DuplicateEbuildEntryLayout,
@@ -818,6 +845,8 @@ FLAT_LAYOUTS = [
     SymlinkLoopLayout,
     SymlinkLoopIgnoreLayout,
     MismatchedFileLayout,
+    UnknownHashLayout,
+    UnknownHashOnlyLayout,
 ]
 SUB_LAYOUTS = [
     SubTimestampLayout,
@@ -1069,6 +1098,7 @@ COMMON_VERIFY_PATH_VARIANTS = [
      [('MD5',
        '5f8db599de986fab7a21625b7916589c',
        '6f8db599de986fab7a21625b7916589c')]),
+    (UnknownHashLayout, 'test', True, []),
 ]
 
 
@@ -1151,6 +1181,8 @@ def test_assert_path_verifies(layout_factory, layout, path, expected, diff):
       {'': {'metadata.xml': ('DATA', 'metadata.xml', ['MD5'])}}),
      (IncompatibleTypeLayout, '', 'MISC',
       {'': {'metadata.xml': ('MISC', 'metadata.xml', ['MD5'])}}),
+     (UnknownHashLayout, '', None,
+      {'': {'test': ('DATA', 'test', ['MD5', 'X-UNKNOWN'])}}),
      ])
 def test_get_file_entry_dict(layout_factory, layout, path, only_types,
                              expected):
@@ -1281,6 +1313,7 @@ COMMON_DIRECTORY_VERIFICATION_VARIANTS = [
      [('MD5',
        '5f8db599de986fab7a21625b7916589c',
        '6f8db599de986fab7a21625b7916589c')]),
+    (UnknownHashLayout, '', None, []),
 ]
 
 
@@ -1323,6 +1356,7 @@ COMMON_DIRECTORY_VERIFICATION_VARIANTS = [
      (SymlinkLoopLayout, '', lambda e: False, ManifestSymlinkLoop, None,
       []),
      (SymlinkLoopIgnoreLayout, '', None, True, None, []),
+     (UnknownHashOnlyLayout, '', None, ManifestNoSupportedHashes, None, []),
      ])
 def test_assert_directory_verifies(layout_factory, layout, path, fail_handler,
                                    expected, fail_path, diff):
@@ -1380,6 +1414,9 @@ def test_assert_directory_verifies(layout_factory, layout, path, fail_handler,
      (SymlinkLoopLayout, '', '',
       str(ManifestSymlinkLoop('<path>')).split('<path>', 1)[1]),
      (SymlinkLoopIgnoreLayout, '', '', None),
+     (UnknownHashOnlyLayout, '', '',
+      str(ManifestNoSupportedHashes(ManifestFileEntry(
+            'test', 0, {"X-UNKNOWN": ""})))),
      ])
 def test_cli_verify(layout_factory, caplog, layout, path, args, expected):
     tmp_path = layout_factory.create(layout, readonly=True)
@@ -1939,6 +1976,19 @@ def test_update_entry_raise(layout_factory, layout, path, expected, reason):
         m.update_entry_for_path(path)
     if expected is ManifestInvalidPath:
         assert exc.value.detail == reason
+
+
+@pytest.mark.parametrize(
+    'layout,path',
+    [(UnknownHashLayout, 'test'),
+     (UnknownHashOnlyLayout, 'test'),
+     ])
+def test_update_entry_unknown_hash(layout_factory, layout, path):
+    tmp_path = layout_factory.create(layout)
+    m = ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
+                                allow_xdev=False)
+    with pytest.raises(KeyError) as exc:
+        m.update_entry_for_path(path)
 
 
 @pytest.mark.parametrize(
