@@ -1987,7 +1987,7 @@ def test_update_entry_unknown_hash(layout_factory, layout, path):
     tmp_path = layout_factory.create(layout)
     m = ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
                                 allow_xdev=False)
-    with pytest.raises(KeyError) as exc:
+    with pytest.raises(KeyError):
         m.update_entry_for_path(path)
 
 
