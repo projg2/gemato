@@ -39,7 +39,12 @@ def get_hash_by_name(name):
 
     # general hash support
     if name in hashlib.algorithms_available:
-        return hashlib.new(name)
+        try:
+            return hashlib.new(name)
+        except ValueError:
+            # some broken Python versions list unsupported algos
+            # in algorithms_available with OpenSSL-3
+            pass
 
     raise UnsupportedHash(name)
 
