@@ -1,8 +1,9 @@
 # gemato: OpenPGP signature support tests
 # vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import contextlib
 import datetime
 import io
 import logging
@@ -26,6 +27,7 @@ from gemato.exceptions import (
     OpenPGPKeyRefreshError,
     OpenPGPRuntimeError,
     OpenPGPUntrustedSigFailure,
+    ManifestInsecureHashes,
     )
 from gemato.manifest import ManifestFile
 from gemato.openpgp import (
@@ -958,3 +960,38 @@ def test_cli_gpg_wrap(tmp_path, caplog, command, expected, match):
     assert retval == expected
     if match is not None:
         assert match in caplog.text
+
+
+@pytest.mark.parametrize(
+    "hashes_arg,insecure",
+    [("MD5", True),
+     ("SHA1", True),
+     ("SHA512", False),
+     ("SHA1 SHA512", True),
+     ])
+@pytest.mark.parametrize(
+    "sign,require_secure",
+    [(None, None),
+     (False, None),
+     (True, None),
+     (None, False),
+     (True, False),
+     ])
+def test_recursive_manifest_loader_require_secure(tmp_path, privkey_env,
+                                                  hashes_arg, insecure,
+                                                  sign, require_secure):
+    with open(tmp_path / "Manifest", "w") as f:
+        f.write(SIGNED_MANIFEST)
+
+    ctx = (pytest.raises(ManifestInsecureHashes)
+           if insecure and sign is not False and require_secure is not False
+           else contextlib.nullcontext())
+    with ctx:
+        m = ManifestRecursiveLoader(tmp_path / "Manifest",
+                                    hashes=hashes_arg.split(),
+                                    require_secure_hashes=require_secure,
+                                    verify_openpgp=not sign,
+                                    sign_openpgp=sign,
+                                    openpgp_env=privkey_env)
+        if not sign:
+            assert m.openpgp_signed

@@ -214,7 +214,7 @@ class ManifestRecursiveLoader:
                  profile=DefaultProfile(),
                  max_jobs=None,
                  allow_xdev=True,
-                 require_secure_hashes=False,
+                 require_secure_hashes=None,
                  ):
         """
         Instantiate the loader for a Manifest tree starting at top-level
@@ -268,12 +268,9 @@ class ManifestRecursiveLoader:
         to false.
 
         If @require_secure_hashes is True, only secure hashes can be used.
+        If it is False, all hashes are permitted. If it is None, secure
+        hashes are required if top-level Manifest is going to be signed.
         """
-
-        if require_secure_hashes and hashes is not None:
-            insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
-            if insecure:
-                raise ManifestInsecureHashes(insecure)
 
         self.root_directory = os.path.dirname(top_manifest_path)
         self.openpgp_env = openpgp_env
@@ -285,7 +282,6 @@ class ManifestRecursiveLoader:
         self.compress_watermark = compress_watermark
         self.compress_format = compress_format
         self.max_jobs = max_jobs
-        self.require_secure_hashes = require_secure_hashes
 
         self.profile.set_loader_options(self)
 
@@ -310,6 +306,19 @@ class ManifestRecursiveLoader:
                                store_dev=not allow_xdev)
         self.openpgp_signed = m.openpgp_signed
         self.openpgp_signature = m.openpgp_signature
+
+        if require_secure_hashes is None:
+            if self.sign_openpgp is None:
+                require_secure_hashes = self.openpgp_signed
+            else:
+                require_secure_hashes = self.sign_openpgp
+        self.require_secure_hashes = require_secure_hashes
+
+        if require_secure_hashes and hashes is not None:
+            insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
+            if insecure:
+                raise ManifestInsecureHashes(insecure)
+
 
     def load_manifest(self,
                       relpath,
