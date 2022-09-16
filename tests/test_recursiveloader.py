@@ -4,6 +4,7 @@
 # Licensed under the terms of 2-clause BSD license
 
 import base64
+import contextlib
 import datetime
 import gzip
 import itertools
@@ -21,6 +22,7 @@ from gemato.exceptions import (
     ManifestCrossDevice,
     ManifestSymlinkLoop,
     ManifestNoSupportedHashes,
+    ManifestInsecureHashes,
     )
 from gemato.manifest import ManifestPathEntry, ManifestFileEntry
 from gemato.recursiveloader import ManifestRecursiveLoader
@@ -2457,3 +2459,58 @@ def test_update_mtime(layout_factory, last_mtime, manifest_update):
     expected = dict(layout.MANIFESTS)
     expected.update(manifest_update)
     assert output == expected
+
+
+@pytest.mark.parametrize(
+    "hashes_arg,insecure",
+    [("MD5", True),
+     ("SHA1", True),
+     ("SHA512", False),
+     ("SHA1 SHA512", True),
+     ])
+def test_insecure_hashes(layout_factory, hashes_arg, insecure):
+    layout = BasicTestLayout
+    tmp_path = layout_factory.create(layout)
+    ctx = (pytest.raises(ManifestInsecureHashes) if insecure
+           else contextlib.nullcontext())
+    with ctx:
+        ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
+                                hashes=hashes_arg.split(),
+                                allow_xdev=False,
+                                require_secure_hashes=True)
+
+
+@pytest.mark.parametrize(
+    "hashes_arg,insecure",
+    [("MD5", True),
+     ("SHA1", True),
+     ("SHA512", False),
+     ("SHA1 SHA512", True),
+     ])
+@pytest.mark.parametrize(
+    "func,arg",
+    [(ManifestRecursiveLoader.update_entry_for_path, "sub/deeper/test"),
+     (ManifestRecursiveLoader.update_entries_for_directory, "sub/deeper"),
+     ])
+def test_insecure_hashes_update(layout_factory, hashes_arg, insecure, func,
+                                arg):
+    layout = BasicTestLayout
+    tmp_path = layout_factory.create(layout)
+    m = ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
+                                hashes=["SHA512"],
+                                allow_xdev=False,
+                                require_secure_hashes=True)
+    ctx = (pytest.raises(ManifestInsecureHashes) if insecure
+           else contextlib.nullcontext())
+    with ctx:
+        func(m, arg, hashes=hashes_arg.split())
+
+
+def test_insecure_hashes_update_no_arg(layout_factory):
+    layout = BasicTestLayout
+    tmp_path = layout_factory.create(layout)
+    m = ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
+                                allow_xdev=False,
+                                require_secure_hashes=True)
+    with pytest.raises(ManifestInsecureHashes):
+        m.update_entry_for_path("sub/deeper/test")

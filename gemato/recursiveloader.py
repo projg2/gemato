@@ -1,6 +1,6 @@
 # gemato: Recursive loader for Manifests
 # vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import os.path
@@ -18,6 +18,7 @@ from gemato.exceptions import (
     ManifestSymlinkLoop,
     ManifestInvalidPath,
     ManifestSyntaxError,
+    ManifestInsecureHashes,
     )
 from gemato.manifest import (
     ManifestFile,
@@ -25,6 +26,7 @@ from gemato.manifest import (
     ManifestEntryTIMESTAMP,
     new_manifest_entry,
     ManifestEntryMANIFEST,
+    is_hash_secure,
     )
 from gemato.profile import DefaultProfile
 from gemato.util import (
@@ -188,6 +190,7 @@ class ManifestRecursiveLoader:
         'compress_watermark',
         'compress_format',
         'profile',
+        'require_secure_hashes',
         # internal variables
         'manifest_loader',
         'top_level_manifest_filename',
@@ -211,6 +214,7 @@ class ManifestRecursiveLoader:
                  profile=DefaultProfile(),
                  max_jobs=None,
                  allow_xdev=True,
+                 require_secure_hashes=False,
                  ):
         """
         Instantiate the loader for a Manifest tree starting at top-level
@@ -262,7 +266,14 @@ class ManifestRecursiveLoader:
         across different filesystem. If it is false, gemato will raise
         an exception upon crossing filesystem boundaries. It defaults
         to false.
+
+        If @require_secure_hashes is True, only secure hashes can be used.
         """
+
+        if require_secure_hashes and hashes is not None:
+            insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
+            if insecure:
+                raise ManifestInsecureHashes(insecure)
 
         self.root_directory = os.path.dirname(top_manifest_path)
         self.openpgp_env = openpgp_env
@@ -274,6 +285,7 @@ class ManifestRecursiveLoader:
         self.compress_watermark = compress_watermark
         self.compress_format = compress_format
         self.max_jobs = max_jobs
+        self.require_secure_hashes = require_secure_hashes
 
         self.profile.set_loader_options(self)
 
@@ -739,6 +751,11 @@ class ManifestRecursiveLoader:
 
         if hashes is None:
             hashes = self.hashes
+        if self.require_secure_hashes and hashes is not None:
+            insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
+            if insecure:
+                raise ManifestInsecureHashes(insecure)
+
         if sort is None:
             sort = self.sort
         if compress_watermark is None:
@@ -768,7 +785,8 @@ class ManifestRecursiveLoader:
                     os.path.join(self.root_directory, fullpath),
                     e,
                     hashes=hashes,
-                    expected_dev=self.manifest_device)
+                    expected_dev=self.manifest_device,
+                    require_secure_hashes=self.require_secure_hashes)
 
                 # do not remove it from self.updated_manifests
                 # immediately as we may have to deal with multiple
@@ -852,6 +870,10 @@ class ManifestRecursiveLoader:
         had_entry = False
         if hashes is None:
             hashes = self.hashes
+        if self.require_secure_hashes and hashes is not None:
+            insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
+            if insecure:
+                raise ManifestInsecureHashes(insecure)
 
         self.load_manifests_for_path(path)
         for mpath, relpath, m in self._iter_manifests_for_path(path):
@@ -883,7 +905,8 @@ class ManifestRecursiveLoader:
                             os.path.join(self.root_directory, fullpath),
                             e,
                             hashes=hashes,
-                            expected_dev=self.manifest_device)
+                            expected_dev=self.manifest_device,
+                            require_secure_hashes=self.require_secure_hashes)
                     except ManifestInvalidPath as err:
                         if err.detail[0] == '__exists__':
                             # file does not exist anymore, so remove
@@ -1119,6 +1142,10 @@ class ManifestRecursiveLoader:
         if hashes is None:
             hashes = self.hashes
         assert hashes is not None
+        if self.require_secure_hashes:
+            insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
+            if insecure:
+                raise ManifestInsecureHashes(insecure)
 
         manifest_filenames = get_potential_compressed_names('Manifest')
 
