@@ -564,3 +564,11 @@ def is_hash_supported(h):
     Return True if the passed hash (in Manifest naming) is supported.
     """
     return h in MANIFEST_HASH_MAPPING
+
+
+def is_hash_secure(h):
+    """
+    Return True if the passed hash (in Manifest naming) is considered
+    cryptographically secure.
+    """
+    return h not in ("MD5", "SHA1")

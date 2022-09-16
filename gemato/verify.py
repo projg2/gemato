@@ -13,9 +13,14 @@ from gemato.exceptions import (
     ManifestCrossDevice,
     ManifestInvalidPath,
     ManifestNoSupportedHashes,
+    ManifestInsecureHashes,
     )
 from gemato.hash import hash_file
-from gemato.manifest import manifest_hashes_to_hashlib, is_hash_supported
+from gemato.manifest import (
+    manifest_hashes_to_hashlib,
+    is_hash_supported,
+    is_hash_secure,
+    )
 
 
 def get_file_metadata(path, hashes):
@@ -220,7 +225,7 @@ def verify_path(path, e, expected_dev=None, last_mtime=None):
 
 
 def update_entry_for_path(path, e, hashes=None, expected_dev=None,
-                          last_mtime=None):
+                          last_mtime=None, require_secure_hashes=False):
     """
     Update the data in entry @e to match the current state of file
     at path @path. Uses hashes listed in @hashes (using Manifest names),
@@ -241,12 +246,18 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None,
     If @last_mtime is not None, it specifies the timestamp corresponding
     to the previous file update. If the file is not newer than that,
     the checksum calculation is skipped.
+
+    If @require_secure_hashes is True, only secure hashes can be used.
     """
 
     assert e.tag not in ('IGNORE', 'TIMESTAMP')
 
     if hashes is None:
         hashes = list(e.checksums)
+    if require_secure_hashes:
+        insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
+        if insecure:
+            raise ManifestInsecureHashes(insecure)
 
     with contextlib.closing(get_file_metadata(path, hashes)) as g:
         # 1. verify whether the file existed in the first place

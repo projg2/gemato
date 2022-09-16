@@ -1,8 +1,9 @@
 # gemato: Verification tests
 # vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import contextlib
 import itertools
 import os
 import os.path
@@ -14,6 +15,7 @@ import pytest
 from gemato.exceptions import (
     ManifestInvalidPath,
     ManifestCrossDevice,
+    ManifestInsecureHashes,
     )
 from gemato.hash import hash_path
 from gemato.manifest import new_manifest_entry
@@ -441,6 +443,26 @@ def test_unreadable_file(test_tree, function, args):
     with pytest.raises(PermissionError):
         for x in function(test_tree / 'unreadable-file', *args):
             pass
+
+
+@pytest.mark.parametrize(
+    "entry_hash,hashes_arg,insecure",
+    [("MD5", None, True),
+     ("SHA1", None, True),
+     ("SHA512", None, False),
+     ("MD5", "SHA1 SHA512", True),
+     ("MD5", "SHA512", False),
+     ("SHA512", "MD5 SHA512", True),
+     ])
+def test_insecure_hashes(test_tree, entry_hash, hashes_arg, insecure):
+    ctx = (pytest.raises(ManifestInsecureHashes) if insecure
+           else contextlib.nullcontext())
+    with ctx:
+        update_entry_for_path(
+            test_tree / "empty-file",
+            new_manifest_entry("DATA", "empty-file", 0, {entry_hash: ""}),
+            hashes=hashes_arg.split() if hashes_arg else None,
+            require_secure_hashes=True)
 
 
 @pytest.mark.parametrize(

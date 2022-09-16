@@ -1,6 +1,6 @@
 # gemato: exceptions
 # vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 class GematoException(Exception):
@@ -279,3 +279,17 @@ class ManifestNoSupportedHashes(GematoException):
     def __str__(self):
         return (f"No hashes provided for file {self.entry.path!r} are "
                 f"supported (out of {' '.join(self.entry.checksums)})")
+
+
+class ManifestInsecureHashes(GematoException):
+    """
+    An exception raised when some of the requested hashes are insecure.
+    """
+
+    def __init__(self, hashes):
+        super().__init__()
+        self.hashes = hashes
+
+    def __str__(self):
+        return ("Some of the requested hashes are considered insecure: "
+                f"{' '.join(self.hashes)}")
