@@ -659,8 +659,21 @@ def main(argv):
 
 
 def setuptools_main():
+    try:
+        from rich.logging import RichHandler
+    except ImportError:
+        format_args = {
+            "format": "[{levelname:>7}] {message}",
+            "style": "{",
+        }
+    else:
+        format_args = {
+            "format": "{message}",
+            "style": "{",
+            "handlers": [RichHandler(show_time=False, show_path=False)],
+        }
+
     logging.basicConfig(
-        format="[{levelname:>7}] {message}",
-        style="{",
-        level=logging.INFO)
+        level=logging.INFO,
+        **format_args)
     sys.exit(main(sys.argv))
