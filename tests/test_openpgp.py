@@ -46,6 +46,7 @@ from tests.keydata import (
     OTHER_PUBLIC_KEY, OTHER_PUBLIC_KEY_UID, OTHER_PUBLIC_KEY_SIG,
     UNEXPIRE_SIG,
     )
+from tests.test_recursiveloader import INSECURE_HASH_TESTS
 from tests.testutil import HKPServer
 
 
@@ -554,30 +555,37 @@ def test_recursive_manifest_loader(tmp_path, openpgp_env, filename,
         pytest.skip(str(e))
 
 
-@pytest.mark.parametrize('manifest_var,key_var,expected',
-                         [(m, k, e) for m, k, e in MANIFEST_VARIANTS
-                          if k is not None])
-def test_cli(tmp_path, caplog, manifest_var, key_var, expected):
-    """Test Manifest verification via CLI"""
-    with open(tmp_path / '.key.bin', 'wb') as f:
-        f.write(globals()[key_var])
-    with open(tmp_path / 'Manifest', 'w') as f:
-        f.write(globals()[manifest_var])
+@pytest.fixture
+def base_tree(tmp_path):
     os.mkdir(tmp_path / 'eclass')
     with open(tmp_path / 'eclass' / 'Manifest', 'w'):
         pass
     with open(tmp_path / 'myebuild-0.ebuild', 'wb') as f:
-        if manifest_var == 'MODIFIED_SIGNED_MANIFEST':
-            f.write(b'12345678901234567890123456789012')
+        pass
     with open(tmp_path / 'metadata.xml', 'wb'):
         pass
+    return tmp_path
+
+
+@pytest.mark.parametrize('manifest_var,key_var,expected',
+                         [(m, k, e) for m, k, e in MANIFEST_VARIANTS
+                          if k is not None])
+def test_cli(base_tree, caplog, manifest_var, key_var, expected):
+    """Test Manifest verification via CLI"""
+    with open(base_tree / '.key.bin', 'wb') as f:
+        f.write(globals()[key_var])
+    with open(base_tree / 'Manifest', 'w') as f:
+        f.write(globals()[manifest_var])
+    if manifest_var == 'MODIFIED_SIGNED_MANIFEST':
+        with open(base_tree / 'myebuild-0.ebuild', 'wb') as f:
+            f.write(b'12345678901234567890123456789012')
 
     retval = gemato.cli.main(['gemato', 'verify',
                               '--openpgp-key',
-                              str(tmp_path / '.key.bin'),
+                              str(base_tree / '.key.bin'),
                               '--no-refresh-keys',
                               '--require-signed-manifest',
-                              str(tmp_path)])
+                              str(base_tree)])
     if str(OpenPGPNoImplementation('install gpg')) in caplog.text:
         pytest.skip('OpenPGP implementation missing')
 
@@ -962,13 +970,7 @@ def test_cli_gpg_wrap(tmp_path, caplog, command, expected, match):
         assert match in caplog.text
 
 
-@pytest.mark.parametrize(
-    "hashes_arg,insecure",
-    [("MD5", True),
-     ("SHA1", True),
-     ("SHA512", False),
-     ("SHA1 SHA512", True),
-     ])
+@pytest.mark.parametrize("hashes_arg,insecure", INSECURE_HASH_TESTS)
 @pytest.mark.parametrize(
     "sign,require_secure",
     [(None, None),
@@ -995,3 +997,35 @@ def test_recursive_manifest_loader_require_secure(tmp_path, privkey_env,
                                     openpgp_env=privkey_env)
         if not sign:
             assert m.openpgp_signed
+
+
+@pytest.mark.parametrize("hashes_arg,insecure", INSECURE_HASH_TESTS)
+@pytest.mark.parametrize(
+    "sign,require_secure",
+    [("", ""),
+     ("--no-sign", ""),
+     ("--sign", ""),
+     ("", "--no-require-secure-hashes"),
+     ("--sign", "--no-require-secure-hashes"),
+     ])
+def test_update_require_secure_cli(base_tree, caplog, hashes_arg,
+                                   insecure, sign, require_secure):
+    with open(base_tree / ".key.bin", "wb") as keyf:
+        keyf.write(PRIVATE_KEY)
+    with open(base_tree / "Manifest", "w") as f:
+        f.write(SIGNED_MANIFEST)
+
+    retval = gemato.cli.main(["gemato", "update",
+                              "-K", str(base_tree / ".key.bin"),
+                              "--hashes", hashes_arg,
+                              str(base_tree)] +
+                             f"{sign} {require_secure}".split())
+    if str(OpenPGPNoImplementation('install gpg')) in caplog.text:
+        pytest.skip('OpenPGP implementation missing')
+
+    expected = (1 if insecure and sign != "--no-sign"
+                and require_secure != "--no-require-secure_hashes"
+                else 0)
+    assert retval == expected
+    if expected == 1:
+        assert str(ManifestInsecureHashes(insecure)) in caplog.text

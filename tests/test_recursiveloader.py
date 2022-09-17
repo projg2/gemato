@@ -2461,13 +2461,16 @@ def test_update_mtime(layout_factory, last_mtime, manifest_update):
     assert output == expected
 
 
-@pytest.mark.parametrize(
-    "hashes_arg,insecure",
-    [("MD5", True),
-     ("SHA1", True),
-     ("SHA512", False),
-     ("SHA1 SHA512", True),
-     ])
+INSECURE_HASH_TESTS = [
+    # hashes, insecure
+    ("MD5", ["MD5"]),
+    ("SHA1", ["SHA1"]),
+    ("SHA512", None),
+    ("SHA1 SHA512", ["SHA1"]),
+]
+
+
+@pytest.mark.parametrize("hashes_arg,insecure", INSECURE_HASH_TESTS)
 def test_insecure_hashes(layout_factory, hashes_arg, insecure):
     layout = BasicTestLayout
     tmp_path = layout_factory.create(layout)
@@ -2480,13 +2483,7 @@ def test_insecure_hashes(layout_factory, hashes_arg, insecure):
                                 require_secure_hashes=True)
 
 
-@pytest.mark.parametrize(
-    "hashes_arg,insecure",
-    [("MD5", True),
-     ("SHA1", True),
-     ("SHA512", False),
-     ("SHA1 SHA512", True),
-     ])
+@pytest.mark.parametrize("hashes_arg,insecure", INSECURE_HASH_TESTS)
 @pytest.mark.parametrize(
     "func,arg",
     [(ManifestRecursiveLoader.update_entry_for_path, "sub/deeper/test"),
@@ -2514,3 +2511,17 @@ def test_insecure_hashes_update_no_arg(layout_factory):
                                 require_secure_hashes=True)
     with pytest.raises(ManifestInsecureHashes):
         m.update_entry_for_path("sub/deeper/test")
+
+
+@pytest.mark.parametrize("hashes_arg,insecure", INSECURE_HASH_TESTS)
+@pytest.mark.parametrize("command", ["create", "update"])
+def test_insecure_hashes_update_cli(layout_factory, caplog,
+                                    hashes_arg, insecure, command):
+    layout = BasicTestLayout
+    tmp_path = layout_factory.create(layout)
+    expected = 1 if insecure else 0
+    assert gemato.cli.main(["gemato", command, "--hashes", hashes_arg,
+                            "--require-secure-hashes", "--force-rewrite",
+                            str(tmp_path)]) == expected
+    if insecure:
+        assert str(ManifestInsecureHashes(insecure)) in caplog.text
