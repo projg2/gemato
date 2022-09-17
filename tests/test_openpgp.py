@@ -1019,13 +1019,13 @@ def test_update_require_secure_cli(base_tree, caplog, hashes_arg,
     retval = gemato.cli.main(["gemato", "update",
                               "-K", str(base_tree / ".key.bin"),
                               "--hashes", hashes_arg,
-                              str(base_tree)] +
-                             f"{sign} {require_secure}".split())
+                              str(base_tree)]
+                             + f"{sign} {require_secure}".split())
     if str(OpenPGPNoImplementation('install gpg')) in caplog.text:
         pytest.skip('OpenPGP implementation missing')
 
     expected = (1 if insecure is not None and sign != "--no-sign"
-                and require_secure != "--no-require-secure_hashes"
+                and require_secure != "--no-require-secure-hashes"
                 else 0)
     assert retval == expected
     if expected == 1:

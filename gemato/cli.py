@@ -309,6 +309,7 @@ class BaseUpdateMixin(BaseManifestLoaderMixin, BaseOpenPGPMixin):
             help="Require using secure hashes (default if Manifest is signed)")
         secugroup.add_argument(
             "--no-require-secure-hashes", action="store_false",
+            dest="require_secure_hashes",
             help="Do not require using secure hashes (default if Manifest "
                  "is not signed)")
         signgroup = update.add_mutually_exclusive_group()
