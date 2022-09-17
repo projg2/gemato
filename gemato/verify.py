@@ -43,6 +43,7 @@ def get_file_metadata(path, hashes):
     StopIteration, or close it explicitly.
     """
 
+    open_exc = None
     try:
         # we want O_NONBLOCK to avoid blocking when opening pipes
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
@@ -55,6 +56,7 @@ def get_file_metadata(path, hashes):
             # EOPNOTSUPP = opening UNIX socket on FreeBSD
             exists = True
             opened = False
+            open_exc = err
         else:
             raise
     else:
@@ -73,6 +75,10 @@ def get_file_metadata(path, hashes):
             st = os.fstat(fd)
         else:
             st = os.stat(path)
+
+        # safety check: if open() failed, it should not be a regular file
+        if not opened and stat.S_ISREG(st.st_mode):
+            raise open_exc
 
         # 2. st_dev
         yield st.st_dev

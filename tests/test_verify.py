@@ -4,11 +4,13 @@
 # Licensed under the terms of 2-clause BSD license
 
 import contextlib
+import errno
 import itertools
 import os
 import os.path
 import socket
 import stat
+import unittest.mock
 
 import pytest
 
@@ -560,3 +562,11 @@ def test_entry_compatibility(a_cls, a_name, a_args, b_cls, b_name,
     e1 = new_manifest_entry(a_cls, a_name, *a_args)
     e2 = new_manifest_entry(b_cls, b_name, *b_args)
     assert verify_entry_compatibility(e1, e2) == (expected, diff)
+
+
+def test_get_file_metadata_fail_to_open_reg(test_tree):
+    """Regression test for when open() fails on a seemingly regular file"""
+    with unittest.mock.patch("os.open") as mock_open:
+        mock_open.side_effect = OSError(errno.ENXIO, "mocked error")
+        with pytest.raises(OSError):
+            list(get_file_metadata(test_tree / "regular-file", {}))
