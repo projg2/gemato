@@ -458,6 +458,9 @@ def test_unreadable_file(test_tree, function, args):
      ("MD5", "SHA1 SHA512", True),
      ("MD5", "SHA512", False),
      ("SHA512", "MD5 SHA512", True),
+     ("", None, True),
+     ("", "SHA512", False),
+     ("SHA512", "", True),
      ])
 def test_insecure_hashes(test_tree, entry_hash, hashes_arg, insecure):
     ctx = (pytest.raises(ManifestInsecureHashes) if insecure
@@ -465,8 +468,9 @@ def test_insecure_hashes(test_tree, entry_hash, hashes_arg, insecure):
     with ctx:
         update_entry_for_path(
             test_tree / "empty-file",
-            new_manifest_entry("DATA", "empty-file", 0, {entry_hash: ""}),
-            hashes=hashes_arg.split() if hashes_arg else None,
+            new_manifest_entry("DATA", "empty-file", 0,
+                               {entry_hash: ""} if entry_hash else {}),
+            hashes=hashes_arg.split() if hashes_arg is not None else None,
             require_secure_hashes=True)
 
 

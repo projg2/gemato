@@ -986,7 +986,8 @@ def test_recursive_manifest_loader_require_secure(tmp_path, privkey_env,
         f.write(SIGNED_MANIFEST)
 
     ctx = (pytest.raises(ManifestInsecureHashes)
-           if insecure and sign is not False and require_secure is not False
+           if insecure is not None and sign is not False
+           and require_secure is not False
            else contextlib.nullcontext())
     with ctx:
         m = ManifestRecursiveLoader(tmp_path / "Manifest",
@@ -1023,7 +1024,7 @@ def test_update_require_secure_cli(base_tree, caplog, hashes_arg,
     if str(OpenPGPNoImplementation('install gpg')) in caplog.text:
         pytest.skip('OpenPGP implementation missing')
 
-    expected = (1 if insecure and sign != "--no-sign"
+    expected = (1 if insecure is not None and sign != "--no-sign"
                 and require_secure != "--no-require-secure_hashes"
                 else 0)
     assert retval == expected

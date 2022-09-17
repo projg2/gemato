@@ -316,7 +316,7 @@ class ManifestRecursiveLoader:
 
         if require_secure_hashes and hashes is not None:
             insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
-            if insecure:
+            if insecure or not hashes:
                 raise ManifestInsecureHashes(insecure)
 
 
@@ -762,7 +762,7 @@ class ManifestRecursiveLoader:
             hashes = self.hashes
         if self.require_secure_hashes and hashes is not None:
             insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
-            if insecure:
+            if insecure or not hashes:
                 raise ManifestInsecureHashes(insecure)
 
         if sort is None:
@@ -881,7 +881,7 @@ class ManifestRecursiveLoader:
             hashes = self.hashes
         if self.require_secure_hashes and hashes is not None:
             insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
-            if insecure:
+            if insecure or not hashes:
                 raise ManifestInsecureHashes(insecure)
 
         self.load_manifests_for_path(path)
@@ -1153,7 +1153,7 @@ class ManifestRecursiveLoader:
         assert hashes is not None
         if self.require_secure_hashes:
             insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
-            if insecure:
+            if insecure or not hashes:
                 raise ManifestInsecureHashes(insecure)
 
         manifest_filenames = get_potential_compressed_names('Manifest')

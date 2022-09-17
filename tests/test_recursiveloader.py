@@ -2467,6 +2467,7 @@ INSECURE_HASH_TESTS = [
     ("SHA1", ["SHA1"]),
     ("SHA512", None),
     ("SHA1 SHA512", ["SHA1"]),
+    ("", []),
 ]
 
 
@@ -2474,7 +2475,7 @@ INSECURE_HASH_TESTS = [
 def test_insecure_hashes(layout_factory, hashes_arg, insecure):
     layout = BasicTestLayout
     tmp_path = layout_factory.create(layout)
-    ctx = (pytest.raises(ManifestInsecureHashes) if insecure
+    ctx = (pytest.raises(ManifestInsecureHashes) if insecure is not None
            else contextlib.nullcontext())
     with ctx:
         ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
@@ -2497,7 +2498,7 @@ def test_insecure_hashes_update(layout_factory, hashes_arg, insecure, func,
                                 hashes=["SHA512"],
                                 allow_xdev=False,
                                 require_secure_hashes=True)
-    ctx = (pytest.raises(ManifestInsecureHashes) if insecure
+    ctx = (pytest.raises(ManifestInsecureHashes) if insecure is not None
            else contextlib.nullcontext())
     with ctx:
         func(m, arg, hashes=hashes_arg.split())
@@ -2519,7 +2520,7 @@ def test_insecure_hashes_update_cli(layout_factory, caplog,
                                     hashes_arg, insecure, command):
     layout = BasicTestLayout
     tmp_path = layout_factory.create(layout)
-    expected = 1 if insecure else 0
+    expected = 1 if insecure is not None else 0
     assert gemato.cli.main(["gemato", command, "--hashes", hashes_arg,
                             "--require-secure-hashes", "--force-rewrite",
                             str(tmp_path)]) == expected

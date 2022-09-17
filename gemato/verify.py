@@ -265,7 +265,7 @@ def update_entry_for_path(path, e, hashes=None, expected_dev=None,
         hashes = list(e.checksums)
     if require_secure_hashes:
         insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
-        if insecure:
+        if insecure or not hashes:
             raise ManifestInsecureHashes(insecure)
 
     with contextlib.closing(get_file_metadata(path, hashes)) as g:
