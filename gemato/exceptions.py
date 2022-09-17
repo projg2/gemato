@@ -272,12 +272,13 @@ class ManifestNoSupportedHashes(GematoException):
     unsupported.
     """
 
-    def __init__(self, entry):
+    def __init__(self, path, entry):
         super().__init__()
+        self.path = path
         self.entry = entry
 
     def __str__(self):
-        return (f"No hashes provided for file {self.entry.path!r} are "
+        return (f"No hashes provided for file {self.path!r} are "
                 f"supported (out of {' '.join(self.entry.checksums)})")
 
 

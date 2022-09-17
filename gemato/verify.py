@@ -181,7 +181,7 @@ def verify_path(path, e, expected_dev=None, last_mtime=None,
         expect_exist = True
         checksums = list(filter(is_hash_supported, e.checksums))
         if not checksums and e.checksums:
-            raise ManifestNoSupportedHashes(e)
+            raise ManifestNoSupportedHashes(path, e)
         if require_secure_hash:
             # Note: even if we require secure hashes, we verify all of them
             secure_hashes = list(filter(is_hash_secure, checksums))

@@ -1431,8 +1431,8 @@ def test_assert_directory_verifies(layout_factory, layout, path, fail_handler,
       str(ManifestSymlinkLoop('<path>')).split('<path>', 1)[1]),
      (SymlinkLoopIgnoreLayout, '', '', None),
      (UnknownHashOnlyLayout, '', '',
-      str(ManifestNoSupportedHashes(ManifestFileEntry(
-            'test', 0, {"X-UNKNOWN": ""})))),
+      str(ManifestNoSupportedHashes("<path>", ManifestFileEntry(
+            "", 0, {"X-UNKNOWN": ""}))).split("<path>", 1)[1]),
      ])
 def test_cli_verify(layout_factory, caplog, layout, path, args, expected):
     tmp_path = layout_factory.create(layout, readonly=True)
