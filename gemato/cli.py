@@ -15,7 +15,7 @@ import subprocess
 import sys
 import timeit
 
-from gemato.exceptions import GematoException
+from gemato.exceptions import GematoException, ManifestMismatch
 from gemato.find_top_level import find_top_level_manifest
 from gemato.hash import hash_file, hash_path
 from gemato.manifest import (
@@ -276,10 +276,19 @@ class VerifyCommand(BaseManifestLoaderMixin, VerifyingOpenPGPMixin,
 
             logging.info(f'Verifying {p}...')
 
-            relpath = os.path.relpath(p, os.path.dirname(tlm))
+            tlmdir = os.path.dirname(tlm)
+            relpath = os.path.relpath(p, tlmdir)
             if relpath == '.':
                 relpath = ''
-            ret &= m.assert_directory_verifies(relpath, **self.kwargs)
+            try:
+                ret &= m.assert_directory_verifies(relpath, **self.kwargs)
+            except ManifestMismatch as e:
+                apparent_path = os.path.join(tlmdir, e.path)
+                real_path = os.path.realpath(apparent_path)
+                if apparent_path != real_path:
+                    logging.warning(
+                        f"Path contains symlinks. Real file path: {real_path}")
+                raise
 
             stop = timeit.default_timer()
             logging.info(f'{p} verified in {stop - start:.2f} seconds')
