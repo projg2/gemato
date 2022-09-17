@@ -560,7 +560,7 @@ def base_tree(tmp_path):
     os.mkdir(tmp_path / 'eclass')
     with open(tmp_path / 'eclass' / 'Manifest', 'w'):
         pass
-    with open(tmp_path / 'myebuild-0.ebuild', 'wb') as f:
+    with open(tmp_path / 'myebuild-0.ebuild', 'wb'):
         pass
     with open(tmp_path / 'metadata.xml', 'wb'):
         pass

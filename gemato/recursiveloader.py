@@ -319,7 +319,6 @@ class ManifestRecursiveLoader:
             if insecure or not hashes:
                 raise ManifestInsecureHashes(insecure)
 
-
     def load_manifest(self,
                       relpath,
                       verify_entry=None,

@@ -104,6 +104,7 @@ def get_checksums(path):
         '__size__': hashes['__size__'],
     }
 
+
 EMPTY_CHECKSUMS = {
     "MD5": "d41d8cd98f00b204e9800998ecf8427e",
     "SHA1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
