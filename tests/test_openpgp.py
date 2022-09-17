@@ -585,6 +585,9 @@ def test_cli(base_tree, caplog, manifest_var, key_var, expected):
                               str(base_tree / '.key.bin'),
                               '--no-refresh-keys',
                               '--require-signed-manifest',
+                              # we verify this option separately
+                              # and our test data currently sucks
+                              '--no-require-secure-hashes',
                               str(base_tree)])
     if str(OpenPGPNoImplementation('install gpg')) in caplog.text:
         pytest.skip('OpenPGP implementation missing')
@@ -1030,3 +1033,27 @@ def test_update_require_secure_cli(base_tree, caplog, hashes_arg,
     assert retval == expected
     if expected == 1:
         assert str(ManifestInsecureHashes(insecure)) in caplog.text
+
+
+@pytest.mark.parametrize(
+    "require_secure", ["", "--no-require-secure-hashes"])
+def test_verify_require_secure_cli(base_tree, caplog, require_secure):
+    with open(base_tree / ".key.bin", "wb") as keyf:
+        keyf.write(VALID_PUBLIC_KEY)
+    with open(base_tree / "Manifest", "w") as f:
+        f.write(SIGNED_MANIFEST)
+
+    retval = gemato.cli.main(["gemato", "verify",
+                              "--no-refresh-keys",
+                              "--require-signed-manifest",
+                              "-K", str(base_tree / ".key.bin"),
+                              str(base_tree)]
+                             + require_secure.split())
+    if str(OpenPGPNoImplementation('install gpg')) in caplog.text:
+        pytest.skip('OpenPGP implementation missing')
+
+    expected = (1 if require_secure != "--no-require-secure-hashes"
+                else 0)
+    assert retval == expected
+    if expected == 1:
+        assert str(ManifestInsecureHashes(["MD5"])) in caplog.text

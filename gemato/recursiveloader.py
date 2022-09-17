@@ -47,7 +47,8 @@ class ManifestLoader:
     Helper class to load Manifests in subprocesses.
     """
 
-    __slots__ = ['root_directory', 'verify_openpgp', 'openpgp_env']
+    __slots__ = ['root_directory', 'verify_openpgp', 'openpgp_env',
+                 'require_secure_hash']
 
     def __init__(self, root_directory, verify_openpgp, openpgp_env):
         """
@@ -60,6 +61,10 @@ class ManifestLoader:
         self.root_directory = root_directory
         self.verify_openpgp = verify_openpgp
         self.openpgp_env = openpgp_env
+        # this is set on the instance because the value may depend
+        # on whether the top-level Manifest is signed (and this class
+        # is used to load it)
+        self.require_secure_hash = False
 
     def verify_and_load(self, relpath, verify_entry=None):
         """
@@ -77,7 +82,9 @@ class ManifestLoader:
         path = os.path.join(self.root_directory, relpath)
 
         if verify_entry is not None:
-            ret, diff = verify_path(path, verify_entry)
+            ret, diff = verify_path(
+                path, verify_entry,
+                require_secure_hash=self.require_secure_hash)
             if not ret:
                 raise ManifestMismatch(relpath, verify_entry, diff)
 
@@ -107,19 +114,23 @@ class SubprocessVerifier:
     """
 
     __slots__ = ['top_level_manifest_filename',
-                 'manifest_device', 'fail_handler', 'last_mtime']
+                 'manifest_device', 'fail_handler', 'last_mtime',
+                 'require_secure_hashes']
 
     def __init__(self, top_level_manifest_filename,
-                 manifest_device, fail_handler, last_mtime):
+                 manifest_device, fail_handler, last_mtime,
+                 require_secure_hashes):
         self.top_level_manifest_filename = top_level_manifest_filename
         self.manifest_device = manifest_device
         self.fail_handler = fail_handler
         self.last_mtime = last_mtime
+        self.require_secure_hashes = require_secure_hashes
 
     def _verify_one_file(self, path, relpath, e):
         ret, diff = verify_path(path, e,
                                 expected_dev=self.manifest_device,
-                                last_mtime=self.last_mtime)
+                                last_mtime=self.last_mtime,
+                                require_secure_hash=self.require_secure_hashes)
 
         if not ret:
             err = ManifestMismatch(relpath, e, diff)
@@ -267,9 +278,12 @@ class ManifestRecursiveLoader:
         an exception upon crossing filesystem boundaries. It defaults
         to false.
 
-        If @require_secure_hashes is True, only secure hashes can be used.
-        If it is False, all hashes are permitted. If it is None, secure
-        hashes are required if top-level Manifest is going to be signed.
+        If @require_secure_hashes is True, strengthened hash security
+        rules are enforced. When verifying Manifest entries, at least
+        one secure hash must be present. When writing Manifest entries,
+        all used hashes must be secure. If it is False, all hashes are
+        permitted. If it is None, secure hashes are required
+        if top-level Manifest is signed or going to be signed.
         """
 
         self.root_directory = os.path.dirname(top_manifest_path)
@@ -313,6 +327,7 @@ class ManifestRecursiveLoader:
             else:
                 require_secure_hashes = self.sign_openpgp
         self.require_secure_hashes = require_secure_hashes
+        self.manifest_loader.require_secure_hash = require_secure_hashes
 
         if require_secure_hashes and hashes is not None:
             insecure = list(filter(lambda x: not is_hash_secure(x), hashes))
@@ -527,7 +542,8 @@ class ManifestRecursiveLoader:
         """
         real_path = os.path.join(self.root_directory, relpath)
         path_entry = self.find_path_entry(relpath)
-        return verify_path(real_path, path_entry)
+        return verify_path(real_path, path_entry,
+                           require_secure_hash=self.require_secure_hashes)
 
     def assert_path_verifies(self, relpath):
         """
@@ -538,7 +554,8 @@ class ManifestRecursiveLoader:
         real_path = os.path.join(self.root_directory, relpath)
         path_entry = self.find_path_entry(relpath)
         ret, diff = verify_path(real_path, path_entry,
-                                expected_dev=self.manifest_device)
+                                expected_dev=self.manifest_device,
+                                require_secure_hash=self.require_secure_hashes)
         if not ret:
             raise ManifestMismatch(relpath, path_entry, diff)
 
@@ -707,7 +724,8 @@ class ManifestRecursiveLoader:
         verifier = SubprocessVerifier(
                 self.top_level_manifest_filename,
                 self.manifest_device,
-                fail_handler, last_mtime)
+                fail_handler, last_mtime,
+                self.require_secure_hashes)
 
         with MultiprocessingPoolWrapper(self.max_jobs) as pool:
             # verify the directories in parallel

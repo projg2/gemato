@@ -817,6 +817,20 @@ DATA test 0 X-UNKNOWN 0123456789abcdef
     }
 
 
+class SecureHashLayout(BaseLayout):
+    """Layout using at least one cryptographically secure hash"""
+
+    MANIFESTS = {
+        "Manifest": """
+DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\
+ SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+""",
+    }
+    FILES = {
+        "test": "",
+    }
+
+
 FLAT_LAYOUTS = [
     DuplicateEntryLayout,
     DuplicateEbuildEntryLayout,
@@ -2490,6 +2504,12 @@ INSECURE_HASH_TESTS = [
     ("", []),
 ]
 
+INSECURE_HASH_VERIFY_TESTS = [
+    # layout, insecure
+    (UnknownHashLayout, ["MD5"]),
+    (SecureHashLayout, None),
+]
+
 
 @pytest.mark.parametrize("hashes_arg,insecure", INSECURE_HASH_TESTS)
 def test_insecure_hashes(layout_factory, hashes_arg, insecure):
@@ -2502,6 +2522,36 @@ def test_insecure_hashes(layout_factory, hashes_arg, insecure):
                                 hashes=hashes_arg.split(),
                                 allow_xdev=False,
                                 require_secure_hashes=True)
+
+
+@pytest.mark.parametrize("layout,insecure", INSECURE_HASH_VERIFY_TESTS)
+@pytest.mark.parametrize(
+    "func,path",
+    [(ManifestRecursiveLoader.verify_path, "test"),
+     (ManifestRecursiveLoader.assert_path_verifies, "test"),
+     (ManifestRecursiveLoader.assert_directory_verifies, ""),
+     ])
+def test_insecure_hashes_verify(layout_factory, layout, insecure, func, path):
+    tmp_path = layout_factory.create(layout)
+    m = ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
+                                allow_xdev=False,
+                                require_secure_hashes=True)
+
+    ctx = (pytest.raises(ManifestInsecureHashes) if insecure is not None
+           else contextlib.nullcontext())
+    with ctx:
+        func(m, path)
+
+
+def test_insecure_hashes_load(layout_factory):
+    layout = BasicTestLayout
+    tmp_path = layout_factory.create(layout)
+    m = ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
+                                allow_xdev=False,
+                                require_secure_hashes=True)
+
+    with pytest.raises(ManifestInsecureHashes):
+        m.load_manifests_for_path("sub")
 
 
 @pytest.mark.parametrize("hashes_arg,insecure", INSECURE_HASH_TESTS)
@@ -2532,6 +2582,17 @@ def test_insecure_hashes_update_no_arg(layout_factory):
                                 require_secure_hashes=True)
     with pytest.raises(ManifestInsecureHashes):
         m.update_entry_for_path("sub/deeper/test")
+
+
+@pytest.mark.parametrize("layout,insecure", INSECURE_HASH_VERIFY_TESTS)
+def test_insecure_hashes_verify_cli(layout_factory, caplog, layout,
+                                    insecure):
+    tmp_path = layout_factory.create(layout)
+    expected = 1 if insecure is not None else 0
+    assert gemato.cli.main(["gemato", "verify", "--require-secure-hashes",
+                            str(tmp_path)]) == expected
+    if insecure is not None:
+        assert str(ManifestInsecureHashes(insecure)) in caplog.text
 
 
 @pytest.mark.parametrize("hashes_arg,insecure", INSECURE_HASH_TESTS)

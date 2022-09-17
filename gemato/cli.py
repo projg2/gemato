@@ -176,6 +176,16 @@ class BaseManifestLoaderMixin:
             '-x', '--one-file-system', action='store_true',
             help='Do not cross filesystem boundaries (report an error '
                  'instead)')
+        secugroup = subp.add_mutually_exclusive_group()
+        secugroup.add_argument(
+            "--require-secure-hashes", action="store_true",
+            default=None,
+            help="Require using secure hashes (default if Manifest is signed)")
+        secugroup.add_argument(
+            "--no-require-secure-hashes", action="store_false",
+            dest="require_secure_hashes",
+            help="Do not require using secure hashes (default if Manifest "
+                 "is not signed)")
 
     def parse_args(self, args, argp):
         super().parse_args(args, argp)
@@ -187,6 +197,9 @@ class BaseManifestLoaderMixin:
             self.init_kwargs['max_jobs'] = args.jobs
         if args.one_file_system:
             self.init_kwargs['allow_xdev'] = False
+        if args.require_secure_hashes is not None:
+            self.init_kwargs["require_secure_hashes"] = (
+                args.require_secure_hashes)
 
 
 class VerifyCommand(BaseManifestLoaderMixin, VerifyingOpenPGPMixin,
@@ -302,16 +315,6 @@ class BaseUpdateMixin(BaseManifestLoaderMixin, BaseOpenPGPMixin):
             '-p', '--profile',
             help='Use the specified profile ("default", "ebuild", '
                  '"old-ebuild"...)')
-        secugroup = update.add_mutually_exclusive_group()
-        secugroup.add_argument(
-            "--require-secure-hashes", action="store_true",
-            default=None,
-            help="Require using secure hashes (default if Manifest is signed)")
-        secugroup.add_argument(
-            "--no-require-secure-hashes", action="store_false",
-            dest="require_secure_hashes",
-            help="Do not require using secure hashes (default if Manifest "
-                 "is not signed)")
         signgroup = update.add_mutually_exclusive_group()
         signgroup.add_argument(
             '-s', '--sign', action='store_true',
@@ -350,9 +353,6 @@ class BaseUpdateMixin(BaseManifestLoaderMixin, BaseOpenPGPMixin):
                 get_profile_by_name(args.profile))
         if args.sign is not None:
             self.init_kwargs['sign_openpgp'] = args.sign
-        if args.require_secure_hashes is not None:
-            self.init_kwargs["require_secure_hashes"] = (
-                args.require_secure_hashes)
 
 
 class UpdateCommand(BaseUpdateMixin, GematoCommand):
