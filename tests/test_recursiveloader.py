@@ -1834,6 +1834,26 @@ def test_update_entry_for_path_no_hash_specified(layout_factory):
       {'Manifest':
        'MANIFEST a/Manifest 50 MD5 0f7cd9ed779a4844f98d28315dd9176a\n',
        }),
+     (SubManifestMismatchLayout,
+      ["MD5"],
+      ManifestRecursiveLoader.update_entry_for_path,
+      "a/Manifest",
+      None,
+      None,
+      {"Manifest":
+       "MANIFEST a/Manifest 50 MD5 0f7cd9ed779a4844f98d28315dd9176a\n",
+       }),
+     (SubManifestMismatchLayout,
+      ["MD5"],
+      ManifestRecursiveLoader.update_entry_for_path,
+      "a/test",
+      None,
+      None,
+      {"Manifest":
+       "MANIFEST a/Manifest 49 MD5 b86a7748346d54c6455886306f017e6c\n",
+       "a/Manifest":
+       "DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n",
+       }),
      (NonexistingDirectoryLayout,
       ['MD5'],
       ManifestRecursiveLoader.update_entry_for_path,

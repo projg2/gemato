@@ -843,6 +843,7 @@ class ManifestRecursiveLoader:
                               path,
                               new_entry_type='DATA',
                               hashes=None,
+                              verify_manifests=False,
                               ):
         """
         Update the Manifest entries for @path and queue the containing
@@ -873,6 +874,10 @@ class ManifestRecursiveLoader:
         @hashes specifies the requested hash set. If the effective value
         is None, the routine reuses the existing hash set in the entry.
         When creating a new entry, @hashes must be non-null.
+
+        @verify_manifests determines whether loaded Manifests will
+        be verified against MANIFEST entries. Disabled by default since
+        the MANIFEST entries would be updated anyway.
         """
 
         had_entry = False
@@ -883,7 +888,7 @@ class ManifestRecursiveLoader:
             if insecure or not hashes:
                 raise ManifestInsecureHashes(insecure)
 
-        self.load_manifests_for_path(path)
+        self.load_manifests_for_path(path, verify=verify_manifests)
         for mpath, relpath, m in self._iter_manifests_for_path(path):
             entries_to_remove = []
             for e in m.entries:
