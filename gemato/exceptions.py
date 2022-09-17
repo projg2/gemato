@@ -291,5 +291,7 @@ class ManifestInsecureHashes(GematoException):
         self.hashes = hashes
 
     def __str__(self):
+        if not self.hashes:
+            return "No hashes found when at least one secure hash is required"
         return ("Some of the requested hashes are considered insecure: "
                 f"{' '.join(self.hashes)}")

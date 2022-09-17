@@ -129,7 +129,8 @@ def get_file_metadata(path, hashes):
         yield ret
 
 
-def verify_path(path, e, expected_dev=None, last_mtime=None):
+def verify_path(path, e, expected_dev=None, last_mtime=None,
+                require_secure_hash=False):
     """
     Verify the file at system path @path against the data in entry @e.
     The path/filename is not matched against the entry -- the correct
@@ -148,6 +149,9 @@ def verify_path(path, e, expected_dev=None, last_mtime=None):
     If @last_mtime is not None, it specifies the timestamp corresponding
     to the previous file verification. If the file is not newer
     than that, the checksum verification is skipped.
+
+    If @require_secure_hash is True, the file must have at least one
+    hash that is considered cryptographically secure.
 
     Each name can be:
     - __exists__ (boolean) to indicate whether the file existed,
@@ -172,6 +176,11 @@ def verify_path(path, e, expected_dev=None, last_mtime=None):
         checksums = list(filter(is_hash_supported, e.checksums))
         if not checksums and e.checksums:
             raise ManifestNoSupportedHashes(e)
+        if require_secure_hash:
+            # Note: even if we require secure hashes, we verify all of them
+            secure_hashes = list(filter(is_hash_secure, checksums))
+            if not secure_hashes:
+                raise ManifestInsecureHashes(checksums)
 
     with contextlib.closing(get_file_metadata(path, checksums)) as g:
         # 1. verify whether the file existed in the first place

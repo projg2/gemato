@@ -104,7 +104,12 @@ def get_checksums(path):
         '__size__': hashes['__size__'],
     }
 
-
+EMPTY_CHECKSUMS = {
+    "MD5": "d41d8cd98f00b204e9800998ecf8427e",
+    "SHA1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+    "SHA256": "e3b0c44298fc1c149afbf4c8996fb924"
+              "27ae41e4649b934ca495991b7852b855",
+}
 TEST_PATH_SIZES = {
     'empty-file': 0,
     'regular-file': 43,
@@ -112,8 +117,8 @@ TEST_PATH_SIZES = {
     '/proc/version': 0,
 }
 TEST_PATH_CHECKSUMS = {
-    'empty-file': {'MD5': 'd41d8cd98f00b204e9800998ecf8427e',
-                   'SHA1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+    'empty-file': {'MD5': EMPTY_CHECKSUMS["MD5"],
+                   'SHA1': EMPTY_CHECKSUMS["SHA1"],
                    '__size__': TEST_PATH_SIZES['empty-file'],
                    },
     'regular-file': {'MD5': '9e107d9d372bb6826bd81d3542a419d6',
@@ -463,6 +468,29 @@ def test_insecure_hashes(test_tree, entry_hash, hashes_arg, insecure):
             new_manifest_entry("DATA", "empty-file", 0, {entry_hash: ""}),
             hashes=hashes_arg.split() if hashes_arg else None,
             require_secure_hashes=True)
+
+
+@pytest.mark.parametrize(
+    "entry_hash,insecure",
+    [("", True),
+     ("MD5", True),
+     ("SHA1", True),
+     ("SHA256", False),
+     ("MD5 SHA1", True),
+     ("SHA1 SHA256", False),
+     ])
+def test_verify_insecure_hashes(test_tree, entry_hash, insecure):
+    checksums = {}
+    for h in entry_hash.split():
+        checksums[h] = EMPTY_CHECKSUMS[h]
+
+    ctx = (pytest.raises(ManifestInsecureHashes) if insecure
+           else contextlib.nullcontext())
+    with ctx:
+        verify_path(
+            test_tree / "empty-file",
+            new_manifest_entry("DATA", "empty-file", 0, checksums),
+            require_secure_hash=True)
 
 
 @pytest.mark.parametrize(
