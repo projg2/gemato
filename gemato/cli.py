@@ -659,5 +659,8 @@ def main(argv):
 
 
 def setuptools_main():
-    logging.getLogger().setLevel(logging.INFO)
+    logging.basicConfig(
+        format="[{levelname:>7}] {message}",
+        style="{",
+        level=logging.INFO)
     sys.exit(main(sys.argv))
