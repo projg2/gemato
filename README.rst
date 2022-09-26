@@ -73,8 +73,8 @@ behavior. Those are:
 Requirements
 ============
 gemato is written in Python and compatible with implementations
-of Python 3.6+. gemato is currently tested against CPython 3.6
-through 3.7 and PyPy3.  gemato core depends only on standard Python
+of Python 3.8+. gemato is currently tested against CPython 3.8
+through 3.11 and PyPy3.  gemato core depends only on standard Python
 library modules.
 
 Additionally, OpenPGP requires system install of GnuPG 2.2+
