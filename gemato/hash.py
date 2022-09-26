@@ -1,6 +1,5 @@
 # gemato: hash support
-# vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import hashlib
@@ -73,7 +72,7 @@ def hash_file(f, hash_names, _apparent_size=0):
         for block in iter(lambda: f.read1(HASH_BUFFER_SIZE), b''):
             for h in hashes.values():
                 h.update(block)
-    return dict((k, h.hexdigest()) for k, h in hashes.items())
+    return {k: h.hexdigest() for k, h in hashes.items()}
 
 
 def hash_path(path, hash_names):

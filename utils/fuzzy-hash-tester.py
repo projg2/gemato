@@ -66,14 +66,14 @@ def main(algo_name, min_size, max_size=None):
                 print('Inconsistent hash values found!')
                 print('Hash values:')
                 for a, v in digests.items():
-                    print('  {}: {}'.format(a, v))
+                    print(f'  {a}: {v}')
                 print('Data block as base64:')
                 print(base64.encodebytes(data).decode())
                 sys.exit(1)
 
             i += 1
             if i % 1000 == 0:
-                print('{} blocks tested.'.format(i))
+                print(f'{i} blocks tested.')
 
 
 if __name__ == '__main__':

@@ -46,7 +46,7 @@ def write_manifest_entries_for_dir(manifest_file, topdir, hashes):
 
 
 def gen_metamanifests(top_dir, hashes):
-    with open(os.path.join(top_dir, 'profiles/categories'), 'r') as f:
+    with open(os.path.join(top_dir, 'profiles/categories')) as f:
         categories = [x.strip() for x in f]
 
     alldirs = []
@@ -73,7 +73,7 @@ def gen_metamanifests(top_dir, hashes):
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print('Usage: {} <rsync-path> <hashes>'.format(sys.argv[0]))
+        print(f'Usage: {sys.argv[0]} <rsync-path> <hashes>')
         sys.exit(1)
 
     gen_metamanifests(sys.argv[1], sys.argv[2].split())

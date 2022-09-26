@@ -1,9 +1,7 @@
 # gemato: CLI routines
-# vim:fileencoding=utf-8
 # (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
-from __future__ import print_function
 
 import argparse
 import datetime
@@ -533,8 +531,7 @@ class HashCommand(GematoCommand):
             sz = h.pop('__size__')
             e = ManifestFileEntry(
                 p, sz,
-                dict((mh, h[hh]) for mh, hh
-                     in zip(self.hashes, hashlib_hashes)))
+                {mh: h[hh] for mh, hh in zip(self.hashes, hashlib_hashes)})
             print(' '.join(e.to_list('DATA' if p != '-' else 'STDIN')))
 
 
@@ -565,7 +562,7 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
             if p == '-':
                 f = sys.stdin
             else:
-                f = open(p, 'r')
+                f = open(p)
 
             try:
                 try:

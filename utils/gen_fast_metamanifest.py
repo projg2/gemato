@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-# vim:fileencoding=utf-8
 # Ultra-optimized Meta-Manifest writing.
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
@@ -19,7 +18,7 @@ import gen_fast_manifest
 
 
 def manifest_dir_generator(iter_n):
-    with open('profiles/categories', 'r') as f:
+    with open('profiles/categories') as f:
         categories = [x.strip() for x in f]
 
     for c in categories:
@@ -80,7 +79,7 @@ def make_toplevel(d, ts, pgp_key):
                                      stderr=subprocess.PIPE)
                 sout, serr = p.communicate(data)
                 if p.wait() != 0:
-                    raise ValueError('GPG error: {}'.format(serr))
+                    raise ValueError(f'GPG error: {serr}')
                 data = sout
 
             with open(dsttop, 'wb') as f:
@@ -139,7 +138,7 @@ IGNORE packages
 
 if __name__ == '__main__':
     if len(sys.argv) not in (2, 3):
-        print('Usage: {} <top-directory> [<openpgp-key>]'.format(sys.argv[0]))
+        print(f'Usage: {sys.argv[0]} <top-directory> [<openpgp-key>]')
         sys.exit(1)
 
     gen_metamanifest(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else None)

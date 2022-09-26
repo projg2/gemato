@@ -1,6 +1,5 @@
 # gemato: Manifest file support tests
-# vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime

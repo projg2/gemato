@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-# vim:fileencoding=utf-8
 # Ultra-optimized Manifest writing.
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
@@ -110,7 +109,7 @@ def gen_manifest(top_dir):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('Usage: {} <directory>...'.format(sys.argv[0]))
+        print(f'Usage: {sys.argv[0]} <directory>...')
         sys.exit(1)
 
     for path in sys.argv[1:]:

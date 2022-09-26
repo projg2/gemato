@@ -1,6 +1,5 @@
 # gemato: Profile support
-# vim:fileencoding=utf-8
-# (c) 2017 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import os.path
@@ -170,12 +169,12 @@ class BackwardsCompatEbuildRepositoryProfile(EbuildRepositoryProfile):
                                              compress_watermark))
 
 
-PROFILE_MAPPING = dict(
-    (getattr(profile, 'name'), profile)
+PROFILE_MAPPING = {
+    getattr(profile, 'name'): profile
     for profile in (DefaultProfile,
                     EbuildRepositoryProfile,
                     BackwardsCompatEbuildRepositoryProfile,
-                    ))
+                    )}
 
 
 def get_profile_by_name(name):

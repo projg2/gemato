@@ -1,6 +1,5 @@
 # gemato: Test utility functions
-# vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
@@ -49,17 +48,17 @@ class TempDirTestCase(LoggingTestCase):
     FILES = {}
 
     def setUp(self):
-        super(TempDirTestCase, self).setUp()
+        super().setUp()
         self.dir = tempfile.mkdtemp()
         for k in self.DIRS:
             os.mkdir(os.path.join(self.dir, k))
         for k, v in self.FILES.items():
-            with io.open(os.path.join(self.dir, k), 'w', encoding='utf8') as f:
+            with open(os.path.join(self.dir, k), 'w', encoding='utf8') as f:
                 f.write(v)
 
     def tearDown(self):
         shutil.rmtree(self.dir)
-        super(TempDirTestCase, self).tearDown()
+        super().tearDown()
 
 
 class HKPServerRequestHandler(BaseHTTPRequestHandler):

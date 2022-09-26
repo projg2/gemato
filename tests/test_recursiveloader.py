@@ -1,5 +1,4 @@
 # gemato: Recursive loader tests
-# vim:fileencoding=utf-8
 # (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
@@ -633,7 +632,7 @@ MD5 d41d8cd98f00b204e9800998ecf8427e
         FILENAME: '',
     }
 
-    MANIFESTS_REWRITTEN = dict((k, v.lstrip()) for k, v in MANIFESTS.items())
+    MANIFESTS_REWRITTEN = {k: v.lstrip() for k, v in MANIFESTS.items()}
 
 
 class FilenameBackslashLayout(BaseLayout):
@@ -647,7 +646,7 @@ DATA foo\\x5Cbar 0 MD5 d41d8cd98f00b204e9800998ecf8427e
         FILENAME: '',
     }
 
-    MANIFESTS_REWRITTEN = dict((k, v.lstrip()) for k, v in MANIFESTS.items())
+    MANIFESTS_REWRITTEN = {k: v.lstrip() for k, v in MANIFESTS.items()}
 
 
 class NewManifestLayout(BaseLayout):
@@ -1208,10 +1207,9 @@ def test_get_file_entry_dict(layout_factory, layout, path, only_types,
     if only_types is not None:
         only_types = [only_types]
     entries = m.get_file_entry_dict(path, only_types=only_types)
-    assert (dict((subdir, dict((k, get_entry(v))
-                               for k, v in files.items()))
-                 for subdir, files in entries.items()) ==
-            expected)
+    assert ({subdir: {k: get_entry(v) for k, v in files.items()}
+             for subdir, files in entries.items()
+             } == expected)
 
 
 @pytest.mark.parametrize(
@@ -1275,8 +1273,8 @@ def test_get_deduplicated_file_entry_dict_for_update(layout_factory,
     m = ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
                                 allow_xdev=False)
     entries = m.get_deduplicated_file_entry_dict_for_update(path)
-    assert dict((k, (v[0],) + get_entry(v[1]))
-                for k, v in entries.items()) == expected
+    assert {k: (v[0],) + get_entry(v[1])
+            for k, v in entries.items()} == expected
 
 
 @pytest.mark.parametrize(
@@ -2056,7 +2054,7 @@ def test_update_entry_new_aux(layout_factory):
     assert (get_entry(m.find_path_entry('files/test.patch')) ==
             ('AUX', 'files/test.patch', ['MD5']))
     m.save_manifests()
-    with open(tmp_path / layout.TOP_MANIFEST, 'r') as f:
+    with open(tmp_path / layout.TOP_MANIFEST) as f:
         contents = f.read()
     assert (contents ==
             'AUX test.patch 0 MD5 d41d8cd98f00b204e9800998ecf8427e\n')
@@ -2155,7 +2153,7 @@ def test_cli_update(layout_factory, layout, args, update,
 
     if replace_timestamp is not None:
         m = gemato.manifest.ManifestFile()
-        with open(tmp_path / layout.TOP_MANIFEST, 'r') as f:
+        with open(tmp_path / layout.TOP_MANIFEST) as f:
             m.load(f)
         ts = m.find_timestamp()
         assert ts is not None
@@ -2362,7 +2360,7 @@ def test_new_manifest_cli(layout_factory, args):
     assert gemato.cli.main(['gemato', 'create', '--hashes=MD5'] +
                            args.split() + [str(tmp_path)]) == 0
 
-    with open(tmp_path / 'Manifest', 'r') as f:
+    with open(tmp_path / 'Manifest') as f:
         contents = f.read()
     expected = '''
 DATA test 0 MD5 d41d8cd98f00b204e9800998ecf8427e

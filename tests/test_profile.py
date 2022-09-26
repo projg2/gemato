@@ -1,6 +1,5 @@
 # gemato: Profile behavior tests
-# vim:fileencoding=utf-8
-# (c) 2017-2020 Michał Górny
+# (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import itertools
@@ -196,8 +195,7 @@ def test_update_entries_for_directory(test_repo, profile):
          for path in EXPECTED_MANIFESTS + PACKAGE_MANIFESTS] +
         [(path, make_expect_match(path, 'IGNORE'))
          for path in EXPECTED_IGNORE])
-    found = dict((path, make_entry_match(m, path))
-                 for path in expected)
+    found = {path: make_entry_match(m, path) for path in expected}
     assert found == expected
 
     m.save_manifests()
@@ -208,8 +206,8 @@ def test_update_entries_for_directory(test_repo, profile):
             ((path + PKG_MANIFEST_SUFFIX[profile],
              make_expect_match(path, 'MANIFEST'))
              for path in PACKAGE_MANIFESTS)))
-    manifests_found = dict((path, make_entry_match(m, path))
-                           for path in manifests_expected)
+    manifests_found = {path: make_entry_match(m, path)
+                       for path in manifests_expected}
     assert manifests_found == manifests_expected
 
     m.assert_directory_verifies('')
@@ -232,8 +230,7 @@ def test_cli_update(test_repo, profile):
          for path in PACKAGE_MANIFESTS] +
         [(path, make_expect_match(path, 'IGNORE'))
          for path in EXPECTED_IGNORE])
-    found = dict((path, make_entry_match(m, path))
-                 for path in expected)
+    found = {path: make_entry_match(m, path) for path in expected}
     assert found == expected
 
     assert gemato.cli.main(['gemato', 'verify', str(test_repo)]) == 0
@@ -266,6 +263,5 @@ def test_regression_top_level_ignore_in_all_manifests(test_repo, profile):
         'dev-foo/Manifest': ('MANIFEST', False),
         'dev-foo/distfiles': None,
     }
-    found = dict((path, make_entry_match(m, path))
-                 for path in expected)
+    found = {path: make_entry_match(m, path) for path in expected}
     assert found == expected

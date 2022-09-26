@@ -11,12 +11,12 @@ import gemato.hash
 
 def benchmark_one(path, hashes):
 	f = lambda: gemato.hash.hash_path(path, hashes)
-	print("{} -> [ ".format(hashes), end='', flush=True)
+	print(f"{hashes} -> [ ", end='', flush=True)
 	results = []
 	for t in (timeit.timeit(f, number=1) for i in range(5)):
-		print("{:.4}".format(t), end=" ", flush=True)
+		print(f"{t:.4}", end=" ", flush=True)
 		results.append(t)
-	print("] -> min: {:.4}".format(min(results)))
+	print(f"] -> min: {min(results):.4}")
 
 
 def benchmark(path, hash_sets):
@@ -35,7 +35,7 @@ def benchmark(path, hash_sets):
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
-		print('Usage: {} <test-file> [<hash-set>...]'.format(sys.argv[0]))
+		print(f'Usage: {sys.argv[0]} <test-file> [<hash-set>...]')
 		sys.exit(1)
 
 	benchmark(sys.argv[1], sys.argv[2:])

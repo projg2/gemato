@@ -1,5 +1,4 @@
 # gemato: OpenPGP signature support tests
-# vim:fileencoding=utf-8
 # (c) 2017-2022 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
@@ -79,7 +78,7 @@ jCvJNJ7pU8YnJSRTQDH0PZEupAdzDU/AhGSrBz5+Jr7N0pQIxq4duE/Q
 -----END PGP PUBLIC KEY BLOCK-----
 '''
 
-SIGNED_MANIFEST = u'''
+SIGNED_MANIFEST = '''
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA256
 
@@ -106,7 +105,7 @@ mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
 -----END PGP SIGNATURE-----
 '''
 
-DASH_ESCAPED_SIGNED_MANIFEST = u'''
+DASH_ESCAPED_SIGNED_MANIFEST = '''
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA256
 
@@ -133,7 +132,7 @@ mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
 -----END PGP SIGNATURE-----
 '''
 
-MODIFIED_SIGNED_MANIFEST = u'''
+MODIFIED_SIGNED_MANIFEST = '''
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA256
 
@@ -159,7 +158,7 @@ mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
 -----END PGP SIGNATURE-----
 '''
 
-EXPIRED_SIGNED_MANIFEST = u'''
+EXPIRED_SIGNED_MANIFEST = '''
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA256
 
@@ -201,7 +200,7 @@ VALID_KEY_SUBKEY = (PUBLIC_KEY + UID + PUBLIC_KEY_SIG + PUBLIC_SUBKEY +
 SUBKEY_FINGERPRINT = '7E9DDE3CBE47E437418DF74038B9D2F76CC833CC'
 SUBKEY_SIG_TIMESTAMP = datetime.datetime(2020, 8, 25, 12, 40, 12)
 
-SUBKEY_SIGNED_MANIFEST = u'''
+SUBKEY_SIGNED_MANIFEST = '''
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA256
 
@@ -317,7 +316,7 @@ def test_noverify_recursive_manifest_loader(tmp_path, write_back):
 
     if write_back:
         m.save_manifest('Manifest')
-        with open(tmp_path / 'Manifest', 'r') as f:
+        with open(tmp_path / 'Manifest') as f:
             assert f.read() == strip_openpgp(MODIFIED_SIGNED_MANIFEST)
 
 
@@ -651,7 +650,7 @@ def privkey_env(request):
     env.close()
 
 
-TEST_STRING = u'The quick brown fox jumps over the lazy dog'
+TEST_STRING = 'The quick brown fox jumps over the lazy dog'
 
 
 @pytest.mark.parametrize('keyid', [None, PRIVATE_KEY_ID])
@@ -729,7 +728,7 @@ def test_recursive_manifest_loader_save_submanifest(tmp_path, privkey_env):
     m.save_manifest('eclass/Manifest')
 
     m2 = ManifestFile()
-    with open(tmp_path / 'eclass' / 'Manifest', 'r') as f:
+    with open(tmp_path / 'eclass' / 'Manifest') as f:
         m2.load(f, openpgp_env=privkey_env)
     assert not m2.openpgp_signed
     assert m2.openpgp_signature is None
