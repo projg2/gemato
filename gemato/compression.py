@@ -1,5 +1,5 @@
 # gemato: compressed file support
-# (c) 2017-2022 Michał Górny
+# (c) 2017-2023 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import bz2
@@ -7,21 +7,15 @@ import gzip
 import io
 import lzma
 import os.path
-import sys
 
 from gemato.exceptions import UnsupportedCompression
 
 
-# NB: bz2 (and gzip in py<3.8) uses generic OSError
-if sys.hexversion >= 0x03080000:
-    InvalidCompressedFileExceptions = (
-        gzip.BadGzipFile,
-        lzma.LZMAError,
-    )
-else:
-    InvalidCompressedFileExceptions = (
-        lzma.LZMAError,
-    )
+# NB: bz2 uses generic OSError
+InvalidCompressedFileExceptions = (
+    gzip.BadGzipFile,
+    lzma.LZMAError,
+)
 
 
 def open_compressed_file(suffix, f, mode='rb'):

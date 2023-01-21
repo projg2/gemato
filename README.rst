@@ -73,7 +73,7 @@ behavior. Those are:
 Requirements
 ============
 gemato is written in Python and compatible with implementations
-of Python 3.8+. gemato is currently tested against CPython 3.8
+of Python 3.9+. gemato is currently tested against CPython 3.9
 through 3.11 and PyPy3.  gemato core depends only on standard Python
 library modules.
 
