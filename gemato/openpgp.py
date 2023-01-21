@@ -1,8 +1,9 @@
 # gemato: OpenPGP verification support
-# (c) 2017-2022 Michał Górny
+# (c) 2017-2023 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import base64
+import dataclasses
 import datetime
 import email.utils
 import errno
@@ -13,6 +14,7 @@ import os.path
 import shutil
 import subprocess
 import tempfile
+import typing
 import urllib.parse
 import warnings
 
@@ -44,16 +46,12 @@ GNUPG = os.environ.get('GNUPG', 'gpg')
 GNUPGCONF = os.environ.get('GNUPGCONF', 'gpgconf')
 
 
+@dataclasses.dataclass
 class OpenPGPSignatureData:
-    __slots__ = ['fingerprint', 'timestamp', 'expire_timestamp',
-                 'primary_key_fingerprint']
-
-    def __init__(self, fingerprint, timestamp, expire_timestamp,
-                 primary_key_fingerprint):
-        self.fingerprint = fingerprint
-        self.timestamp = timestamp
-        self.expire_timestamp = expire_timestamp
-        self.primary_key_fingerprint = primary_key_fingerprint
+    fingerprint: str = ""
+    timestamp: typing.Optional[datetime.datetime] = None
+    expire_timestamp: typing.Optional[datetime.datetime] = None
+    primary_key_fingerprint: str = ""
 
 
 ZBASE32_TRANSLATE = bytes.maketrans(
