@@ -1,5 +1,5 @@
 # gemato: OpenPGP key data for tests
-# (c) 2017-2022 Michał Górny
+# (c) 2017-2023 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import base64
@@ -148,3 +148,17 @@ Yp/6PW+SlL5drIOi45vfRbRvGMiirQVolbb4FzUL5fYROrp6Rt/UCBTpK1xnoTbOtzyTLSq2
 Wq7iapS3DqitGoDRtKyPXeSFDpWsgcAYzghFMI265fqeBebTeKtz7mtYUw4DrBlYXSBPpRte
 T1oNst52zSr1Wzuc9w==
 ''')
+
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+
+    argp = argparse.ArgumentParser()
+    argp.add_argument("variable",
+                      nargs="+",
+                      choices=sorted(x for x in globals() if x[0].isupper()),
+                      help="Variables to print")
+    args = argp.parse_args()
+
+    sys.stdout.buffer.write(b"".join(globals()[x] for x in args.variable))
