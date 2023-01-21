@@ -205,6 +205,22 @@ MANIFESTS_BAD_SIG = [
 ]
 
 
+# workaround pyflakes' limitations
+_ = COMBINED_PUBLIC_KEYS
+_ = EXPIRED_PUBLIC_KEY
+_ = FORGED_PUBLIC_KEY
+_ = FORGED_SUBKEY
+_ = FORGED_UNEXPIRE_KEY
+_ = OLD_UNEXPIRE_PUBLIC_KEY
+_ = OTHER_VALID_PUBLIC_KEY
+_ = UNEXPIRE_PUBLIC_KEY
+_ = UNSIGNED_PUBLIC_KEY
+_ = UNSIGNED_SUBKEY
+_ = VALID_KEY_NOEMAIL
+_ = VALID_KEY_NONUTF
+_ = VALID_KEY_SUBKEY
+
+
 @pytest.mark.parametrize('manifest_var',
                          MANIFESTS_GOOD_SIG + MANIFESTS_BAD_SIG)
 def test_noverify_goodish_manifest_load(manifest_var):
