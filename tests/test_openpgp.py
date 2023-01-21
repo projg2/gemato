@@ -3,6 +3,7 @@
 # Licensed under the terms of 2-clause BSD license
 
 import contextlib
+import datetime
 import io
 import logging
 import os
@@ -33,6 +34,8 @@ from gemato.openpgp import (
     IsolatedGPGEnvironment,
     PGPyEnvironment,
     get_wkd_url,
+    OpenPGPSignatureList,
+    OpenPGPSignatureData,
     )
 from gemato.recursiveloader import ManifestRecursiveLoader
 
@@ -43,7 +46,7 @@ from tests.keydata import (
     OTHER_VALID_PUBLIC_KEY, UNSIGNED_PUBLIC_KEY, FORGED_PUBLIC_KEY,
     UNSIGNED_SUBKEY, FORGED_SUBKEY, SIG_TIMESTAMP, SUBKEY_FINGERPRINT,
     SUBKEY_SIG_TIMESTAMP, UNEXPIRE_PUBLIC_KEY, OLD_UNEXPIRE_PUBLIC_KEY,
-    FORGED_UNEXPIRE_KEY,
+    FORGED_UNEXPIRE_KEY, TWO_SIGNATURE_PUBLIC_KEYS, SECOND_KEY_FINGERPRINT,
     )
 from tests.test_recursiveloader import INSECURE_HASH_TESTS
 from tests.testutil import HKPServer
@@ -186,6 +189,27 @@ n4XmpdPvu+UdAHpQIGzKoNOEDJpZ5CzPLhYa5KgZiJhpYsDXgg==
 -----END PGP SIGNATURE-----
 """
 
+TWO_SIGNATURE_MANIFEST = f"""
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+{COMMON_MANIFEST_TEXT}
+-----BEGIN PGP SIGNATURE-----
+
+iQFHBAABCAAxFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAmPMHYQTHGdlbWF0b0Bl
+eGFtcGxlLmNvbQAKCRATaIDnKnsThCDWB/95B9njv423M94uRdpPqSNqTpAokNhy
+V0hjnhpiqnY85iFdL1Zc/rvhuxYbZezrig3dqctLseWYcx2mINBTLZqWHk5/NKEm
+rd8iCdXZU1B7yo/HCfzUYR4HX5wISCiRjKimFFgkWKOg7KYGOqqrwLjAjaYJKmL5
+L7R5joHpGbp87jix7c0ruSIMslQg5PbJ6/YAQWyOPTcZvqMFieJ8tqE/G2FabQcs
+YRHEGu1x8wNY40rFzWd90ICR/hPjXZlCdCN2qk7hs+Coasb29n6pXjmt5L8/ICcL
+zApRg8cetid6/SIzUSwiVqBt7i8noYWbgaazNt3HDlGq55v21dkOhmrXiIkEABYI
+ADEWIQR1jj6cjPscaH2bJCVTcI9ps0i0zAUCY8wd6BMcc2Vjb25kQGV4YW1wbGUu
+Y29tAAoJEFNwj2mzSLTMHKcA/0QbVl3PafYp45PFFo2e/knGKJKrm8D4bUH9wS5h
+dchVAP0RSzkUQPP7Zs+2uHQItkqbXJyrBBHOqjGzeh39sWVuAw==
+=wG4b
+-----END PGP SIGNATURE-----
+"""
+
 
 def strip_openpgp(text):
     lines = text.lstrip().splitlines()
@@ -213,6 +237,7 @@ _ = FORGED_SUBKEY
 _ = FORGED_UNEXPIRE_KEY
 _ = OLD_UNEXPIRE_PUBLIC_KEY
 _ = OTHER_VALID_PUBLIC_KEY
+_ = TWO_SIGNATURE_PUBLIC_KEYS
 _ = UNEXPIRE_PUBLIC_KEY
 _ = UNSIGNED_PUBLIC_KEY
 _ = UNSIGNED_SUBKEY
@@ -356,6 +381,8 @@ MANIFEST_VARIANTS = [
     ('SIGNED_MANIFEST', 'COMBINED_PUBLIC_KEYS', None),
     ('DASH_ESCAPED_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', None),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_KEY_SUBKEY', None),
+    # == Manifest with two signatures ==
+    ("TWO_SIGNATURE_MANIFEST", "TWO_SIGNATURE_PUBLIC_KEYS", None),
     # == using private key ==
     ('SIGNED_MANIFEST', 'PRIVATE_KEY', None),
     # == bad manifests ==
@@ -383,14 +410,35 @@ MANIFEST_VARIANTS = [
 ]
 
 
-def assert_signature(sig, manifest_var):
+def assert_signature(sig: OpenPGPSignatureList,
+                     manifest_var: str,
+                     ) -> None:
     """Make assertions about the signature"""
-    if manifest_var == 'SUBKEY_SIGNED_MANIFEST':
+    if manifest_var == "TWO_SIGNATURE_MANIFEST":
+        assert sorted(sig) == [
+            OpenPGPSignatureData(
+                fingerprint=SECOND_KEY_FINGERPRINT,
+                timestamp=datetime.datetime(2023, 1, 21, 17, 16, 24),
+                primary_key_fingerprint=SECOND_KEY_FINGERPRINT,
+                good_sig=True,
+                trusted_sig=True,
+                ),
+            OpenPGPSignatureData(
+                fingerprint=KEY_FINGERPRINT,
+                timestamp=datetime.datetime(2023, 1, 21, 17, 14, 44),
+                primary_key_fingerprint=KEY_FINGERPRINT,
+                good_sig=True,
+                trusted_sig=True,
+                ),
+        ]
+    elif manifest_var == 'SUBKEY_SIGNED_MANIFEST':
+        assert len(sig) == 1
         assert sig.fingerprint == SUBKEY_FINGERPRINT
         assert sig.timestamp == SUBKEY_SIG_TIMESTAMP
         assert sig.expire_timestamp is None
         assert sig.primary_key_fingerprint == KEY_FINGERPRINT
     else:
+        assert len(sig) == 1
         assert sig.fingerprint == KEY_FINGERPRINT
         assert sig.timestamp == SIG_TIMESTAMP
         assert sig.expire_timestamp is None

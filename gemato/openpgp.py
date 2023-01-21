@@ -46,12 +46,35 @@ GNUPG = os.environ.get('GNUPG', 'gpg')
 GNUPGCONF = os.environ.get('GNUPGCONF', 'gpgconf')
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(order=True)
 class OpenPGPSignatureData:
     fingerprint: str = ""
     timestamp: typing.Optional[datetime.datetime] = None
     expire_timestamp: typing.Optional[datetime.datetime] = None
     primary_key_fingerprint: str = ""
+
+    good_sig: bool = False
+    trusted_sig: bool = False
+
+
+class OpenPGPSignatureList(list[OpenPGPSignatureData]):
+    # backwards compatibility with OpenPGPSignatureData
+
+    @property
+    def fingerprint(self) -> str:
+        return self[0].fingerprint
+
+    @property
+    def timestamp(self) -> typing.Optional[datetime.datetime]:
+        return self[0].timestamp
+
+    @property
+    def expire_timestamp(self) -> typing.Optional[datetime.datetime]:
+        return self[0].expire_timestamp
+
+    @property
+    def primary_key_fingerprint(self) -> str:
+        return self[0].primary_key_fingerprint
 
 
 ZBASE32_TRANSLATE = bytes.maketrans(
@@ -131,7 +154,9 @@ class SystemGPGEnvironment:
         else:
             return datetime.datetime.utcfromtimestamp(int(ts))
 
-    def verify_file(self, f):
+    def verify_file(self,
+                    f: typing.IO[str],
+                    ) -> OpenPGPSignatureList:
         """
         Perform an OpenPGP verification of Manifest data in open file @f.
         The file should be open in text mode and set at the beginning
@@ -144,44 +169,49 @@ class SystemGPGEnvironment:
             f.read().encode('utf8'),
             raise_on_error=OpenPGPVerificationFailure)
 
-        is_good = False
-        is_trusted = False
-        sig_data = None
-
         # process the output of gpg to find the exact result
+        print(out.decode("iso-8859-1"))
+        sig_list = OpenPGPSignatureList()
         for line in out.splitlines():
-            if line.startswith(b'[GNUPG:] GOODSIG'):
-                is_good = True
+            if line.startswith(b'[GNUPG:] NEWSIG'):
+                sig_list.append(OpenPGPSignatureData())
+            elif line.startswith(b'[GNUPG:] GOODSIG'):
+                assert sig_list
+                sig_list[-1].good_sig = True
             elif line.startswith(b'[GNUPG:] EXPKEYSIG'):
+                assert sig_list
                 raise OpenPGPExpiredKeyFailure(
                     err.decode('utf8', errors='backslashreplace'))
             elif line.startswith(b'[GNUPG:] REVKEYSIG'):
+                assert sig_list
                 raise OpenPGPRevokedKeyFailure(
                     err.decode('utf8', errors='backslashreplace'))
             elif line.startswith(b'[GNUPG:] VALIDSIG'):
+                assert sig_list
                 spl = line.split(b' ')
                 assert len(spl) >= 12
-                fp = spl[2].decode('utf8')
-                ts = self._parse_gpg_ts(spl[4].decode('utf8'))
-                expts = self._parse_gpg_ts(spl[5].decode('utf8'))
-                pkfp = spl[11].decode('utf8')
-
-                sig_data = OpenPGPSignatureData(fp, ts, expts, pkfp)
+                sig_list[-1].fingerprint = spl[2].decode('utf8')
+                sig_list[-1].timestamp = (
+                    self._parse_gpg_ts(spl[4].decode('utf8')))
+                sig_list[-1].expiration_timestamp = (
+                    self._parse_gpg_ts(spl[5].decode('utf8')))
+                sig_list[-1].primary_key_fingerprint = spl[11].decode('utf8')
             elif line.startswith(b'[GNUPG:] TRUST_'):
+                assert sig_list
                 spl = line.split(b' ', 2)
                 if spl[1] in (b'TRUST_MARGINAL',
                               b'TRUST_FULL',
                               b'TRUST_ULTIMATE'):
-                    is_trusted = True
+                    sig_list[-1].trusted_sig = True
 
         # require both GOODSIG and VALIDSIG
-        if not is_good or sig_data is None:
+        if not sig_list or not all(x.good_sig for x in sig_list):
             raise OpenPGPUnknownSigFailure(
                 err.decode('utf8', errors='backslashreplace'))
-        if not is_trusted:
+        if not all(x.trusted_sig for x in sig_list):
             raise OpenPGPUntrustedSigFailure(
                 err.decode('utf8', errors='backslashreplace'))
-        return sig_data
+        return sig_list
 
     def clear_sign_file(self, f, outf, keyid=None):
         """
