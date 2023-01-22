@@ -165,27 +165,13 @@ class SystemGPGEnvironment:
         else:
             return datetime.datetime.utcfromtimestamp(int(ts))
 
-    def verify_file(self,
-                    f: typing.IO[str],
-                    require_all_good: bool = True,
-                    ) -> OpenPGPSignatureList:
-        """
-        Perform an OpenPGP verification of Manifest data in open file @f.
-        The file should be open in text mode and set at the beginning
-        (or start of signed part). Raises an exception if the verification
-        fails.
+    def _process_gpg_verify_output(self,
+                                   out: bytes,
+                                   err: bytes,
+                                   require_all_good: bool,
+                                   ) -> OpenPGPSignatureList:
+        """Process the output of gpg --verify and return a siglist"""
 
-        If require_all_good is True and the file contains multiple OpenPGP
-        signatures, all signatures have to be good and trusted in order
-        for the verificatin to succeed. Otherwise, a single good signature
-        is considered sufficient.
-        """
-
-        exitst, out, err = self._spawn_gpg(
-            [GNUPG, '--batch', '--status-fd', '1', '--verify'],
-            f.read().encode('utf8'))
-
-        # process the output of gpg to find the exact result
         sig_list = OpenPGPSignatureList()
         for line in out.splitlines():
             if line.startswith(b'[GNUPG:] NEWSIG'):
@@ -275,6 +261,27 @@ class SystemGPGEnvironment:
                     err.decode('utf8', errors='backslashreplace'), sig)
 
         return sig_list
+
+    def verify_file(self,
+                    f: typing.IO[str],
+                    require_all_good: bool = True,
+                    ) -> OpenPGPSignatureList:
+        """
+        Perform an OpenPGP verification of Manifest data in open file @f.
+        The file should be open in text mode and set at the beginning
+        (or start of signed part). Raises an exception if the verification
+        fails.
+
+        If require_all_good is True and the file contains multiple OpenPGP
+        signatures, all signatures have to be good and trusted in order
+        for the verificatin to succeed. Otherwise, a single good signature
+        is considered sufficient.
+        """
+
+        exitst, out, err = self._spawn_gpg(
+            [GNUPG, '--batch', '--status-fd', '1', '--verify'],
+            f.read().encode('utf8'))
+        return self._process_gpg_verify_output(out, err, require_all_good)
 
     def clear_sign_file(self, f, outf, keyid=None):
         """
