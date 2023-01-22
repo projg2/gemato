@@ -484,6 +484,38 @@ def test_verify_manifest(openpgp_env, manifest_var, key_var, expected):
         pytest.skip(str(e))
 
 
+def test_verify_one_out_of_two():
+    try:
+        with MockedSystemGPGEnvironment() as openpgp_env:
+            with io.BytesIO(VALID_PUBLIC_KEY) as f:
+                openpgp_env.import_key(f)
+
+            with io.StringIO(TWO_SIGNATURE_MANIFEST) as f:
+                sig = openpgp_env.verify_file(f, require_all_good=False)
+
+            assert sig == [
+                OpenPGPSignatureData(
+                    fingerprint="81E12C16BD8DCD60BE180845136880E72A7B1384",
+                    timestamp=datetime.datetime(2023, 1, 21, 17, 14, 44),
+                    expire_timestamp=None,
+                    primary_key_fingerprint="81E12C16BD8DCD60BE18"
+                                            "0845136880E72A7B1384",
+                    sig_status=OpenPGPSignatureStatus.GOOD,
+                    valid_sig=True,
+                    trusted_sig=True),
+                OpenPGPSignatureData(
+                    fingerprint="",
+                    timestamp=None,
+                    expire_timestamp=None,
+                    primary_key_fingerprint="",
+                    sig_status=OpenPGPSignatureStatus.NO_PUBLIC_KEY,
+                    valid_sig=False,
+                    trusted_sig=False),
+            ]
+    except OpenPGPNoImplementation as e:
+        pytest.skip(str(e))
+
+
 def test_verify_untrusted_key():
     try:
         with MockedSystemGPGEnvironment() as openpgp_env:

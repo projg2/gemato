@@ -167,12 +167,18 @@ class SystemGPGEnvironment:
 
     def verify_file(self,
                     f: typing.IO[str],
+                    require_all_good: bool = True,
                     ) -> OpenPGPSignatureList:
         """
         Perform an OpenPGP verification of Manifest data in open file @f.
         The file should be open in text mode and set at the beginning
         (or start of signed part). Raises an exception if the verification
         fails.
+
+        If require_all_good is True and the file contains multiple OpenPGP
+        signatures, all signatures have to be good and trusted in order
+        for the verificatin to succeed. Otherwise, a single good signature
+        is considered sufficient.
         """
 
         exitst, out, err = self._spawn_gpg(
@@ -230,6 +236,17 @@ class SystemGPGEnvironment:
         if not sig_list:
             raise OpenPGPUnknownSigFailure(
                 err.decode('utf8', errors='backslashreplace'))
+
+        # bad signature causes failure even without require_all_good
+        for sig in sig_list:
+            if sig.sig_status == OpenPGPSignatureStatus.BAD:
+                raise OpenPGPVerificationFailure(
+                    err.decode("utf8", errors="backslashreplace"), sig)
+
+        if not require_all_good:
+            if any(x.sig_status == OpenPGPSignatureStatus.GOOD and
+                   x.valid_sig and x.trusted_sig for x in sig_list):
+                return sig_list
 
         for sig in sig_list:
             if sig.sig_status == OpenPGPSignatureStatus.GOOD:
