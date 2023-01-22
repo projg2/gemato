@@ -737,3 +737,7 @@ def setuptools_main():
         level=logging.INFO,
         **format_args)
     sys.exit(main(sys.argv))
+
+
+if __name__ == '__main__':
+    setuptools_main()
