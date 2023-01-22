@@ -1,5 +1,5 @@
 # gemato: exceptions
-# (c) 2017-2022 Michał Górny
+# (c) 2017-2023 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 class GematoException(Exception):
@@ -163,7 +163,7 @@ class OpenPGPVerificationFailure(OpenPGPRuntimeError):
         return f'OpenPGP verification failed:\n{self.output}'
 
 
-class OpenPGPExpiredKeyFailure(OpenPGPRuntimeError):
+class OpenPGPExpiredKeyFailure(OpenPGPVerificationFailure):
     """
     OpenPGP verification rejected because of expired key.
     """
@@ -173,7 +173,7 @@ class OpenPGPExpiredKeyFailure(OpenPGPRuntimeError):
                 f'{self.output}')
 
 
-class OpenPGPRevokedKeyFailure(OpenPGPRuntimeError):
+class OpenPGPRevokedKeyFailure(OpenPGPVerificationFailure):
     """
     OpenPGP verification rejected because of revoked key.
     """
@@ -183,7 +183,7 @@ class OpenPGPRevokedKeyFailure(OpenPGPRuntimeError):
                 f'{self.output}')
 
 
-class OpenPGPUnknownSigFailure(OpenPGPRuntimeError):
+class OpenPGPUnknownSigFailure(OpenPGPVerificationFailure):
     """
     OpenPGP verification rejected for unknown reason (i.e. unrecognized
     GPG status).
@@ -194,7 +194,7 @@ class OpenPGPUnknownSigFailure(OpenPGPRuntimeError):
                 f'{self.output}')
 
 
-class OpenPGPUntrustedSigFailure(OpenPGPRuntimeError):
+class OpenPGPUntrustedSigFailure(OpenPGPVerificationFailure):
     """OpenPGP verification failed due to untrusted signing key"""
 
     def __str__(self):
