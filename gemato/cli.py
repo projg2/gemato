@@ -157,6 +157,19 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
                                               keyserver=args.keyserver)
                 logging.info('Keys refreshed.')
 
+    def print_signatures(self, sigs):
+        for i, sig in enumerate(sigs):
+            if len(sigs) > 1:
+                logging.info(f"-- signature {i}")
+            logging.info(f"- status: {sig.sig_status}")
+            logging.info(f"- valid: {sig.valid_sig}, "
+                         f"trusted: {sig.trusted_sig}")
+            if sig.valid_sig:
+                logging.info("- primary key: "
+                             f"{sig.primary_key_fingerprint}")
+                logging.info(f"- subkey: {sig.fingerprint}")
+                logging.info(f"- timestamp: {sig.timestamp} UTC")
+
 
 class BaseManifestLoaderMixin:
     """
@@ -262,15 +275,7 @@ class VerifyCommand(BaseManifestLoaderMixin, VerifyingOpenPGPMixin,
 
             if m.openpgp_signed:
                 logging.info('Valid OpenPGP signature found:')
-                logging.info(
-                    f'- primary key: '
-                    f'{m.openpgp_signature.primary_key_fingerprint}')
-                logging.info(
-                    f'- subkey: '
-                    f'{m.openpgp_signature.fingerprint}')
-                logging.info(
-                    f'- timestamp: '
-                    f'{m.openpgp_signature.timestamp} UTC')
+                self.print_signatures(m.openpgp_signature)
 
             logging.info(f'Verifying {p}...')
 
@@ -573,7 +578,7 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
 
             try:
                 try:
-                    sig = self.openpgp_env.verify_file(
+                    sigs = self.openpgp_env.verify_file(
                         f, require_all_good=self.require_all_good)
                 except GematoException as e:
                     logging.error(
@@ -582,10 +587,7 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
                 else:
                     logging.info(
                         f'Valid OpenPGP signature found in {p}:')
-                    logging.info(
-                        f'- primary key: {sig.primary_key_fingerprint}')
-                    logging.info(f'- subkey: {sig.fingerprint}')
-                    logging.info(f'- timestamp: {sig.timestamp} UTC')
+                    self.print_signatures(sigs)
             finally:
                 if p != '-':
                     f.close()
