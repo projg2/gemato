@@ -120,8 +120,6 @@ class OpenPGPRuntimeError(GematoException):
     Base exception class for OpenPGP runtime errors.
     """
 
-    __slots__ = ['output']
-
     def __init__(self, output):
         super().__init__(output)
         self.output = output
@@ -158,6 +156,10 @@ class OpenPGPVerificationFailure(OpenPGPRuntimeError):
     """
     An exception raised when OpenPGP verification fails.
     """
+
+    def __init__(self, output, sig_data=None):
+        super().__init__(output)
+        self.sig_data = sig_data
 
     def __str__(self):
         return f'OpenPGP verification failed:\n{self.output}'

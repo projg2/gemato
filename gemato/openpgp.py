@@ -239,23 +239,23 @@ class SystemGPGEnvironment:
                                     OpenPGPSignatureStatus.NO_PUBLIC_KEY,
                                     OpenPGPSignatureStatus.ERROR):
                 raise OpenPGPVerificationFailure(
-                    err.decode("utf8", errors="backslashreplace"))
+                    err.decode("utf8", errors="backslashreplace"), sig)
             elif sig.sig_status == OpenPGPSignatureStatus.EXPIRED_KEY:
                 raise OpenPGPExpiredKeyFailure(
-                    err.decode('utf8', errors='backslashreplace'))
+                    err.decode('utf8', errors='backslashreplace'), sig)
             elif sig.sig_status == OpenPGPSignatureStatus.REVOKED_KEY:
                 raise OpenPGPRevokedKeyFailure(
-                    err.decode('utf8', errors='backslashreplace'))
+                    err.decode('utf8', errors='backslashreplace'), sig)
             else:
                 raise OpenPGPUnknownSigFailure(
-                    err.decode('utf8', errors='backslashreplace'))
+                    err.decode('utf8', errors='backslashreplace'), sig)
 
             if not sig.valid_sig:
                 raise OpenPGPUnknownSigFailure(
-                    err.decode('utf8', errors='backslashreplace'))
+                    err.decode('utf8', errors='backslashreplace'), sig)
             if not sig.trusted_sig:
                 raise OpenPGPUntrustedSigFailure(
-                    err.decode('utf8', errors='backslashreplace'))
+                    err.decode('utf8', errors='backslashreplace'), sig)
 
         return sig_list
 
