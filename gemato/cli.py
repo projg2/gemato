@@ -13,6 +13,8 @@ import subprocess
 import sys
 import timeit
 
+from pathlib import Path
+
 from gemato.exceptions import GematoException, ManifestMismatch
 from gemato.find_top_level import find_top_level_manifest
 from gemato.hash import hash_file, hash_path
@@ -595,6 +597,56 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
         return 0 if ret else 1
 
 
+class OpenPGPVerifyDetachedCommand(VerifyingOpenPGPMixin, GematoCommand):
+    name = "openpgp-verify-detached"
+    help = "Verify a file against detached OpenPGP signature "
+
+    def add_options(self, subp):
+        super().add_options(subp)
+
+        subp.add_argument(
+            "--no-require-all-good",
+            dest="require_all_good",
+            action="store_false",
+            default=True,
+            help="Require only one good signature on multi-signature files")
+        subp.add_argument(
+            "signature_file",
+            type=Path,
+            help="Path to the file containing the OpenPGP signature")
+        subp.add_argument(
+            "data_file",
+            type=Path,
+            help="Path to the file to verify")
+
+    def parse_args(self, args, argp):
+        super().parse_args(args, argp)
+
+        self.signature_file = args.signature_file
+        self.data_file = args.data_file
+        self.require_all_good = args.require_all_good
+
+    def __call__(self):
+        super().__call__()
+
+        try:
+            sigs = self.openpgp_env.verify_detached(
+                self.signature_file, self.data_file,
+                require_all_good=self.require_all_good)
+        except GematoException as e:
+            logging.error(
+                f"OpenPGP verification failed for {self.data_file} "
+                f"(sig in {self.signature_file}):\n{e}")
+            return 1
+        else:
+            logging.info(
+                f"File {self.data_file} verified succesfully against "
+                f"the signature in {self.signature_file}:")
+            self.print_signatures(sigs)
+
+        return 0
+
+
 class GnuPGWrapCommand(VerifyingOpenPGPMixin, GematoCommand):
     name = 'gpg-wrap'
     help = ('Run specified command with GNUPGHOME set to OpenPGP '
@@ -641,6 +693,7 @@ def main(argv):
                 CreateCommand,
                 HashCommand,
                 OpenPGPVerifyCommand,
+                OpenPGPVerifyDetachedCommand,
                 GnuPGWrapCommand,
                 ]
     for cmdclass in commands:
