@@ -166,8 +166,7 @@ class SystemGPGEnvironment:
 
         exitst, out, err = self._spawn_gpg(
             [GNUPG, '--batch', '--status-fd', '1', '--verify'],
-            f.read().encode('utf8'),
-            raise_on_error=OpenPGPVerificationFailure)
+            f.read().encode('utf8'))
 
         # process the output of gpg to find the exact result
         print(out.decode("iso-8859-1"))
@@ -178,6 +177,18 @@ class SystemGPGEnvironment:
             elif line.startswith(b'[GNUPG:] GOODSIG'):
                 assert sig_list
                 sig_list[-1].good_sig = True
+            elif line.startswith(b"[GNUPG:] BADSIG"):
+                assert sig_list
+                raise OpenPGPVerificationFailure(
+                    err.decode("utf8", errors="backslashreplace"))
+            elif line.startswith(b"[GNUPG:] EXPSIG"):
+                assert sig_list
+                raise OpenPGPVerificationFailure(
+                    err.decode("utf8", errors="backslashreplace"))
+            elif line.startswith(b"[GNUPG:] ERRSIG"):
+                assert sig_list
+                raise OpenPGPVerificationFailure(
+                    err.decode("utf8", errors="backslashreplace"))
             elif line.startswith(b'[GNUPG:] EXPKEYSIG'):
                 assert sig_list
                 raise OpenPGPExpiredKeyFailure(
