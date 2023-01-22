@@ -2,6 +2,7 @@
 # (c) 2017-2023 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
+import base64
 import contextlib
 import datetime
 import io
@@ -191,13 +192,7 @@ n4XmpdPvu+UdAHpQIGzKoNOEDJpZ5CzPLhYa5KgZiJhpYsDXgg==
 -----END PGP SIGNATURE-----
 """
 
-TWO_SIGNATURE_MANIFEST = f"""
------BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA256
-
-{COMMON_MANIFEST_TEXT}
------BEGIN PGP SIGNATURE-----
-
+TWO_SIGNATURES = """
 iQFHBAABCAAxFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAmPMHYQTHGdlbWF0b0Bl
 eGFtcGxlLmNvbQAKCRATaIDnKnsThCDWB/95B9njv423M94uRdpPqSNqTpAokNhy
 V0hjnhpiqnY85iFdL1Zc/rvhuxYbZezrig3dqctLseWYcx2mINBTLZqWHk5/NKEm
@@ -208,6 +203,16 @@ zApRg8cetid6/SIzUSwiVqBt7i8noYWbgaazNt3HDlGq55v21dkOhmrXiIkEABYI
 ADEWIQR1jj6cjPscaH2bJCVTcI9ps0i0zAUCY8wd6BMcc2Vjb25kQGV4YW1wbGUu
 Y29tAAoJEFNwj2mzSLTMHKcA/0QbVl3PafYp45PFFo2e/knGKJKrm8D4bUH9wS5h
 dchVAP0RSzkUQPP7Zs+2uHQItkqbXJyrBBHOqjGzeh39sWVuAw==
+"""
+
+TWO_SIGNATURE_MANIFEST = f"""
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+{COMMON_MANIFEST_TEXT}
+-----BEGIN PGP SIGNATURE-----
+
+{TWO_SIGNATURES}
 =wG4b
 -----END PGP SIGNATURE-----
 """
@@ -1108,3 +1113,24 @@ def test_verify_require_secure_cli(base_tree, caplog, require_secure):
     assert retval == expected
     if expected == 1:
         assert str(ManifestInsecureHashes(["MD5"])) in caplog.text
+
+
+def test_verify_detached(tmp_path):
+    try:
+        with MockedSystemGPGEnvironment() as openpgp_env:
+            with io.BytesIO(TWO_SIGNATURE_PUBLIC_KEYS) as f:
+                openpgp_env.import_key(f)
+
+            with open(tmp_path / "data.bin", "wb") as f:
+                f.write(b"\r\n".join(COMMON_MANIFEST_TEXT.encode("utf8")
+                                     .splitlines()))
+            with open(tmp_path / "sig.bin", "wb") as f:
+                f.write(base64.b64decode(TWO_SIGNATURES))
+
+            sig = openpgp_env.verify_detached(
+                tmp_path / "sig.bin", tmp_path / "data.bin",
+                require_all_good=False)
+
+            assert_signature(sig, "TWO_SIGNATURE_MANIFEST")
+    except OpenPGPNoImplementation as e:
+        pytest.skip(str(e))

@@ -19,6 +19,8 @@ import typing
 import urllib.parse
 import warnings
 
+from pathlib import Path
+
 from gemato.exceptions import (
     OpenPGPNoImplementation,
     OpenPGPVerificationFailure,
@@ -274,13 +276,36 @@ class SystemGPGEnvironment:
 
         If require_all_good is True and the file contains multiple OpenPGP
         signatures, all signatures have to be good and trusted in order
-        for the verificatin to succeed. Otherwise, a single good signature
+        for the verification to succeed. Otherwise, a single good signature
         is considered sufficient.
         """
 
         exitst, out, err = self._spawn_gpg(
             [GNUPG, '--batch', '--status-fd', '1', '--verify'],
             f.read().encode('utf8'))
+        return self._process_gpg_verify_output(out, err, require_all_good)
+
+    def verify_detached(self,
+                        signature_file: Path,
+                        data_file: Path,
+                        require_all_good: bool = True,
+                        ) -> OpenPGPSignatureList:
+        """
+        Verify the file against a detached signature
+
+        Verify the data from data_file against the detached signature
+        from signature_file. Both files are specified by Path.
+        Raise an exception if the verification fails.
+
+        If require_all_good is True and the file contains multiple OpenPGP
+        signatures, all signatures have to be good and trusted in order
+        for the verification to succeed. Otherwise, a single good signature
+        is considered sufficient.
+        """
+
+        _, out, err = self._spawn_gpg(
+            [GNUPG, "--batch", "--status-fd", "1", "--verify",
+             str(signature_file), str(data_file)])
         return self._process_gpg_verify_output(out, err, require_all_good)
 
     def clear_sign_file(self, f, outf, keyid=None):
