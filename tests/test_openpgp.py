@@ -1100,10 +1100,15 @@ def test_verify_require_secure_cli(base_tree, caplog, require_secure):
         assert str(ManifestInsecureHashes(["MD5"])) in caplog.text
 
 
-def test_verify_detached(tmp_path):
+@pytest.mark.parametrize(
+    "key_var,two_sigs",
+    [("TWO_SIGNATURE_PUBLIC_KEYS", True),
+     ("VALID_PUBLIC_KEY", False),
+     ])
+def test_verify_detached(tmp_path, key_var, two_sigs):
     try:
         with MockedSystemGPGEnvironment() as openpgp_env:
-            with io.BytesIO(TWO_SIGNATURE_PUBLIC_KEYS) as f:
+            with io.BytesIO(globals()[key_var]) as f:
                 openpgp_env.import_key(f)
 
             with open(tmp_path / "data.bin", "wb") as f:
@@ -1114,8 +1119,9 @@ def test_verify_detached(tmp_path):
 
             sig = openpgp_env.verify_detached(
                 tmp_path / "sig.bin", tmp_path / "data.bin",
-                require_all_good=False)
+                require_all_good=two_sigs)
 
-            assert_signature(sig, "TWO_SIGNATURE_MANIFEST")
+            assert_signature(sig, "TWO_SIGNATURE_MANIFEST",
+                             expect_both=two_sigs)
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
