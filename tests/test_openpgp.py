@@ -36,6 +36,7 @@ from gemato.openpgp import (
     get_wkd_url,
     OpenPGPSignatureList,
     OpenPGPSignatureData,
+    OpenPGPSignatureStatus,
     )
 from gemato.recursiveloader import ManifestRecursiveLoader
 
@@ -420,15 +421,17 @@ def assert_signature(sig: OpenPGPSignatureList,
                 fingerprint=SECOND_KEY_FINGERPRINT,
                 timestamp=datetime.datetime(2023, 1, 21, 17, 16, 24),
                 primary_key_fingerprint=SECOND_KEY_FINGERPRINT,
-                good_sig=True,
+                sig_status=OpenPGPSignatureStatus.GOOD,
                 trusted_sig=True,
+                valid_sig=True,
                 ),
             OpenPGPSignatureData(
                 fingerprint=KEY_FINGERPRINT,
                 timestamp=datetime.datetime(2023, 1, 21, 17, 14, 44),
                 primary_key_fingerprint=KEY_FINGERPRINT,
-                good_sig=True,
+                sig_status=OpenPGPSignatureStatus.GOOD,
                 trusted_sig=True,
+                valid_sig=True,
                 ),
         ]
     elif manifest_var == 'SUBKEY_SIGNED_MANIFEST':

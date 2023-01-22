@@ -6,6 +6,7 @@ import base64
 import dataclasses
 import datetime
 import email.utils
+import enum
 import errno
 import hashlib
 import logging
@@ -46,14 +47,23 @@ GNUPG = os.environ.get('GNUPG', 'gpg')
 GNUPGCONF = os.environ.get('GNUPGCONF', 'gpgconf')
 
 
+class OpenPGPSignatureStatus(enum.Enum):
+    GOOD = enum.auto()
+    BAD = enum.auto()
+    EXPIRED = enum.auto()
+    ERROR = enum.auto()
+    EXPIRED_KEY = enum.auto()
+    REVOKED_KEY = enum.auto()
+
+
 @dataclasses.dataclass(order=True)
 class OpenPGPSignatureData:
     fingerprint: str = ""
     timestamp: typing.Optional[datetime.datetime] = None
     expire_timestamp: typing.Optional[datetime.datetime] = None
     primary_key_fingerprint: str = ""
-
-    good_sig: bool = False
+    sig_status: typing.Optional[OpenPGPSignatureStatus] = None
+    valid_sig: bool = False
     trusted_sig: bool = False
 
 
@@ -169,38 +179,33 @@ class SystemGPGEnvironment:
             f.read().encode('utf8'))
 
         # process the output of gpg to find the exact result
-        print(out.decode("iso-8859-1"))
         sig_list = OpenPGPSignatureList()
         for line in out.splitlines():
             if line.startswith(b'[GNUPG:] NEWSIG'):
                 sig_list.append(OpenPGPSignatureData())
             elif line.startswith(b'[GNUPG:] GOODSIG'):
-                assert sig_list
-                sig_list[-1].good_sig = True
+                assert sig_list and sig_list[-1].sig_status is None
+                sig_list[-1].sig_status = OpenPGPSignatureStatus.GOOD
             elif line.startswith(b"[GNUPG:] BADSIG"):
-                assert sig_list
-                raise OpenPGPVerificationFailure(
-                    err.decode("utf8", errors="backslashreplace"))
+                assert sig_list and sig_list[-1].sig_status is None
+                sig_list[-1].sig_status = OpenPGPSignatureStatus.BAD
             elif line.startswith(b"[GNUPG:] EXPSIG"):
-                assert sig_list
-                raise OpenPGPVerificationFailure(
-                    err.decode("utf8", errors="backslashreplace"))
+                assert sig_list and sig_list[-1].sig_status is None
+                sig_list[-1].sig_status = OpenPGPSignatureStatus.EXPIRED
             elif line.startswith(b"[GNUPG:] ERRSIG"):
-                assert sig_list
-                raise OpenPGPVerificationFailure(
-                    err.decode("utf8", errors="backslashreplace"))
+                assert sig_list and sig_list[-1].sig_status is None
+                sig_list[-1].sig_status = OpenPGPSignatureStatus.ERROR
             elif line.startswith(b'[GNUPG:] EXPKEYSIG'):
-                assert sig_list
-                raise OpenPGPExpiredKeyFailure(
-                    err.decode('utf8', errors='backslashreplace'))
+                assert sig_list and sig_list[-1].sig_status is None
+                sig_list[-1].sig_status = OpenPGPSignatureStatus.EXPIRED_KEY
             elif line.startswith(b'[GNUPG:] REVKEYSIG'):
-                assert sig_list
-                raise OpenPGPRevokedKeyFailure(
-                    err.decode('utf8', errors='backslashreplace'))
+                assert sig_list and sig_list[-1].sig_status is None
+                sig_list[-1].sig_status = OpenPGPSignatureStatus.REVOKED_KEY
             elif line.startswith(b'[GNUPG:] VALIDSIG'):
-                assert sig_list
+                assert sig_list and not sig_list[-1].valid_sig
                 spl = line.split(b' ')
                 assert len(spl) >= 12
+                sig_list[-1].valid_sig = True
                 sig_list[-1].fingerprint = spl[2].decode('utf8')
                 sig_list[-1].timestamp = (
                     self._parse_gpg_ts(spl[4].decode('utf8')))
@@ -215,13 +220,35 @@ class SystemGPGEnvironment:
                               b'TRUST_ULTIMATE'):
                     sig_list[-1].trusted_sig = True
 
-        # require both GOODSIG and VALIDSIG
-        if not sig_list or not all(x.good_sig for x in sig_list):
+        if not sig_list:
             raise OpenPGPUnknownSigFailure(
                 err.decode('utf8', errors='backslashreplace'))
-        if not all(x.trusted_sig for x in sig_list):
-            raise OpenPGPUntrustedSigFailure(
-                err.decode('utf8', errors='backslashreplace'))
+
+        for sig in sig_list:
+            if sig.sig_status == OpenPGPSignatureStatus.GOOD:
+                pass
+            elif sig.sig_status in (OpenPGPSignatureStatus.BAD,
+                                    OpenPGPSignatureStatus.EXPIRED,
+                                    OpenPGPSignatureStatus.ERROR):
+                raise OpenPGPVerificationFailure(
+                    err.decode("utf8", errors="backslashreplace"))
+            elif sig.sig_status == OpenPGPSignatureStatus.EXPIRED_KEY:
+                raise OpenPGPExpiredKeyFailure(
+                    err.decode('utf8', errors='backslashreplace'))
+            elif sig.sig_status == OpenPGPSignatureStatus.REVOKED_KEY:
+                raise OpenPGPRevokedKeyFailure(
+                    err.decode('utf8', errors='backslashreplace'))
+            else:
+                raise OpenPGPUnknownSigFailure(
+                    err.decode('utf8', errors='backslashreplace'))
+
+            if not sig.valid_sig:
+                raise OpenPGPUnknownSigFailure(
+                    err.decode('utf8', errors='backslashreplace'))
+            if not sig.trusted_sig:
+                raise OpenPGPUntrustedSigFailure(
+                    err.decode('utf8', errors='backslashreplace'))
+
         return sig_list
 
     def clear_sign_file(self, f, outf, keyid=None):
