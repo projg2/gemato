@@ -51,6 +51,7 @@ class OpenPGPSignatureStatus(enum.Enum):
     GOOD = enum.auto()
     BAD = enum.auto()
     EXPIRED = enum.auto()
+    NO_PUBLIC_KEY = enum.auto()
     ERROR = enum.auto()
     EXPIRED_KEY = enum.auto()
     REVOKED_KEY = enum.auto()
@@ -194,7 +195,13 @@ class SystemGPGEnvironment:
                 sig_list[-1].sig_status = OpenPGPSignatureStatus.EXPIRED
             elif line.startswith(b"[GNUPG:] ERRSIG"):
                 assert sig_list and sig_list[-1].sig_status is None
-                sig_list[-1].sig_status = OpenPGPSignatureStatus.ERROR
+                spl = line.split(b" ")
+                assert len(spl) >= 8
+                if spl[7] == b"9":
+                    sig_list[-1].sig_status = (
+                        OpenPGPSignatureStatus.NO_PUBLIC_KEY)
+                else:
+                    sig_list[-1].sig_status = OpenPGPSignatureStatus.ERROR
             elif line.startswith(b'[GNUPG:] EXPKEYSIG'):
                 assert sig_list and sig_list[-1].sig_status is None
                 sig_list[-1].sig_status = OpenPGPSignatureStatus.EXPIRED_KEY
@@ -229,6 +236,7 @@ class SystemGPGEnvironment:
                 pass
             elif sig.sig_status in (OpenPGPSignatureStatus.BAD,
                                     OpenPGPSignatureStatus.EXPIRED,
+                                    OpenPGPSignatureStatus.NO_PUBLIC_KEY,
                                     OpenPGPSignatureStatus.ERROR):
                 raise OpenPGPVerificationFailure(
                     err.decode("utf8", errors="backslashreplace"))
