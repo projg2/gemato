@@ -1,5 +1,5 @@
 # gemato: CLI routines
-# (c) 2017-2022 Michał Górny
+# (c) 2017-2023 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 
@@ -544,6 +544,12 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
         super().add_options(subp)
 
         subp.add_argument(
+            "--no-require-all-good",
+            dest="require_all_good",
+            action="store_false",
+            default=True,
+            help="Require only one good signature on multi-signature files")
+        subp.add_argument(
             'paths', nargs='*', default=['-'],
             help='Paths to hash (defaults to "-" (stdin) if not '
                  'specified)')
@@ -552,6 +558,7 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
         super().parse_args(args, argp)
 
         self.paths = args.paths
+        self.require_all_good = args.require_all_good
 
     def __call__(self):
         super().__call__()
@@ -566,7 +573,8 @@ class OpenPGPVerifyCommand(VerifyingOpenPGPMixin, GematoCommand):
 
             try:
                 try:
-                    sig = self.openpgp_env.verify_file(f)
+                    sig = self.openpgp_env.verify_file(
+                        f, require_all_good=self.require_all_good)
                 except GematoException as e:
                     logging.error(
                         f'OpenPGP verification failed for {p}:\n{e}')
