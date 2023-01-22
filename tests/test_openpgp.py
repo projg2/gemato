@@ -426,18 +426,13 @@ MANIFEST_VARIANTS = [
 
 def assert_signature(sig: OpenPGPSignatureList,
                      manifest_var: str,
+                     expect_both: bool = True,
                      ) -> None:
     """Make assertions about the signature"""
     if manifest_var == "TWO_SIGNATURE_MANIFEST":
-        assert sorted(sig) == [
-            OpenPGPSignatureData(
-                fingerprint=SECOND_KEY_FINGERPRINT,
-                timestamp=datetime.datetime(2023, 1, 21, 17, 16, 24),
-                primary_key_fingerprint=SECOND_KEY_FINGERPRINT,
-                sig_status=OpenPGPSignatureStatus.GOOD,
-                trusted_sig=True,
-                valid_sig=True,
-                ),
+        no_key_sig = OpenPGPSignatureData(
+            sig_status=OpenPGPSignatureStatus.NO_PUBLIC_KEY)
+        assert sorted(sig) == sorted([
             OpenPGPSignatureData(
                 fingerprint=KEY_FINGERPRINT,
                 timestamp=datetime.datetime(2023, 1, 21, 17, 14, 44),
@@ -446,7 +441,15 @@ def assert_signature(sig: OpenPGPSignatureList,
                 trusted_sig=True,
                 valid_sig=True,
                 ),
-        ]
+            OpenPGPSignatureData(
+                fingerprint=SECOND_KEY_FINGERPRINT,
+                timestamp=datetime.datetime(2023, 1, 21, 17, 16, 24),
+                primary_key_fingerprint=SECOND_KEY_FINGERPRINT,
+                sig_status=OpenPGPSignatureStatus.GOOD,
+                trusted_sig=True,
+                valid_sig=True,
+                ) if expect_both else no_key_sig,
+        ])
     elif manifest_var == 'SUBKEY_SIGNED_MANIFEST':
         assert len(sig) == 1
         assert sig.fingerprint == SUBKEY_FINGERPRINT
@@ -498,25 +501,7 @@ def test_verify_one_out_of_two():
             with io.StringIO(TWO_SIGNATURE_MANIFEST) as f:
                 sig = openpgp_env.verify_file(f, require_all_good=False)
 
-            assert sig == [
-                OpenPGPSignatureData(
-                    fingerprint="81E12C16BD8DCD60BE180845136880E72A7B1384",
-                    timestamp=datetime.datetime(2023, 1, 21, 17, 14, 44),
-                    expire_timestamp=None,
-                    primary_key_fingerprint="81E12C16BD8DCD60BE18"
-                                            "0845136880E72A7B1384",
-                    sig_status=OpenPGPSignatureStatus.GOOD,
-                    valid_sig=True,
-                    trusted_sig=True),
-                OpenPGPSignatureData(
-                    fingerprint="",
-                    timestamp=None,
-                    expire_timestamp=None,
-                    primary_key_fingerprint="",
-                    sig_status=OpenPGPSignatureStatus.NO_PUBLIC_KEY,
-                    valid_sig=False,
-                    trusted_sig=False),
-            ]
+            assert_signature(sig, "TWO_SIGNATURE_MANIFEST", expect_both=False)
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
