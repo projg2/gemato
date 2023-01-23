@@ -9,8 +9,6 @@ import random
 import subprocess
 import sys
 
-import pyblake2
-
 
 class ExternalToolHash:
     def __init__(self, argv):

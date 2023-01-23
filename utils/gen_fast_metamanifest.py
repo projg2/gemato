@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # Ultra-optimized Meta-Manifest writing.
-# (c) 2017-2022 Michał Górny
+# (c) 2017-2023 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import datetime
 import glob
-import io
 import multiprocessing
 import os
 import os.path
@@ -70,7 +69,6 @@ def make_toplevel(d, ts, pgp_key):
             data = me + b'\n' + ts
 
             if pgp_key is not None:
-                cmd = []
                 gpg = os.environ.get('GNUPG', 'gpg')
                 p = subprocess.Popen([gpg, '--batch', '-u', pgp_key,
                                       '--armor', '--clearsign'],
