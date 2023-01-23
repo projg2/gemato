@@ -57,17 +57,17 @@ for the specified leaf and respective Manifest files are updated.
 
 Utility commands
 ----------------
-gemato provides a few other commands that could help debugging its
-behavior. Those are:
+gemato provides a few other utility commands that provide access to
+its crypto backend. These are:
 
 ``gemato hash -H <hashes> [<path>...]``
   Print hashes of the specified files in Manifest-like format.
-  Used to verify that the hash backend works correctly.
 
 ``gemato openpgp-verify [-K <key>] [<path>...]``
-  Check OpenPGP signatures embedded in the specified files. Detached
-  signatures are not supported. Used to verify that the OpenPGP backend
-  works correctly.
+  Check OpenPGP cleartext signatures embedded in the specified files.
+
+``gemato openpgp-verify-detached [-K <key>] <sig-file> <data-file>``
+  Verify the specified data file against a detached OpenPGP signature.
 
 
 Requirements
