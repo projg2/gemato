@@ -879,6 +879,7 @@ REFRESH_VARIANTS = [
 def test_refresh_hkp(openpgp_env_with_refresh, hkp_server, manifest_var,
                      key_var, server_key_fpr, server_key_var, expected):
     """Test refreshing against a HKP keyserver"""
+    # TODO: Need to mock socket.getaddrinfo to test this safely
     try:
         if key_var is not None:
             with io.BytesIO(globals()[key_var]) as f:
@@ -925,18 +926,27 @@ def test_refresh_wkd(openpgp_env_with_refresh,
                     openpgp_env_with_refresh.import_key(f)
 
             if server_key_var is not None:
-                responses.add(
-                    responses.GET,
-                    'https://example.com/.well-known/openpgpkey/hu/'
-                    '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato',
-                    body=globals()[server_key_var],
-                    content_type='application/pgp-keys')
+                body_ = globals()[server_key_var]
+                content_type_ = 'application/pgp-keys'
+                status_ = 200
             else:
-                responses.add(
-                    responses.GET,
-                    'https://example.com/.well-known/openpgpkey/hu/'
-                    '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato',
-                    status=404)
+                body_ = None
+                content_type_ = None
+                status_ = 404
+            responses.add(
+                responses.GET,
+                'https://example.com/.well-known/openpgpkey/hu/'
+                '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato',
+                body=body_,
+                content_type=content_type_,
+                status=status_)
+            responses.add(
+                responses.GET,
+                'https://openpgpkey.example.com/.well-known/openpgpkey/example.org/hu/'
+                '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato',
+                body=body_,
+                content_type=content_type_,
+                status=status_)
 
             if expected is None:
                 openpgp_env_with_refresh.refresh_keys(
