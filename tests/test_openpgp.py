@@ -35,6 +35,7 @@ from gemato.openpgp import (
     IsolatedGPGEnvironment,
     PGPyEnvironment,
     get_wkd_url,
+    has_advanced_wkd,
     OpenPGPSignatureList,
     OpenPGPSignatureData,
     OpenPGPSignatureStatus,
@@ -877,9 +878,9 @@ REFRESH_VARIANTS = [
       'VALID_PUBLIC_KEY', None),
      ])
 def test_refresh_hkp(openpgp_env_with_refresh, hkp_server, manifest_var,
-                     key_var, server_key_fpr, server_key_var, expected):
+                     key_var, server_key_fpr, server_key_var, expected, monkeypatch):
     """Test refreshing against a HKP keyserver"""
-    # TODO: Need to mock socket.getaddrinfo to test this safely
+    monkeypatch.setattr(gemato.openpgp, 'has_advanced_wkd', lambda _: True)
     try:
         if key_var is not None:
             with io.BytesIO(globals()[key_var]) as f:
@@ -992,15 +993,16 @@ def test_refresh_wkd_fallback_to_hkp(openpgp_env_with_refresh,
 
 
 @pytest.mark.parametrize(
-    'email,expected',
-    [('gemato@example.com',
+    'email,has_advanced_wkd,expected',
+    [('gemato@example.com',  False,
       'https://example.com/.well-known/openpgpkey/hu/'
       '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato'),
-     ('Joe.Doe@Example.ORG',
-      'https://example.org/.well-known/openpgpkey/hu/'
+     ('Joe.Doe@Example.ORG', True,
+      'https://openpgpkey.example.org/.well-known/openpgpkey/example.org/hu/'
       'iy9q119eutrkn8s1mk4r39qejnbu3n5q?l=Joe.Doe'),
      ])
-def test_get_wkd_url(email, expected):
+def test_get_wkd_url(email, has_advanced_wkd, expected, monkeypatch):
+    monkeypatch.setattr(gemato.openpgp, 'has_advanced_wkd', lambda _: has_advanced_wkd)
     assert get_wkd_url(email) == expected
 
 
