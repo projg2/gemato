@@ -225,17 +225,6 @@ def strip_openpgp(text):
     return '\n'.join(lines[start+1:stop-start+2]) + '\n'
 
 
-MANIFESTS_GOOD_SIG = [
-    'SIGNED_MANIFEST',
-    'DASH_ESCAPED_SIGNED_MANIFEST',
-    'SUBKEY_SIGNED_MANIFEST',
-]
-MANIFESTS_BAD_SIG = [
-    'MODIFIED_SIGNED_MANIFEST',
-    'EXPIRED_SIGNED_MANIFEST'
-]
-
-
 # workaround pyflakes' limitations
 _ = COMBINED_PUBLIC_KEYS
 _ = EXPIRED_PUBLIC_KEY
@@ -256,7 +245,13 @@ _ = VALID_KEY_SUBKEY
 
 
 @pytest.mark.parametrize('manifest_var',
-                         MANIFESTS_GOOD_SIG + MANIFESTS_BAD_SIG)
+                         ["SIGNED_MANIFEST",
+                          "DASH_ESCAPED_SIGNED_MANIFEST",
+                          "SUBKEY_SIGNED_MANIFEST",
+                          "MODIFIED_SIGNED_MANIFEST",
+                          "EXPIRED_SIGNED_MANIFEST",
+                          "TWO_SIGNATURE_MANIFEST",
+                          ])
 def test_noverify_goodish_manifest_load(manifest_var):
     """Test Manifest files that should succeed (OpenPGP disabled)"""
     m = ManifestFile()
