@@ -68,6 +68,7 @@ class OpenPGPSignatureData:
     sig_status: typing.Optional[OpenPGPSignatureStatus] = None
     valid_sig: bool = False
     trusted_sig: bool = False
+    key_expiration: typing.Optional[datetime.datetime] = None
 
 
 class OpenPGPSignatureList(list[OpenPGPSignatureData]):
@@ -111,10 +112,9 @@ class SystemGPGEnvironment:
     (user's home directory or GNUPGHOME).
     """
 
-    __slots__ = ['debug']
-
     def __init__(self, debug=False, proxy=None):
         self.debug = debug
+        self._trusted_keys = set()
 
     def __enter__(self):
         return self
@@ -220,16 +220,39 @@ class SystemGPGEnvironment:
                               b'TRUST_FULL',
                               b'TRUST_ULTIMATE'):
                     sig_list[-1].trusted_sig = True
+            elif line.startswith(b"[GNUPG:] KEYEXPIRED"):
+                # TODO: will the "correct" key be emitted last?
+                assert sig_list
+                spl = line.split(b" ", 3)
+                assert len(spl) >= 3
+                sig_list[-1].key_expiration = (
+                    self._parse_gpg_ts(spl[2].decode("utf8")))
 
         if not sig_list:
             raise OpenPGPUnknownSigFailure(
                 err.decode('utf8', errors='backslashreplace'))
 
-        # bad signature causes failure even without require_all_good
         for sig in sig_list:
+            # bad signature causes failure even without require_all_good
             if sig.sig_status == OpenPGPSignatureStatus.BAD:
                 raise OpenPGPVerificationFailure(
                     err.decode("utf8", errors="backslashreplace"), sig)
+
+            if sig.sig_status == OpenPGPSignatureStatus.EXPIRED_KEY:
+                # if the signature was done using a key that's expired *now*,
+                # check whether it was expired prior to the signature.
+                assert sig.timestamp is not None
+                assert sig.key_expiration is not None
+                if sig.timestamp < sig.key_expiration:
+                    sig.sig_status = OpenPGPSignatureStatus.GOOD
+                    # we need to check the trust explicitly since GPG
+                    # doesn't check trust on expired keys
+                    if sig.primary_key_fingerprint in self._trusted_keys:
+                        sig.trusted_sig = True
+            else:
+                # remove key_expiration if it the signature was not done
+                # by an expired key
+                sig.key_expiration = None
 
         if not require_all_good:
             if any(x.sig_status == OpenPGPSignatureStatus.GOOD and
@@ -373,8 +396,6 @@ class IsolatedGPGEnvironment(SystemGPGEnvironment):
     or use as a context manager (via 'with').
     """
 
-    __slots__ = ['_home', 'proxy']
-
     def __init__(self, debug=False, proxy=None):
         super().__init__(debug=debug)
         self.proxy = proxy
@@ -443,6 +464,7 @@ debug-level guru
             for line in out.splitlines():
                 if line.startswith(b'[GNUPG:] IMPORT_OK'):
                     fprs.add(line.split(b' ')[3].decode('ASCII'))
+            self._trusted_keys.update(fprs)
 
             ownertrust = ''.join(f'{fpr}:6:\n' for fpr in fprs).encode('utf8')
             exitst, out, err = self._spawn_gpg(

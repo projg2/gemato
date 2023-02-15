@@ -106,6 +106,24 @@ mkkhTd2Auao4D2K74BePBuiZ9+eDQA==
 -----END PGP SIGNATURE-----
 """
 
+POST_EXPIRATION_SIGNED_MANIFEST = f"""
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+{COMMON_MANIFEST_TEXT}
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCAAdFiEEgeEsFr2NzWC+GAhFE2iA5yp7E4QFAmPsj28ACgkQE2iA5yp7
+E4R0xAf8CC6uh8VMmv8xlFePEoBYEuSUtDa2hWHJv1sMn90QnszHGG6oo32g2Lje
+H9NRyjOltAG9t0siF/pf57EiKCs9B+Z9zLGYuWlK4gvkHjMHzsoTipUymm2/saEo
+AuoeZvhqNtfU0hCIJsWENtdyMb/hsJIxIOwBjVS/JT5cZlOGjhlyxVO0CS/7FsCp
+GZCeLYPdYXPw2em2DR3Q3NDuNmUY7W3WhJCL14uC+AkU64SnHc13xQ9/go6TQ2ho
+783Jm2f/4ZREYpKMvCgUJvOADSqnfY89hc6B/9JCXn+Zm8a31zgENlJ8DEhN0JMN
+le/JaXEH/AhO6xCOmk8tNQ3QXcNF5w==
+=UGgA
+-----END PGP SIGNATURE-----
+"""
+
 DASH_ESCAPED_SIGNED_MANIFEST = '''
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA256
@@ -251,6 +269,7 @@ _ = VALID_KEY_SUBKEY
                           "MODIFIED_SIGNED_MANIFEST",
                           "EXPIRED_SIGNED_MANIFEST",
                           "TWO_SIGNATURE_MANIFEST",
+                          "POST_EXPIRATION_SIGNED_MANIFEST",
                           ])
 def test_noverify_goodish_manifest_load(manifest_var):
     """Test Manifest files that should succeed (OpenPGP disabled)"""
@@ -385,6 +404,9 @@ MANIFEST_VARIANTS = [
     ('SIGNED_MANIFEST', 'COMBINED_PUBLIC_KEYS', None),
     ('DASH_ESCAPED_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', None),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_KEY_SUBKEY', None),
+    ("POST_EXPIRATION_SIGNED_MANIFEST", "VALID_PUBLIC_KEY", None),
+    # == Manifest signed before the key expired ==
+    ("SIGNED_MANIFEST", "EXPIRED_PUBLIC_KEY", None),
     # == Manifest with two signatures ==
     ("TWO_SIGNATURE_MANIFEST", "TWO_SIGNATURE_PUBLIC_KEYS", None),
     ("TWO_SIGNATURE_MANIFEST", "VALID_PUBLIC_KEY", OpenPGPVerificationFailure),
@@ -402,7 +424,7 @@ MANIFEST_VARIANTS = [
     # == bad keys ==
     ('SIGNED_MANIFEST', None,
      OpenPGPVerificationFailure),
-    ('SIGNED_MANIFEST', 'EXPIRED_PUBLIC_KEY',
+    ("POST_EXPIRATION_SIGNED_MANIFEST", "EXPIRED_PUBLIC_KEY",
      OpenPGPExpiredKeyFailure),
     ('SIGNED_MANIFEST', 'REVOKED_PUBLIC_KEY',
      OpenPGPRevokedKeyFailure),
@@ -451,6 +473,12 @@ def assert_signature(sig: OpenPGPSignatureList,
         assert sig.timestamp == SUBKEY_SIG_TIMESTAMP
         assert sig.expire_timestamp is None
         assert sig.primary_key_fingerprint == KEY_FINGERPRINT
+    elif manifest_var == "POST_EXPIRATION_SIGNED_MANIFEST":
+        assert len(sig) == 1
+        assert sig.fingerprint == KEY_FINGERPRINT
+        assert sig.timestamp == datetime.datetime(2023, 2, 15, 7, 53, 19)
+        assert sig.expire_timestamp is None
+        assert sig.primary_key_fingerprint == KEY_FINGERPRINT
     else:
         assert len(sig) == 1
         assert sig.fingerprint == KEY_FINGERPRINT
@@ -482,7 +510,7 @@ def test_verify_manifest(openpgp_env, manifest_var, key_var, expected):
                         with io.BytesIO(globals()[key_var]) as kf:
                             openpgp_env.import_key(kf)
 
-                    openpgp_env.verify_file(f)
+                    print(openpgp_env.verify_file(f))
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
@@ -825,16 +853,16 @@ REFRESH_VARIANTS = [
     ('SIGNED_MANIFEST', 'EXPIRED_PUBLIC_KEY', KEY_FINGERPRINT,
      'UNEXPIRE_PUBLIC_KEY', None),
     # ...but only with a new signature
-    ('SIGNED_MANIFEST', 'EXPIRED_PUBLIC_KEY', KEY_FINGERPRINT,
-     'OLD_UNEXPIRE_PUBLIC_KEY', OpenPGPExpiredKeyFailure),
+    ("POST_EXPIRATION_SIGNED_MANIFEST", "EXPIRED_PUBLIC_KEY", KEY_FINGERPRINT,
+     "OLD_UNEXPIRE_PUBLIC_KEY", OpenPGPExpiredKeyFailure),
     # make sure server can't malicously inject or replace key
     ('SIGNED_MANIFEST', 'OTHER_VALID_PUBLIC_KEY', OTHER_KEY_FINGERPRINT,
      'VALID_PUBLIC_KEY', OpenPGPKeyRefreshError),
     ('SIGNED_MANIFEST', 'OTHER_VALID_PUBLIC_KEY', OTHER_KEY_FINGERPRINT,
      'COMBINED_PUBLIC_KEYS', OpenPGPRuntimeError),
     # test that forged keys are rejected
-    ('SIGNED_MANIFEST', 'EXPIRED_PUBLIC_KEY', KEY_FINGERPRINT,
-     'FORGED_UNEXPIRE_KEY', OpenPGPExpiredKeyFailure),
+    ("POST_EXPIRATION_SIGNED_MANIFEST", "EXPIRED_PUBLIC_KEY", KEY_FINGERPRINT,
+     "FORGED_UNEXPIRE_KEY", OpenPGPExpiredKeyFailure),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,
      'FORGED_SUBKEY', OpenPGPVerificationFailure),
     ('SUBKEY_SIGNED_MANIFEST', 'VALID_PUBLIC_KEY', KEY_FINGERPRINT,

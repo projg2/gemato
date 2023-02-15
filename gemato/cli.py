@@ -171,6 +171,8 @@ class VerifyingOpenPGPMixin(BaseOpenPGPMixin):
                              f"{sig.primary_key_fingerprint}")
                 logging.info(f"- subkey: {sig.fingerprint}")
                 logging.info(f"- timestamp: {sig.timestamp} UTC")
+            if sig.key_expiration is not None:
+                logging.info(f"- key expiration: {sig.key_expiration} UTC")
 
 
 class BaseManifestLoaderMixin:
