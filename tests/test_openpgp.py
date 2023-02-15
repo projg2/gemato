@@ -46,8 +46,8 @@ from tests.keydata import (
     VALID_KEY_NOEMAIL, VALID_KEY_NONUTF, COMBINED_PUBLIC_KEYS,
     VALID_KEY_SUBKEY, PRIVATE_KEY, EXPIRED_PUBLIC_KEY, REVOKED_PUBLIC_KEY,
     OTHER_VALID_PUBLIC_KEY, UNSIGNED_PUBLIC_KEY, FORGED_PUBLIC_KEY,
-    UNSIGNED_SUBKEY, FORGED_SUBKEY, SIG_TIMESTAMP, SUBKEY_FINGERPRINT,
-    SUBKEY_SIG_TIMESTAMP, UNEXPIRE_PUBLIC_KEY, OLD_UNEXPIRE_PUBLIC_KEY,
+    UNSIGNED_SUBKEY, FORGED_SUBKEY, SUBKEY_FINGERPRINT,
+    UNEXPIRE_PUBLIC_KEY, OLD_UNEXPIRE_PUBLIC_KEY,
     FORGED_UNEXPIRE_KEY, TWO_SIGNATURE_PUBLIC_KEYS, SECOND_KEY_FINGERPRINT,
     SECOND_VALID_PUBLIC_KEY, TWO_KEYS_ONE_EXPIRED,
     )
@@ -470,7 +470,7 @@ def assert_signature(sig: OpenPGPSignatureList,
     elif manifest_var == 'SUBKEY_SIGNED_MANIFEST':
         assert len(sig) == 1
         assert sig.fingerprint == SUBKEY_FINGERPRINT
-        assert sig.timestamp == SUBKEY_SIG_TIMESTAMP
+        assert sig.timestamp == datetime.datetime(2020, 8, 25, 12, 40, 12)
         assert sig.expire_timestamp is None
         assert sig.primary_key_fingerprint == KEY_FINGERPRINT
     elif manifest_var == "POST_EXPIRATION_SIGNED_MANIFEST":
@@ -482,7 +482,7 @@ def assert_signature(sig: OpenPGPSignatureList,
     else:
         assert len(sig) == 1
         assert sig.fingerprint == KEY_FINGERPRINT
-        assert sig.timestamp == SIG_TIMESTAMP
+        assert sig.timestamp == datetime.datetime(2017, 11, 8, 9, 1, 26)
         assert sig.expire_timestamp is None
         assert sig.primary_key_fingerprint == KEY_FINGERPRINT
 
