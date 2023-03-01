@@ -210,7 +210,7 @@ class SystemGPGEnvironment:
                 sig_list[-1].fingerprint = spl[2].decode('utf8')
                 sig_list[-1].timestamp = (
                     self._parse_gpg_ts(spl[4].decode('utf8')))
-                sig_list[-1].expiration_timestamp = (
+                sig_list[-1].expire_timestamp = (
                     self._parse_gpg_ts(spl[5].decode('utf8')))
                 sig_list[-1].primary_key_fingerprint = spl[11].decode('utf8')
             elif line.startswith(b'[GNUPG:] TRUST_'):
