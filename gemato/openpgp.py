@@ -310,14 +310,15 @@ class SystemGPGEnvironment:
 
     def verify_detached(self,
                         signature_file: Path,
-                        data_file: Path,
+                        data_file: typing.IO[bytes],
                         require_all_good: bool = True,
                         ) -> OpenPGPSignatureList:
         """
         Verify the file against a detached signature
 
         Verify the data from data_file against the detached signature
-        from signature_file. Both files are specified by Path.
+        from signature_file.  data_file should be an open file,
+        whereas signature_file should be a Path object.
         Raise an exception if the verification fails.
 
         If require_all_good is True and the file contains multiple OpenPGP
@@ -328,7 +329,8 @@ class SystemGPGEnvironment:
 
         _, out, err = self._spawn_gpg(
             [GNUPG, "--batch", "--status-fd", "1", "--verify",
-             str(signature_file), str(data_file)])
+             str(signature_file), "-"],
+            stdin_file=data_file)
         return self._process_gpg_verify_output(out, err, require_all_good)
 
     def clear_sign_file(self, f, outf, keyid=None):
@@ -353,14 +355,18 @@ class SystemGPGEnvironment:
         outf.write(out.decode('utf8'))
 
     def _spawn_gpg(self, argv, stdin='', env_override={},
-                   raise_on_error=None):
+                   raise_on_error=None,
+                   stdin_file: typing.Optional[typing.IO[bytes]] = None):
         env = os.environ.copy()
         env['TZ'] = 'UTC'
         env.update(env_override)
 
+        if stdin_file is None:
+            stdin_file = subprocess.PIPE
+
         try:
             p = subprocess.Popen(argv,
-                                 stdin=subprocess.PIPE,
+                                 stdin=stdin_file,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  env=env)

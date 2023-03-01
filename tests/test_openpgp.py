@@ -1140,9 +1140,10 @@ def test_verify_detached(tmp_path, key_var, two_sigs):
             with open(tmp_path / "sig.bin", "wb") as f:
                 f.write(base64.b64decode(TWO_SIGNATURES))
 
-            sig = openpgp_env.verify_detached(
-                tmp_path / "sig.bin", tmp_path / "data.bin",
-                require_all_good=two_sigs)
+            with open(tmp_path / "data.bin", "rb") as f:
+                sig = openpgp_env.verify_detached(
+                    tmp_path / "sig.bin", f,
+                    require_all_good=two_sigs)
 
             assert_signature(sig, "TWO_SIGNATURE_MANIFEST",
                              expect_both=two_sigs)

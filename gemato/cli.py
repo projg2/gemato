@@ -618,8 +618,8 @@ class OpenPGPVerifyDetachedCommand(VerifyingOpenPGPMixin, GematoCommand):
             help="Path to the file containing the OpenPGP signature")
         subp.add_argument(
             "data_file",
-            type=Path,
-            help="Path to the file to verify")
+            type=argparse.FileType("rb"),
+            help="Path to the file to verify or \"-\" for stdin")
 
     def parse_args(self, args, argp):
         super().parse_args(args, argp)
@@ -642,7 +642,7 @@ class OpenPGPVerifyDetachedCommand(VerifyingOpenPGPMixin, GematoCommand):
             return 1
         else:
             logging.info(
-                f"File {self.data_file} verified succesfully against "
+                f"File {self.data_file.name} verified successfully against "
                 f"the signature in {self.signature_file}:")
             self.print_signatures(sigs)
 
