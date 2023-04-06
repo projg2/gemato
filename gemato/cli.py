@@ -61,6 +61,8 @@ class GematoCommand:
         """
         subp.add_argument('--debug', action='store_true',
                           help='Enable debugging output')
+        subp.add_argument('-q', '--quiet', action='store_true',
+                          help='Only emit warning or error messages')
 
     def parse_args(self, args, argp):
         """
@@ -69,6 +71,8 @@ class GematoCommand:
         """
         if args.debug:
             logging.getLogger().setLevel(logging.DEBUG)
+        elif args.quiet:
+            logging.getLogger().setLevel(logging.WARNING)
 
     def __call__(self):
         """
