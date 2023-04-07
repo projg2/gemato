@@ -59,20 +59,20 @@ class GematoCommand:
         """
         Add options specific to the command to subparser @subp.
         """
-        subp.add_argument('--debug', action='store_true',
+        subp.add_argument("--debug", action="store_const",
+                          dest="log_level", const=logging.DEBUG,
+                          default=logging.INFO,
                           help='Enable debugging output')
-        subp.add_argument('-q', '--quiet', action='store_true',
-                          help='Only emit warning or error messages')
+        subp.add_argument("-q", "--quiet", action="store_const",
+                          dest="log_level", const=logging.WARNING,
+                          help="Only emit warning or error messages")
 
     def parse_args(self, args, argp):
         """
         Process command-line arguments @args. @argp is the argparse
         instance provided for error reporting.
         """
-        if args.debug:
-            logging.getLogger().setLevel(logging.DEBUG)
-        elif args.quiet:
-            logging.getLogger().setLevel(logging.WARNING)
+        logging.getLogger().setLevel(args.log_level)
 
     def __call__(self):
         """
@@ -115,7 +115,7 @@ class BaseOpenPGPMixin:
             env_class = OpenPGPEnvironment
         else:
             env_class = OpenPGPSystemEnvironment
-        self.openpgp_env = env_class(debug=args.debug,
+        self.openpgp_env = env_class(debug=args.log_level == logging.DEBUG,
                                      proxy=args.proxy)
 
         if args.openpgp_key is not None:
