@@ -934,24 +934,25 @@ def test_refresh_wkd(openpgp_env_with_refresh,
                 # 01 = The server SHOULD return "application/octet-string" as the content-type
                 content_type_ = 'application/octet-stream'
                 status_ = 200
+                headers_ = { 'Content-Length': len(body_) } # needed esp. for HEAD
             else:
                 body_ = None
                 content_type_ = None
                 status_ = 404
-            responses.add(
-                responses.GET,
-                'https://example.com/.well-known/openpgpkey/hu/'
-                '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato',
-                body=body_,
-                content_type=content_type_,
-                status=status_)
-            responses.add(
-                responses.GET,
-                'https://openpgpkey.example.com/.well-known/openpgpkey/example.org/hu/'
-                '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato',
-                body=body_,
-                content_type=content_type_,
-                status=status_)
+                headers_ = None
+            url1 = 'https://example.com/.well-known/openpgpkey/hu/' \
+                   '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato'
+            url2 = 'https://openpgpkey.example.com/.well-known/openpgpkey/example.org/hu/' \
+                   '5x66h616iaskmnadrm86ndo6xnxbxjxb?l=gemato'
+            for method_ in [responses.GET, responses.HEAD]:
+                for url_ in [url1, url2]:
+                    body__ = body_ if method_ == responses.HEAD else None
+                    responses.add(
+                        method_, url_,
+                        body=body__,
+                        content_type=content_type_,
+                        headers=headers_,
+                        status=status_)
 
             if expected is None:
                 openpgp_env_with_refresh.refresh_keys(
