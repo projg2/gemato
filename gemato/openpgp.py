@@ -413,6 +413,12 @@ class IsolatedGPGEnvironment(SystemGPGEnvironment):
 # honor user's http_proxy setting
 honor-http-proxy
 
+# The default of "recursive-resolver" (see "man dirmngr") may cause
+# problems with corporate networks, where this is often prohibited.
+# It's better to setup the DNS resolver of your choice correctly
+# preferably with DNSSEC checks enabled and use the following setting:
+standard-resolver
+
 # enable debugging, in case we needed it
 log-file {os.path.join(self._home, 'dirmngr.log')}
 debug-level guru
