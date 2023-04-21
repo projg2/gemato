@@ -928,7 +928,11 @@ def test_refresh_wkd(openpgp_env_with_refresh,
 
             if server_key_var is not None:
                 body_ = globals()[server_key_var]
-                content_type_ = 'application/pgp-keys'
+                # The content-type changed over the development of the RFC, section 3.1.
+                # https://datatracker.ietf.org/doc/draft-koch-openpgp-webkey-service/15/
+                # 00 = The server SHOULD return "application/pgp-key" as the content-type
+                # 01 = The server SHOULD return "application/octet-string" as the content-type
+                content_type_ = 'application/octet-stream'
                 status_ = 200
             else:
                 body_ = None
