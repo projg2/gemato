@@ -99,12 +99,20 @@ class BaseOpenPGPMixin:
     def add_options(self, subp):
         super().add_options(subp)
 
+        default_timeout = 180
+
         subp.add_argument(
             '-K', '--openpgp-key',
             help='Use only the OpenPGP key(s) from a specific file')
         subp.add_argument(
             '--proxy',
             help='Use HTTP proxy')
+        subp.add_argument(
+            "--timeout",
+            default=default_timeout,
+            type=float,
+            help="Connection timeout (for WKD requests, in seconds, "
+                 f"default: {default_timeout})")
 
     def parse_args(self, args, argp):
         super().parse_args(args, argp)
@@ -116,7 +124,8 @@ class BaseOpenPGPMixin:
         else:
             env_class = OpenPGPSystemEnvironment
         self.openpgp_env = env_class(debug=args.log_level == logging.DEBUG,
-                                     proxy=args.proxy)
+                                     proxy=args.proxy,
+                                     timeout=args.timeout)
 
         if args.openpgp_key is not None:
             with open(args.openpgp_key, 'rb') as f:
