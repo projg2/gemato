@@ -561,7 +561,7 @@ debug-level guru
                     f'key {key}')
                 return False
             addrs.update(uids)
-        keys = set(keys)
+        expected_keys = set(keys)
 
         data = b''
         proxies = {}
@@ -588,23 +588,38 @@ debug-level guru
             data,
             raise_on_error=OpenPGPKeyRefreshError)
 
-        # we need to explicitly ensure all keys were fetched
+        imported_keys = set()
         for line in out.splitlines():
             if line.startswith(b'[GNUPG:] IMPORT_OK'):
                 fpr = line.split(b' ')[3].decode('ASCII')
                 logging.debug(
                     f'refresh_keys_wkd(): import successful for key: {fpr}')
-                if fpr in keys:
-                    keys.remove(fpr)
-                else:
-                    # we need to delete unexpected keys
-                    exitst, out, err = self._spawn_gpg(
-                        [GNUPG, '--batch', '--delete-keys', fpr],
-                        raise_on_error=OpenPGPKeyRefreshError)
-        if keys:
+                imported_keys.add(fpr)
+
+        # Need to explicitly ensure all keys were fetched
+        # However:
+        # - any key MAY appear 0 or more times.
+        # - expected keys SHOULD be present.
+        # - unexpected keys MAY also be present.
+        unexpected_keys = imported_keys.difference(expected_keys)
+        not_updated_keys = expected_keys.difference(imported_keys)
+
+        if unexpected_keys:
+            # we need to delete unexpected keys
+            logging.info(
+                f'refresh_keys_wkd(): got unexpected key, will remove: '
+                f'{unexpected_keys}')
+            # 128x 40-byte fingerprints = 5KiB commandline max
+            # If this contains a lot of keys, it should just blow up, but that
+            # saves complexity.
+            exitst, out, err = self._spawn_gpg(
+                [GNUPG, '--batch', '--delete-keys'] + list(unexpected_keys),
+                raise_on_error=OpenPGPKeyRefreshError)
+
+        if not_updated_keys:
             logging.debug(
                 f'refresh_keys_wkd(): failing due to non-updated keys: '
-                f'{keys}')
+                f'{not_updated_keys}')
             return False
 
         return True
