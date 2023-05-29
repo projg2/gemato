@@ -510,7 +510,7 @@ def test_verify_manifest(openpgp_env, manifest_var, key_var, expected):
                         with io.BytesIO(globals()[key_var]) as kf:
                             openpgp_env.import_key(kf)
 
-                    print(openpgp_env.verify_file(f))
+                    openpgp_env.verify_file(f)
     except OpenPGPNoImplementation as e:
         pytest.skip(str(e))
 
