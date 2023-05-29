@@ -23,6 +23,7 @@ from gemato.exceptions import (
     ManifestNoSupportedHashes,
     ManifestInsecureHashes,
     )
+from gemato.hash import hash_path
 from gemato.manifest import ManifestPathEntry, ManifestFileEntry
 from gemato.recursiveloader import ManifestRecursiveLoader
 
@@ -1790,17 +1791,6 @@ def test_update_entry_for_path_no_hash_specified(layout_factory):
        'sub/Manifest':
        StrayManifestLayout.MANIFESTS['sub/Manifest'].lstrip()
        }),
-     (StrayCompressedManifestLayout,
-      ['MD5'],
-      ManifestRecursiveLoader.update_entries_for_directory,
-      '',
-      None,
-      None,
-      {'Manifest': 'MANIFEST sub/Manifest.gz 75 MD5 '
-       'e6378b64d3577c73c979fdb423937d94\n',
-       'sub/Manifest.gz':
-       StrayCompressedManifestLayout.MANIFESTS['sub/Manifest.gz'].lstrip()
-       }),
      (FilenameWhitespaceLayout,
       ['MD5'],
       ManifestRecursiveLoader.update_entries_for_directory,
@@ -1922,6 +1912,32 @@ def test_update_entry_hash_specs(layout_factory, layout, ctor, func, path,
             output[relpath] = f.read()
     expected = dict(layout.MANIFESTS)
     expected.update(manifest_update)
+    assert output == expected
+    m.assert_directory_verifies()
+
+
+def test_update_entry_hash_stray_compressed(layout_factory):
+    layout = StrayCompressedManifestLayout
+    tmp_path = layout_factory.create(layout)
+    m = ManifestRecursiveLoader(tmp_path / layout.TOP_MANIFEST,
+                                hashes=["MD5"],
+                                allow_xdev=False)
+    ManifestRecursiveLoader.update_entries_for_directory(m, "")
+    m.save_manifests()
+
+    output = {}
+    for relpath in layout.MANIFESTS:
+        with open_potentially_compressed_path(tmp_path / relpath,
+                                              'r') as f:
+            output[relpath] = f.read()
+    hashes = hash_path(tmp_path / "sub/Manifest.gz", ["__size__", "md5"])
+    expected = dict(layout.MANIFESTS)
+    expected.update(
+        {"Manifest": f"MANIFEST sub/Manifest.gz {hashes['__size__']} "
+         f"MD5 {hashes['md5']}\n",
+         "sub/Manifest.gz":
+         StrayCompressedManifestLayout.MANIFESTS["sub/Manifest.gz"].lstrip()
+         })
     assert output == expected
     m.assert_directory_verifies()
 
@@ -2109,15 +2125,6 @@ def test_update_entry_and_discard(layout_factory):
        '4b40f4102dd71fb2083ce9a8d8af6d7e49c281c4\n'
        'TIMESTAMP\n',
        'sub/Manifest': 'DATA test 0 SHA1 '
-       'da39a3ee5e6b4b0d3255bfef95601890afd80709\n',
-       },
-      'TIMESTAMP'),
-     (StrayCompressedManifestLayout,
-      '',
-      {'Manifest': 'MANIFEST sub/Manifest.gz 84 SHA1 '
-       'aa62bd16d440d2a118a381df4f9b9c413d993e75\n'
-       'TIMESTAMP\n',
-       'sub/Manifest.gz': 'DATA test 0 SHA1 '
        'da39a3ee5e6b4b0d3255bfef95601890afd80709\n',
        },
       'TIMESTAMP'),
