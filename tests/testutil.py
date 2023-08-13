@@ -1,19 +1,14 @@
 # gemato: Test utility functions
-# (c) 2017-2022 Michał Górny
+# (c) 2017-2023 Michał Górny
 # Licensed under the terms of 2-clause BSD license
 
 import errno
 import functools
-import io
-import logging
 import os
 import os.path
 import random
-import shutil
 import stat
-import tempfile
 import threading
-import unittest
 
 import pytest
 
@@ -30,35 +25,6 @@ def disallow_writes(path):
                 os.chmod(os.path.join(dirpath, f),
                          st.st_mode & ~0o222)
     os.chmod(path, 0o555)
-
-
-class LoggingTestCase(unittest.TestCase):
-    def setUp(self):
-        self.log = io.StringIO()
-        self.log_handler = logging.getLogger().addHandler(
-                logging.StreamHandler(self.log))
-
-    def tearDown(self):
-        # TODO: make some use of the log output?
-        logging.getLogger().removeHandler(self.log_handler)
-
-
-class TempDirTestCase(LoggingTestCase):
-    DIRS = []
-    FILES = {}
-
-    def setUp(self):
-        super().setUp()
-        self.dir = tempfile.mkdtemp()
-        for k in self.DIRS:
-            os.mkdir(os.path.join(self.dir, k))
-        for k, v in self.FILES.items():
-            with open(os.path.join(self.dir, k), 'w', encoding='utf8') as f:
-                f.write(v)
-
-    def tearDown(self):
-        shutil.rmtree(self.dir)
-        super().tearDown()
 
 
 class HKPServerRequestHandler(BaseHTTPRequestHandler):
