@@ -49,6 +49,8 @@ except ImportError:
 GNUPG = os.environ.get('GNUPG', 'gpg')
 GNUPGCONF = os.environ.get('GNUPGCONF', 'gpgconf')
 
+LOGGER = logging.getLogger(__name__)
+
 
 class OpenPGPSignatureStatus(enum.Enum):
     GOOD = enum.auto()
@@ -465,7 +467,7 @@ debug-level guru
             ret, sout, serr = self._spawn_gpg(
                 [GNUPGCONF, '--kill', 'all'])
             if ret != 0:
-                logging.warning(
+                LOGGER.warning(
                     f'{GNUPGCONF} --kill failed:\n'
                     f'{serr.decode("utf8", errors="backslashescape")}')
             if not self.debug:
@@ -474,8 +476,8 @@ debug-level guru
                     shutil.rmtree(self._home,
                                   onerror=_rmtree_error_handler)
             else:
-                logging.debug(f'GNUPGHOME left for debug purposes: '
-                              f'{self._home}')
+                LOGGER.debug(f'GNUPGHOME left for debug purposes: '
+                             f'{self._home}')
             self._home = None
 
     def import_key(self, keyfile, trust=True):
@@ -522,7 +524,7 @@ debug-level guru
                         raise OpenPGPKeyListingError(
                             f'Incorrect fingerprint {fpr} for key '
                             f'{prev_pub}')
-                    logging.debug(
+                    LOGGER.debug(
                         f'list_keys(): fingerprint: {fpr}')
                     ret[fpr] = []
                     prev_pub = None
@@ -533,7 +535,7 @@ debug-level guru
             elif line.startswith(b'pub:'):
                 # wait for the fingerprint
                 prev_pub = line.split(b':')[4].decode('ASCII')
-                logging.debug(f'list_keys(): keyid: {prev_pub}')
+                LOGGER.debug(f'list_keys(): keyid: {prev_pub}')
             elif line.startswith(b'uid:'):
                 if fpr is None:
                     raise OpenPGPKeyListingError(
@@ -542,10 +544,10 @@ debug-level guru
                 _, addr = email.utils.parseaddr(
                     uid.decode('utf8', errors='replace'))
                 if '@' in addr:
-                    logging.debug(f'list_keys(): UID: {addr}')
+                    LOGGER.debug(f'list_keys(): UID: {addr}')
                     ret[fpr].append(addr)
                 else:
-                    logging.debug(
+                    LOGGER.debug(
                         f'list_keys(): ignoring UID without mail: '
                         f'{uid!r}')
 
@@ -557,19 +559,19 @@ debug-level guru
         keys were successfully found.  Otherwise, returns false.
         """
         if requests is None:
-            logging.debug('refresh_keys_wkd(): failing because requests'
-                          'module is missing')
+            LOGGER.debug('refresh_keys_wkd(): failing because requests'
+                         'module is missing')
             return False
 
         # list all keys in the keyring
         keys = self.list_keys()
         if not keys:
-            logging.debug('refresh_keys_wkd(): no keys found')
+            LOGGER.debug('refresh_keys_wkd(): no keys found')
             return False
         addrs = set()
         for key, uids in keys.items():
             if not uids:
-                logging.debug(
+                LOGGER.debug(
                     f'refresh_keys_wkd(): failing due to no UIDs on '
                     f'key {key}')
                 return False
@@ -591,8 +593,8 @@ debug-level guru
             except (requests.exceptions.ConnectionError,
                     requests.exceptions.HTTPError,
                     ) as e:
-                logging.debug(f'refresh_keys_wkd(): failing due to failed '
-                              f'request for {url}: {e}')
+                LOGGER.debug(f'refresh_keys_wkd(): failing due to failed '
+                             f'request for {url}: {e}')
                 return False
             data += resp.content
 
@@ -605,7 +607,7 @@ debug-level guru
         for line in out.splitlines():
             if line.startswith(b'[GNUPG:] IMPORT_OK'):
                 fpr = line.split(b' ')[3].decode('ASCII')
-                logging.debug(
+                LOGGER.debug(
                     f'refresh_keys_wkd(): import successful for key: {fpr}')
                 imported_keys.add(fpr)
 
@@ -617,7 +619,7 @@ debug-level guru
         unexpected_keys = imported_keys.difference(expected_keys)
         if unexpected_keys:
             # we need to delete unexpected keys
-            logging.debug(
+            LOGGER.debug(
                 f'refresh_keys_wkd(): got unexpected key, will remove: '
                 f'{unexpected_keys}')
             # 128x 40-byte fingerprints = 5KiB commandline max
@@ -629,7 +631,7 @@ debug-level guru
 
         not_updated_keys = expected_keys.difference(imported_keys)
         if not_updated_keys:
-            logging.debug(
+            LOGGER.debug(
                 f'refresh_keys_wkd(): failing due to non-updated keys: '
                 f'{not_updated_keys}')
             return False
@@ -646,8 +648,8 @@ debug-level guru
             raise_on_error=OpenPGPKeyRefreshError)
 
     def refresh_keys(self, allow_wkd=True, keyserver=None):
-        logging.debug(f'refresh_keys(allow_wkd={allow_wkd}, '
-                      f'keyserver={keyserver}) called')
+        LOGGER.debug(f'refresh_keys(allow_wkd={allow_wkd}, '
+                     f'keyserver={keyserver}) called')
 
         if allow_wkd and self.refresh_keys_wkd():
             return
@@ -710,12 +712,12 @@ class PGPyEnvironment:
                     try:
                         verifies = k.parent.verify(k)
                     except pgpy.errors.PGPError:
-                        logging.debug(
+                        LOGGER.debug(
                             f'Rejecting subkey {fpr} due to missing sig')
                         self.keyring.unload(k)
                     else:
                         if not verifies:
-                            logging.debug(
+                            LOGGER.debug(
                                 f'Rejecting subkey {fpr} since parent '
                                 f'key signature does not check out')
                             self.keyring.unload(k)
