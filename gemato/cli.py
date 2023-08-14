@@ -75,6 +75,10 @@ class GematoCommand:
         Process command-line arguments @args. @argp is the argparse
         instance provided for error reporting.
         """
+        # allow an easy override for users when gemato is called
+        # via scripts
+        if os.environ.get("GEMATO_DEBUG"):
+            args.log_level = logging.DEBUG
         logging.getLogger().setLevel(args.log_level)
 
     def __call__(self):
