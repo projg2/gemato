@@ -4,7 +4,7 @@ jobs:
   build:
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12-dev", "pypy-3.9"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13-dev", "pypy-3.9", "pypy-3.10"]
         variant: ["", "-norequests-noresponses", "-noresponses"]
         gpg: ["no-gpg", "vanilla-gpg"]
       fail-fast: false
