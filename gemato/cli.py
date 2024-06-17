@@ -1,6 +1,6 @@
 # gemato: CLI routines
 # (c) 2017-2023 Michał Górny
-# Licensed under the terms of 2-clause BSD license
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 
 import argparse

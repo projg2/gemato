@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "gemato"
 authors = [{name = "Michał Górny", email = "mgorny@gentoo.org"}]
-license = {file = "COPYING"}
+license = {text = "GPL-2.0-or-later"}
 readme = "README.rst"
 dynamic = ["version", "description"]
 classifiers = [
