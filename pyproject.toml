@@ -38,6 +38,7 @@ gemato = "gemato.cli:setuptools_main"
 [tool.flit.sdist]
 include = [
     "bin/gemato",
+    "COPYING",
     "tox.ini",
     "tests/*.py",
     "utils",
